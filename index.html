@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MHAS de Honduras</title>
+<meta name="description" content="MHAS de Honduras — sitio web en construcción.">
+<link rel="icon" href="logo.png">
+<style>
+  :root { --bg:#ffffff; --text:#1e3356; --muted:#5b6780; --accent:#1e3356; color-scheme: light; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         text-align:center; padding:24px 16px; }
+  img.logo { max-width:min(320px,80vw); height:auto; margin-bottom:40px; }
+  h1 { font-size:clamp(1.6rem,5vw,2.4rem); font-weight:700; margin-bottom:12px; }
+  p { color:var(--muted); font-size:1.05rem; max-width:480px; line-height:1.5; }
+  .bar { width:64px; height:4px; background:var(--accent); border-radius:2px; margin:20px auto; }
+  footer { position:fixed; bottom:16px; font-size:.85rem; color:var(--muted); }
+</style>
+</head>
+<body>
+  <img class="logo" src="logo.png" alt="MHAS de Honduras">
+  <h1>Estamos trabajando en nuestro sitio web</h1>
+  <div class="bar"></div>
+  <p>Muy pronto tendremos novedades. Gracias por su visita.</p>
+  <footer>&copy; <span id="y"></span> MHAS de Honduras · San Pedro Sula, Honduras</footer>
+  <script>document.getElementById('y').textContent=new Date().getFullYear();</script>
+</body>
+</html>
