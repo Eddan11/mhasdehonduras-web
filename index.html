@@ -13,7 +13,17 @@
          background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
          text-align:center; padding:24px 16px; }
   img.logo { max-width:min(280px,70vw); height:auto; margin-bottom:28px; }
-  img.foto { width:min(680px,100%); height:auto; margin:8px 0 32px; }
+  .anim-wrap { width:min(620px,100%); aspect-ratio:620/245; overflow:hidden; margin:0 0 20px; }
+  #anim { width:100%; aspect-ratio:16/9; margin-top:-16%; }
+  #anim img { width:100%; height:100%; object-fit:contain; }
+  .contacto { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:28px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 18px; border-radius:10px; text-decoration:none;
+         font-weight:600; font-size:.95rem; color:#fff; background:var(--accent); }
+  .btn svg { width:20px; height:20px; fill:currentColor; }
+  .btn.wa { background:#1f9e55; } .btn.fb { background:#1877f2; }
+  .btn.ig { background:linear-gradient(45deg,#f09433,#dc2743 50%,#bc1888); }
+  .btn:hover { filter:brightness(1.1); }
+  .dir { margin-top:18px; font-size:.9rem; }
   footer { position:static !important; margin-top:40px; }
   h1 { font-size:clamp(1.6rem,5vw,2.4rem); font-weight:700; margin-bottom:12px; }
   p { color:var(--muted); font-size:1.05rem; max-width:480px; line-height:1.5; }
@@ -23,11 +33,28 @@
 </head>
 <body>
   <img class="logo" src="logo.png" alt="MHAS de Honduras">
-  <img class="foto" src="trabajadores.png" alt="Silueta de trabajadores de la construcción">
+  <div class="anim-wrap"><div id="anim" aria-label="Animación: sitio en construcción"></div></div>
   <h1>Estamos trabajando en nuestro sitio web</h1>
   <div class="bar"></div>
   <p>Muy pronto tendremos novedades. Gracias por su visita.</p>
+  <div class="contacto">
+    <a class="btn" href="tel:+50425401090"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>PBX 2540-1090</a>
+    <a class="btn wa" href="https://wa.me/50431666059?text=Hola%20MHAS%2C%20quisiera%20una%20cotizaci%C3%B3n" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>WhatsApp 3166-6059</a>
+    <a class="btn fb" href="https://www.facebook.com/profile.php?id=61567458963508" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg>Facebook</a>
+    <a class="btn ig" href="https://www.instagram.com/mhasdhonduras/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.2 5.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM21.9 7c-.1-1.6-.4-3-1.6-4.2S17.6 1.2 16 1.1C14.4 1 9.6 1 8 1.1 6.4 1.2 5 1.5 3.8 2.7S2.2 5.4 2.1 7C2 8.6 2 13.4 2.1 15c.1 1.6.4 3 1.6 4.2s2.6 1.5 4.2 1.6c1.6.1 6.4.1 8 0 1.6-.1 3-.4 4.2-1.6s1.5-2.6 1.6-4.2c.1-1.6.1-6.4.2-8zm-2 10.2a3.3 3.3 0 0 1-1.8 1.8c-1.3.5-4.3.4-5.7.4s-4.4.1-5.7-.4a3.3 3.3 0 0 1-1.8-1.8c-.5-1.3-.4-4.3-.4-5.7s-.1-4.4.4-5.7A3.3 3.3 0 0 1 6.3 4c1.3-.5 4.3-.4 5.7-.4s4.4-.1 5.7.4a3.3 3.3 0 0 1 1.8 1.8c.5 1.3.4 4.3.4 5.7s.1 4.4-.4 5.7z"/></svg>Instagram</a>
+  </div>
+  <p class="dir">33 calle, sector El Polvorín, San Pedro Sula, Honduras</p>
   <footer>&copy; <span id="y"></span> MHAS de Honduras · San Pedro Sula, Honduras</footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <script>
+    (function(){
+      var box=document.getElementById('anim');
+      function fallback(){ box.innerHTML='<img src="trabajadores.png" alt="Trabajadores de la construcción">'; }
+      if(!window.lottie){ fallback(); return; }
+      var a=lottie.loadAnimation({container:box,renderer:'svg',loop:true,autoplay:true,path:'animacion.json'});
+      a.addEventListener('data_failed',fallback);
+    })();
+  </script>
   <script>document.getElementById('y').textContent=new Date().getFullYear();</script>
 </body>
 </html>
