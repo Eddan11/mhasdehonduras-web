@@ -13,6 +13,7 @@
 <meta property="og:image" content="https://www.mhasdehonduras.com/logo.png">
 <meta property="og:url" content="https://www.mhasdehonduras.com/">
 <meta name="theme-color" content="#1e3356">
+<meta name="facebook-domain-verification" content="c1z7d1wfhugb3iisxnvwbazmay4124" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
@@ -134,6 +135,29 @@ section{padding:64px 0}
 .social svg{width:20px;height:20px;fill:#fff}
 @media(max-width:760px){.contact .wrap{grid-template-columns:1fr}}
 
+/* cotización por correo */
+.quote{background:var(--soft)}
+.quote .wrap{display:grid;grid-template-columns:1fr 1.4fr;gap:36px;align-items:start}
+.quote .intro p{color:var(--muted);margin-top:8px}
+.quote .intro ul{list-style:none;margin-top:18px;display:grid;gap:8px;color:var(--ink)}
+.quote .intro li::before{content:"✓ ";color:var(--wa);font-weight:700}
+.qform{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;box-shadow:0 10px 28px rgba(30,51,86,.08)}
+.qform .full{grid-column:1/-1}
+.qform label{display:block;font-weight:600;font-size:.9rem;color:var(--navy);margin-bottom:5px}
+.qform label small{font-weight:400;color:var(--muted)}
+.qform input,.qform select,.qform textarea{width:100%;font:inherit;font-size:1rem;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.qform input:focus,.qform select:focus,.qform textarea:focus{outline:none;border-color:var(--navy)}
+.qform textarea{min-height:96px;resize:vertical}
+.qform .btn{justify-content:center;border:0;cursor:pointer;font-size:1rem;width:100%}
+.qform .btn[disabled]{opacity:.6;cursor:wait}
+.qform .hp{position:absolute;left:-9999px}
+.qmsg{grid-column:1/-1;border-radius:10px;padding:12px 14px;font-weight:600;display:none}
+.qmsg.ok{display:block;background:#e7f6ee;color:#16683a}
+.qmsg.err{display:block;background:#fdecea;color:#a3261a}
+.card .alt{font-size:.85rem;text-align:center;color:var(--navy);font-weight:600;text-decoration:underline;margin-top:6px}
+@media(max-width:860px){.quote .wrap{grid-template-columns:1fr}}
+@media(max-width:560px){.qform{grid-template-columns:1fr;padding:18px}}
+
 footer{background:var(--navy-2);color:#b9c3d0;padding:28px 0;font-size:.92rem;border-top:6px solid var(--gold)}
 footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
@@ -151,6 +175,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <ul>
       <li><a href="#productos">Productos</a></li>
       <li><a href="#catalogo">Catálogo PDF</a></li>
+      <li><a href="#cotizar">Cotizar por correo</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul>
     <a class="btn btn-wa js-wa" data-item="Consulta general" href="https://wa.me/50431666059" target="_blank" rel="noopener">
@@ -229,6 +254,34 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     </div>
   </section>
 
+  <section class="quote" id="cotizar">
+    <div class="wrap">
+      <div class="intro">
+        <h2>Solicite su cotización por correo</h2>
+        <p>Llene el formulario y le enviamos la cotización formal a su correo, lista para su departamento de compras.</p>
+        <ul>
+          <li>Respuesta en horario hábil</li>
+          <li>Precios con ISV incluido</li>
+          <li>Factura a nombre de su empresa</li>
+        </ul>
+      </div>
+      <form class="qform" id="qform" novalidate>
+        <div><label for="q-nombre">Nombre *</label><input id="q-nombre" name="Nombre" required autocomplete="name"></div>
+        <div><label for="q-empresa">Empresa</label><input id="q-empresa" name="Empresa" autocomplete="organization"></div>
+        <div><label for="q-tel">Teléfono / WhatsApp *</label><input id="q-tel" name="Teléfono" type="tel" required inputmode="tel" autocomplete="tel" placeholder="9999-9999"></div>
+        <div><label for="q-email">Correo *</label><input id="q-email" name="email" type="email" required autocomplete="email" placeholder="compras@empresa.com"></div>
+        <div><label for="q-rtn">RTN <small>(si requiere factura)</small></label><input id="q-rtn" name="RTN" inputmode="numeric"></div>
+        <div><label for="q-ciudad">Ciudad</label><input id="q-ciudad" name="Ciudad" placeholder="San Pedro Sula"></div>
+        <div><label for="q-prod">Producto *</label><select id="q-prod" name="Producto" required></select></div>
+        <div><label for="q-cant">Cantidad *</label><input id="q-cant" name="Cantidad" required placeholder="Ej. 10 cajas, 50 rollos"></div>
+        <div class="full"><label for="q-det">Detalles u otros productos</label><textarea id="q-det" name="Detalles" placeholder="Medidas, frecuencia de compra, fecha de entrega, otros productos…"></textarea></div>
+        <input class="hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="full"><button class="btn btn-orange" type="submit" id="q-btn">Enviar solicitud de cotización</button></div>
+        <div class="qmsg" id="q-msg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+
   <section class="contact" id="contacto">
     <div class="wrap">
       <div>
@@ -255,6 +308,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
           <li>Atendemos empresas, comercios, oficinas, almacenes y cualquier tipo de negocio.</li>
         </ul>
         <a class="btn btn-wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" style="margin-top:20px">Solicitar cotización</a>
+        <a class="btn btn-orange js-quote" data-item="" href="#cotizar" style="margin-top:10px">Cotizar por correo</a>
       </div>
     </div>
   </section>
@@ -311,7 +365,7 @@ var html='';
 CATS.forEach(function(c){
   html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
   c.p.forEach(function(p){
-    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><a class="btn btn-wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener">Cotizar</a></div></article>';
+    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><a class="btn btn-wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener">Cotizar</a><a class="alt js-quote" data-item="'+esc(p[1])+'" href="#cotizar">o cotizar por correo</a></div></article>';
   });
   html+='</div></div>';
 });
@@ -338,6 +392,42 @@ document.querySelectorAll('.chip').forEach(function(b){
     document.querySelectorAll('.cat').forEach(function(c){c.style.display=(f==='all'||c.getAttribute('data-cat')===f)?'':'none';});
   });
 });
+// formulario de cotización (llega por correo a comercial@)
+var QMAIL='comercial@mhasdehonduras.com';
+var sel=document.getElementById('q-prod');
+sel.innerHTML='<option value="">Seleccione un producto</option>'+CATS.map(function(c){return '<optgroup label="'+esc(c.t)+'">'+c.p.map(function(p){return '<option>'+esc(p[1])+'</option>';}).join('')+'</optgroup>';}).join('')+'<option>Otro / varios productos</option>';
+document.addEventListener('click',function(e){
+  var a=e.target.closest('.js-quote');if(!a)return;
+  var it=a.getAttribute('data-item');if(it)sel.value=it;
+  track('ViewContent',{content_name:it||'Formulario cotización',method:'email'});
+  setTimeout(function(){document.getElementById(it?'q-cant':'q-nombre').focus({preventScroll:true});},500);
+});
+var qf=document.getElementById('qform'),qm=document.getElementById('q-msg'),qb=document.getElementById('q-btn');
+function qmsg(t,ok){qm.className='qmsg '+(ok?'ok':'err');qm.textContent=t;}
+qf.addEventListener('input',function(){if(qm.className.indexOf('err')>-1)qm.className='qmsg';});
+qf.addEventListener('submit',function(e){
+  e.preventDefault();
+  var bad=[].slice.call(qf.querySelectorAll('[required]')).filter(function(i){return !i.value.trim()||(i.type==='email'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(i.value));});
+  if(bad.length){qmsg('Por favor complete: '+bad.map(function(i){return qf.querySelector('label[for="'+i.id+'"]').textContent.replace(' *','');}).join(', ')+'.',false);bad[0].focus();return;}
+  var d={},fd=new FormData(qf);fd.forEach(function(v,k){d[k]=v;});
+  if(d._honey)return;
+  var now=new Date(),ref='COT-'+String(now.getFullYear()).slice(2)+('0'+(now.getMonth()+1)).slice(-2)+('0'+now.getDate()).slice(-2)+'-'+('0'+now.getHours()).slice(-2)+('0'+now.getMinutes()).slice(-2);
+  d['Referencia']=ref;
+  d._subject='Solicitud de cotización '+ref+' – '+(d.Empresa||d.Nombre)+' – '+d.Producto;
+  d._template='table';d._captcha='false';d._replyto=d.email;
+  d._autoresponse='Gracias por contactar a MHAS de Honduras. Recibimos su solicitud de cotización ('+ref+') de: '+d.Producto+' – '+d.Cantidad+'. Le enviaremos la cotización a este correo en horario hábil. Si es urgente, escríbanos al WhatsApp +504 3166-6059.';
+  qb.disabled=true;qb.textContent='Enviando…';
+  fetch('https://formsubmit.co/ajax/'+QMAIL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(d)})
+  .then(function(r){return r.json().then(function(j){if(!r.ok||String(j.success)==='false')throw new Error(j.message||'error');return j;});})
+  .then(function(){
+    qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
+    track('Lead',{content_name:d.Producto,content_category:'Cotización por correo',method:'email'});
+    qf.reset();
+  })
+  .catch(function(){qmsg('No se pudo enviar. Escríbanos a '+QMAIL+' o al WhatsApp +504 3166-6059.',false);})
+  .finally(function(){qb.disabled=false;qb.textContent='Enviar solicitud de cotización';});
+});
+
 document.getElementById('y').textContent=new Date().getFullYear();
 </script>
 </body>
