@@ -25,6 +25,7 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq.disablePushState=true;
 fbq('init','28383545161288464');
 fbq('track','PageView');
 </script>
@@ -421,6 +422,7 @@ qf.addEventListener('submit',function(e){
   .then(function(r){return r.json().then(function(j){if(!r.ok||String(j.success)==='false')throw new Error(j.message||'error');return j;});})
   .then(function(){
     qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
+    try{var ph=(d['Teléfono']||'').replace(/\D/g,'');if(ph.length===8)ph='504'+ph;fbq('init','28383545161288464',{em:(d.email||'').trim().toLowerCase(),ph:ph,fn:(d.Nombre||'').trim().split(' ')[0].toLowerCase(),ct:(d.Ciudad||'').trim().toLowerCase().replace(/\s/g,''),country:'hn'});}catch(x){}
     track('Lead',{content_name:d.Producto,content_category:'Cotización por correo',method:'email'});
     qf.reset();
   })
