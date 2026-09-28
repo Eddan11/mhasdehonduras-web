@@ -176,6 +176,37 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .float-wa svg{width:30px;height:30px;fill:#fff}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media(max-width:560px){.hero-grid{display:none}.grid{grid-template-columns:1fr 1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:none}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}.qbtns{grid-template-columns:1fr;gap:6px}.qbtn{font-size:.88rem;padding:8px 6px}.qbtn img,.card .qbtn img{width:20px;height:20px}.conds .qbtns{grid-template-columns:1fr 1fr}section{padding:44px 0}.custom{padding:24px}}
+
+/* visor de imagen */
+.card img{cursor:zoom-in}
+.card .zoomhint{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;background:rgba(30,51,86,.82);display:flex;align-items:center;justify-content:center;pointer-events:none}
+.card .zoomhint svg{width:17px;height:17px}
+.card .imgw{position:relative}
+.lb{position:fixed;inset:0;z-index:1000;background:rgba(10,18,32,.62);display:flex;align-items:center;justify-content:center;padding:24px;overscroll-behavior:contain;opacity:0;visibility:hidden;transition:opacity .22s ease,visibility 0s linear .22s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.lb.open{opacity:1;visibility:visible;transition:opacity .22s ease}
+.lb-box{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:calc(100dvh - 48px);overflow-y:auto;position:relative;box-shadow:0 24px 70px rgba(0,0,0,.35);transform:scale(.92);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.lb.open .lb-box{transform:scale(1)}
+.lb-media{background:#fff;border-bottom:1px solid var(--line)}
+.lb-stage{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#fff}
+.lb-stage img,.lb-stage video,.lb-stage iframe{display:block;width:100%;height:100%;object-fit:contain;border:0;background:#fff}
+.lb-stage video,.lb-stage iframe{background:#000}
+.lb-thumbs{display:none;gap:8px;padding:10px 12px;overflow-x:auto;border-top:1px solid var(--line)}
+.lb-thumbs.show{display:flex}
+.lb-thumbs button{flex:none;width:58px;height:58px;border-radius:10px;border:2px solid var(--line);background:#fff center/contain no-repeat;cursor:pointer;padding:0;position:relative}
+.lb-thumbs button[aria-current="true"]{border-color:var(--navy)}
+.lb-thumbs button.vid::after{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;border-left:14px solid rgba(30,51,86,.9);border-top:9px solid transparent;border-bottom:9px solid transparent}
+.lb-body{padding:18px 20px 20px}
+.lb-body h4{font-family:"Poppins",system-ui,sans-serif;color:var(--navy);font-size:1.3rem;line-height:1.25;margin:0 0 4px}
+.lb-body .sub{color:var(--orange);font-weight:700;margin-bottom:8px}
+.lb-body p{color:var(--ink);font-size:1.03rem;line-height:1.55;margin:0}
+.lb-body .qbtns{grid-template-columns:1fr 1fr!important;margin-top:16px}
+.lb-body .qbtn{padding:12px 10px;font-size:1rem}
+.lb-body .qbtn img{width:22px;height:22px;aspect-ratio:auto;border:0;padding:0;background:none}
+.lb-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(30,51,86,.9);color:#fff;font-size:25px;line-height:1;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center}
+body.lb-lock{overflow:hidden}
+@media(min-width:900px){.lb-box{max-width:820px;display:grid;grid-template-columns:420px minmax(0,1fr);align-items:center}.lb-media{border-bottom:0;border-right:1px solid var(--line)}.lb-body{padding:28px 26px}.lb-body h4{font-size:1.45rem}}
+@media(max-width:560px){.lb{padding:28px 18px}.lb-box{max-height:calc(100dvh - 56px)}.lb-stage{aspect-ratio:auto;height:min(42dvh,354px)}.lb-body{padding:14px 16px 16px}.lb-body h4{font-size:1.25rem}.lb-body p{font-size:1.02rem;line-height:1.5}.lb-x{width:38px;height:38px;font-size:24px}}
+@media(prefers-reduced-motion:reduce){.lb,.lb-box{transition:none}}
 </style>
 </head>
 <body>
@@ -337,6 +368,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
 </a>
 
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Imagen del producto"><div class="lb-box"><button class="lb-x" id="lb-x" aria-label="Cerrar">&times;</button><div class="lb-media"><div class="lb-stage" id="lb-stage"></div><div class="lb-thumbs" id="lb-thumbs" aria-label="Más imágenes"></div></div><div class="lb-body"><h4 id="lb-t"></h4><div class="sub" id="lb-s"></div><p id="lb-d"></p><div class="qbtns" id="lb-q"></div></div></div></div>
 <script>
 var WA='50431666059';
 var CATS=[
@@ -377,7 +409,7 @@ var html='';
 CATS.forEach(function(c){
   html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
   c.p.forEach(function(p){
-    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
+    html+='<article class="card"><div class="imgw"><img loading="lazy" src="img/'+p[0]+'.jpg" data-big="img/meta/'+p[0]+'.jpg" data-more="'+esc((p[4]||[]).join('|'))+'" alt="'+esc(p[1])+'" width="400" height="400" role="button" tabindex="0" aria-label="Ver imagen grande: '+esc(p[1])+'"><span class="zoomhint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg></span></div><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
   });
   html+='</div></div>';
 });
@@ -387,15 +419,55 @@ document.getElementById('cats').innerHTML=html;
 document.querySelectorAll('.js-wa').forEach(function(a){a.href=waUrl(a.getAttribute('data-item')||'Consulta general');});
 
 // eventos del píxel
+function pidOf(name){var r=null;CATS.forEach(function(c){c.p.forEach(function(p){if(p[1]===name)r='mhas-'+p[0];});});return r;}
+function withIds(o,id){if(id){o.content_ids=[id];o.content_type='product';}return o;}
 function track(ev,params){try{if(window.fbq)fbq('track',ev,params||{});}catch(e){}}
 document.addEventListener('click',function(e){
   var a=e.target.closest('a');if(!a)return;
-  if(a.classList.contains('js-wa')){track('Contact',{content_name:a.getAttribute('data-item')||'WhatsApp',content_category:a.getAttribute('data-cat')||'General',method:'whatsapp'});}
+  if(a.classList.contains('js-wa')){track('Contact',withIds({content_name:a.getAttribute('data-item')||'WhatsApp',content_category:a.getAttribute('data-cat')||'General',method:'whatsapp'},a.getAttribute('data-pid')));}
   else if(a.classList.contains('js-call')){track('Contact',{method:'phone'});}
   else if(a.classList.contains('js-mail')){track('Contact',{method:'email'});}
   else if(a.id==='dlpdf'){track('ViewContent',{content_name:'Catálogo PDF'});}
 });
 
+
+// visor de imagen grande
+(function(){
+  var lb=document.getElementById('lb'),stage=document.getElementById('lb-stage'),thumbs=document.getElementById('lb-thumbs'),last=null,skipPop=false;
+  function yt(u){var m=u.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:null;}
+  function isVid(u){return /\.(mp4|webm)(\?|$)/i.test(u)||!!yt(u);}
+  function show(u,alt){stage.innerHTML='';var el;
+    if(yt(u)){el=document.createElement('iframe');el.src='https://www.youtube-nocookie.com/embed/'+yt(u)+'?rel=0';el.allow='autoplay; encrypted-media; picture-in-picture';el.allowFullscreen=true;el.title=alt;}
+    else if(isVid(u)){el=document.createElement('video');el.src=u;el.controls=true;el.playsInline=true;el.preload='metadata';}
+    else{el=document.createElement('img');el.src=u;el.alt=alt;}
+    stage.appendChild(el);
+    [].forEach.call(thumbs.children,function(b){b.setAttribute('aria-current',b.getAttribute('data-u')===u?'true':'false');});}
+  function open(img){
+    var card=img.closest('.card');last=img;
+    var list=[img.getAttribute('data-big')||img.src].concat((img.getAttribute('data-more')||'').split('|').filter(Boolean));
+    thumbs.innerHTML='';thumbs.classList.toggle('show',list.length>1);
+    if(list.length>1)list.forEach(function(u,i){var t=document.createElement('button');t.type='button';t.setAttribute('data-u',u);t.setAttribute('aria-label',(isVid(u)?'Video ':'Imagen ')+(i+1));if(isVid(u)){t.className='vid';}else{t.style.backgroundImage='url("'+u+'")';}thumbs.appendChild(t);});
+    show(list[0],img.alt);
+    var first=stage.firstChild;if(first&&first.tagName==='IMG')first.onerror=function(){first.onerror=null;first.src=img.src;};
+    document.getElementById('lb-t').textContent=card.querySelector('h4').textContent;
+    document.getElementById('lb-s').textContent=card.querySelector('.sub').textContent;
+    document.getElementById('lb-d').textContent=card.querySelector('.desc').textContent;
+    document.getElementById('lb-q').innerHTML=card.querySelector('.qbtns').innerHTML;
+    lb.classList.add('open');document.body.classList.add('lb-lock');lb.querySelector('.lb-box').scrollTop=0;
+    document.getElementById('lb-x').focus({preventScroll:true});
+    var pe=card.querySelector('[data-pid]'),pid=pe?pe.getAttribute('data-pid'):null;
+    track('ViewContent',withIds({content_name:img.alt,method:'imagen'},pid));
+    if(history.pushState)history.pushState({lb:1},'');
+  }
+  function close(fromPop){if(!lb.classList.contains('open'))return;var v=stage.querySelector('video');if(v)v.pause();setTimeout(function(){if(!lb.classList.contains('open'))stage.innerHTML='';},260);lb.classList.remove('open');document.body.classList.remove('lb-lock');if(!fromPop&&history.state&&history.state.lb){skipPop=true;history.back();}if(last)last.focus({preventScroll:true});}
+  document.getElementById('cats').addEventListener('click',function(e){var i=e.target.closest('.card img');if(i)open(i);});
+  document.getElementById('cats').addEventListener('keydown',function(e){var i=e.target.closest('.card img');if(i&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(i);}});
+  document.getElementById('lb-x').addEventListener('click',function(){close();});
+  thumbs.addEventListener('click',function(e){var b=e.target.closest('button');if(b)show(b.getAttribute('data-u'),document.getElementById('lb-t').textContent);});
+  lb.addEventListener('click',function(e){if(e.target===lb)close();if(e.target.closest('#lb-q .js-quote')){if(history.state&&history.state.lb)history.replaceState(null,'');close(true);}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  window.addEventListener('popstate',function(){if(skipPop){skipPop=false;return;}close(true);});
+})();
 // filtros
 document.querySelectorAll('.chip').forEach(function(b){
   b.addEventListener('click',function(){
@@ -411,7 +483,7 @@ sel.innerHTML='<option value="">Seleccione un producto</option>'+CATS.map(functi
 document.addEventListener('click',function(e){
   var a=e.target.closest('.js-quote');if(!a)return;
   var it=a.getAttribute('data-item');if(it)sel.value=it;
-  track('ViewContent',{content_name:it||'Formulario cotización',method:'email'});
+  track('ViewContent',withIds({content_name:it||'Formulario cotización',method:'email'},a.getAttribute('data-pid')||pidOf(it)));
   setTimeout(function(){document.getElementById(it?'q-cant':'q-nombre').focus({preventScroll:true});},500);
 });
 var qf=document.getElementById('qform'),qm=document.getElementById('q-msg'),qb=document.getElementById('q-btn');
@@ -434,7 +506,7 @@ qf.addEventListener('submit',function(e){
   .then(function(){
     qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
     try{var ph=(d['Teléfono']||'').replace(/\D/g,'');if(ph.length===8)ph='504'+ph;fbq('init','28383545161288464',{em:(d.email||'').trim().toLowerCase(),ph:ph,fn:(d.Nombre||'').trim().split(' ')[0].toLowerCase(),ct:(d.Ciudad||'').trim().toLowerCase().replace(/\s/g,''),country:'hn'});}catch(x){}
-    track('Lead',{content_name:d.Producto,content_category:'Cotización por correo',method:'email'});
+    track('Lead',withIds({content_name:d.Producto,content_category:'Cotización por correo',method:'email'},pidOf(d.Producto)));
     qf.reset();
   })
   .catch(function(){qmsg('No se pudo enviar. Escríbanos a '+QMAIL+' o al WhatsApp +504 3166-6059.',false);})
