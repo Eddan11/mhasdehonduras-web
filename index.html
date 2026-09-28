@@ -158,9 +158,9 @@ section{padding:64px 0}
 .qbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .qbtn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 8px;border-radius:10px;font-weight:700;font-size:.92rem;text-decoration:none;border:1.5px solid var(--line);background:#fff;color:var(--navy);transition:background .15s,border-color .15s}
 .qbtn img,.card .qbtn img{width:22px;height:22px;flex:none;padding:0!important;border:0!important;aspect-ratio:auto;background:none;object-fit:contain}
-.qbtn.wa{border-color:#25d366;background:#effbf3;color:#146c38}
-.qbtn.wa:hover{background:#dcf6e5}
-.qbtn.mail:hover{background:var(--soft);border-color:var(--navy)}
+.qbtn.wa{border-color:#1f9e55;background:#1f9e55;color:#fff}
+.qbtn.wa:hover{background:#17844a;border-color:#17844a}
+.qbtn.mail{border-color:#1a6fd6;background:#1a6fd6;color:#fff}.qbtn.mail:hover{background:#155bb0;border-color:#155bb0}
 .conds .qbtns{margin-top:20px}.conds .qbtn{padding:12px 10px;font-size:1rem}
 .social a{width:44px;height:44px;border-radius:0;background:none!important}
 .social img{width:44px;height:44px;display:block;transition:transform .15s}
@@ -320,7 +320,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
           <li>Precios preferenciales por volumen.</li>
           <li>Atendemos empresas, comercios, oficinas, almacenes y cualquier tipo de negocio.</li>
         </ul>
-        <div class="qbtns"><a class="qbtn wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp.png" alt=""></a><a class="qbtn mail js-quote" data-item="" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo.png" alt=""></a></div>
+        <div class="qbtns"><a class="qbtn wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-item="" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div>
       </div>
     </div>
   </section>
@@ -377,7 +377,7 @@ var html='';
 CATS.forEach(function(c){
   html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
   c.p.forEach(function(p){
-    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp.png" alt=""></a><a class="qbtn mail js-quote" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo.png" alt=""></a></div></div></article>';
+    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
   });
   html+='</div></div>';
 });
