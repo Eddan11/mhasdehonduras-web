@@ -155,7 +155,17 @@ section{padding:64px 0}
 .qmsg{grid-column:1/-1;border-radius:10px;padding:12px 14px;font-weight:600;display:none}
 .qmsg.ok{display:block;background:#e7f6ee;color:#16683a}
 .qmsg.err{display:block;background:#fdecea;color:#a3261a}
-.card .alt{font-size:.85rem;text-align:center;color:var(--navy);font-weight:600;text-decoration:underline;margin-top:6px}
+.qbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.qbtn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 8px;border-radius:10px;font-weight:700;font-size:.92rem;text-decoration:none;border:1.5px solid var(--line);background:#fff;color:var(--navy);transition:background .15s,border-color .15s}
+.qbtn img,.card .qbtn img{width:22px;height:22px;flex:none;padding:0!important;border:0!important;aspect-ratio:auto;background:none;object-fit:contain}
+.qbtn.wa{border-color:#25d366;background:#effbf3;color:#146c38}
+.qbtn.wa:hover{background:#dcf6e5}
+.qbtn.mail:hover{background:var(--soft);border-color:var(--navy)}
+.conds .qbtns{margin-top:20px}.conds .qbtn{padding:12px 10px;font-size:1rem}
+.social a{width:44px;height:44px;border-radius:0;background:none!important}
+.social img{width:44px;height:44px;display:block;transition:transform .15s}
+.social a:hover img{transform:scale(1.08)}
+.clist .ic img{width:24px;height:24px}
 @media(max-width:860px){.quote .wrap{grid-template-columns:1fr}}
 @media(max-width:560px){.qform{grid-template-columns:1fr;padding:18px}}
 
@@ -165,7 +175,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .float-wa{position:fixed;right:18px;bottom:18px;z-index:60;width:58px;height:58px;border-radius:50%;background:var(--wa);display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.25)}
 .float-wa svg{width:30px;height:30px;fill:#fff}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-@media(max-width:560px){.hero-grid{display:none}.grid{grid-template-columns:1fr 1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:none}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}section{padding:44px 0}.custom{padding:24px}}
+@media(max-width:560px){.hero-grid{display:none}.grid{grid-template-columns:1fr 1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:none}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}.qbtns{grid-template-columns:1fr;gap:6px}.qbtn{font-size:.88rem;padding:8px 6px}.qbtn img,.card .qbtn img{width:20px;height:20px}.conds .qbtns{grid-template-columns:1fr 1fr}section{padding:44px 0}.custom{padding:24px}}
 </style>
 </head>
 <body>
@@ -288,15 +298,17 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div>
         <h2>Contáctenos</h2>
         <ul class="clist">
-          <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z"/></svg></span><div><small>WhatsApp</small><a class="js-wa" data-item="Contacto" href="https://wa.me/50431666059" target="_blank" rel="noopener">+504 3166-6059</a></div></li>
+          <li><span class="ic"><img src="img/icons/whatsapp.png" alt=""></span><div><small>WhatsApp</small><a class="js-wa" data-item="Contacto" href="https://wa.me/50431666059" target="_blank" rel="noopener">+504 3166-6059</a></div></li>
           <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><div><small>PBX</small><a class="js-call" href="tel:+50425401090">2540-1090</a></div></li>
           <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><div><small>Ventas</small><a class="js-call" href="tel:+50494689500">+504 9468-9500</a> · <a class="js-call" href="tel:+50499458993">+504 9945-8993</a></div></li>
-          <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z"/></svg></span><div><small>Correo</small><a class="js-mail" href="mailto:ventas@mhasdehonduras.com">ventas@mhasdehonduras.com</a><br><a class="js-mail" href="mailto:comercial@mhasdehonduras.com">comercial@mhasdehonduras.com</a></div></li>
+          <li><span class="ic"><img src="img/icons/correo.png" alt=""></span><div><small>Correo</small><a class="js-mail" href="mailto:ventas@mhasdehonduras.com">ventas@mhasdehonduras.com</a><br><a class="js-mail" href="mailto:comercial@mhasdehonduras.com">comercial@mhasdehonduras.com</a></div></li>
           <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><div><small>Dirección</small><a href="https://www.google.com/maps/search/?api=1&query=33+calle+El+Polvor%C3%ADn+San+Pedro+Sula" target="_blank" rel="noopener">33 calle, zona El Polvorín, San Pedro Sula, Cortés</a></div></li>
         </ul>
         <div class="social">
-          <a href="https://www.facebook.com/profile.php?id=61567458963508" target="_blank" rel="noopener" style="background:#1877f2" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg></a>
-          <a href="https://www.instagram.com/mhasdhonduras/" target="_blank" rel="noopener" style="background:linear-gradient(45deg,#f09433,#dc2743 50%,#bc1888)" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.2 5.6a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM21.9 7c-.1-1.6-.4-3-1.6-4.2S17.6 1.2 16 1.1C14.4 1 9.6 1 8 1.1 6.4 1.2 5 1.5 3.8 2.7S2.2 5.4 2.1 7C2 8.6 2 13.4 2.1 15c.1 1.6.4 3 1.6 4.2s2.6 1.5 4.2 1.6c1.6.1 6.4.1 8 0 1.6-.1 3-.4 4.2-1.6s1.5-2.6 1.6-4.2c.1-1.6.1-6.4.2-8z"/></svg></a>
+          <a href="https://www.facebook.com/profile.php?id=61567458963508" target="_blank" rel="noopener" aria-label="Facebook"><img src="img/icons/facebook.png" alt="Facebook"></a>
+          <a href="https://www.instagram.com/mhasdhonduras/" target="_blank" rel="noopener" aria-label="Instagram"><img src="img/icons/instagram.png" alt="Instagram"></a>
+          <a class="js-wa" data-item="Contacto" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="WhatsApp"><img src="img/icons/whatsapp.png" alt="WhatsApp"></a>
+          <a class="js-mail" href="mailto:ventas@mhasdehonduras.com" aria-label="Correo"><img src="img/icons/correo.png" alt="Correo"></a>
         </div>
       </div>
       <div class="conds">
@@ -308,8 +320,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
           <li>Precios preferenciales por volumen.</li>
           <li>Atendemos empresas, comercios, oficinas, almacenes y cualquier tipo de negocio.</li>
         </ul>
-        <a class="btn btn-wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" style="margin-top:20px">Solicitar cotización</a>
-        <a class="btn btn-orange js-quote" data-item="" href="#cotizar" style="margin-top:10px">Cotizar por correo</a>
+        <div class="qbtns"><a class="qbtn wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp.png" alt=""></a><a class="qbtn mail js-quote" data-item="" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo.png" alt=""></a></div>
       </div>
     </div>
   </section>
@@ -366,7 +377,7 @@ var html='';
 CATS.forEach(function(c){
   html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
   c.p.forEach(function(p){
-    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><a class="btn btn-wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener">Cotizar</a><a class="alt js-quote" data-item="'+esc(p[1])+'" href="#cotizar">o cotizar por correo</a></div></article>';
+    html+='<article class="card"><img loading="lazy" src="img/'+p[0]+'.jpg" alt="'+esc(p[1])+'" width="400" height="400"><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp.png" alt=""></a><a class="qbtn mail js-quote" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo.png" alt=""></a></div></div></article>';
   });
   html+='</div></div>';
 });
