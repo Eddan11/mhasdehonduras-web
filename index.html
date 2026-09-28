@@ -403,13 +403,15 @@ var CATS=[
   ['cinta-3x100','Cinta Adhesiva 3" x 100 yd','Más ancho, más seguridad','Para cajas grandes y pesadas. Cubre más superficie y refuerza el cierre.'],
   ['cinta-cafe','Cinta Adhesiva Café 2" x 200 yd','Discreta en cajas de cartón','Se integra al cartón kraft y da una presentación más limpia.']]}
 ];
+// versión de fotos: cuando cambies fotos de productos, sube este número (2, 3, 4...)
+var IMGV='2';
 function waUrl(item){return 'https://wa.me/'+WA+'?text='+encodeURIComponent('Hola MHAS, vi su página web y quiero cotizar: '+item);}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 var html='';
 CATS.forEach(function(c){
   html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
   c.p.forEach(function(p){
-    html+='<article class="card"><div class="imgw"><img loading="lazy" src="img/'+p[0]+'.jpg" data-big="img/meta/'+p[0]+'.jpg" data-more="'+esc((p[4]||[]).join('|'))+'" alt="'+esc(p[1])+'" width="400" height="400" role="button" tabindex="0" aria-label="Ver imagen grande: '+esc(p[1])+'"><span class="zoomhint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg></span></div><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
+    html+='<article class="card"><div class="imgw"><img loading="lazy" src="img/'+p[0]+'.jpg?v='+IMGV+'" data-big="img/meta/'+p[0]+'.jpg?v='+IMGV+'" data-more="'+esc((p[4]||[]).join('|'))+'" alt="'+esc(p[1])+'" width="400" height="400" role="button" tabindex="0" aria-label="Ver imagen grande: '+esc(p[1])+'"><span class="zoomhint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg></span></div><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
   });
   html+='</div></div>';
 });
