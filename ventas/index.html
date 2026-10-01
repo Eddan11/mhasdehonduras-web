@@ -593,7 +593,7 @@ function vAjustes(){
   </div>
   <div class="panel">
     <h2>Datos de la empresa en el PDF</h2>
-    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["validez", "Validez (días)"]]
+    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["envio", "Envío"], ["validez", "Validez (días)"]]
       .map(([k, t]) => `<div class="field"><label for="em_${k}">${t}</label><input id="em_${k}" data-k="em_${k}" ${k === "validez" ? 'type="number" min="1"' : ""} value="${esc(S.f["em_" + k] ?? emp()[k])}"></div>`).join("")}
     <div class="actions"><button class="btn pri" data-a="saveEmpresa" ${S.busy ? "disabled" : ""}>Guardar datos</button></div>
   </div>
@@ -778,8 +778,13 @@ function waLink(c){
 }
 const EMP_DEF = {nombre: "MHAS DE HONDURAS S DE RL", rtn: "05019018067606", direccion: "33 calle zona el polvorín, Res. Valle Escondido, S.P.S.",
   pbx: "2540-1090", whatsapp: "3166-6059", correo: "comercial@mhasdehonduras.com",
-  entrega: "Inmediato en San Pedro Sula · envío a nivel nacional (flete se paga al recibir)", validez: 15};
-function emp(){ const e = S.cfg.emp || {}, o = {}; for (const k in EMP_DEF) o[k] = (e[k] !== undefined && e[k] !== "") ? e[k] : EMP_DEF[k]; return o; }
+  entrega: "Inmediato en San Pedro Sula", envio: "A nivel nacional (flete se paga al recibir)", validez: 15};
+function emp(){
+  const e = S.cfg.emp || {}, o = {};
+  for (const k in EMP_DEF) o[k] = (e[k] !== undefined && e[k] !== "") ? e[k] : EMP_DEF[k];
+  if (!e.envio && e.entrega && e.entrega.includes("·")) { const [a, ...b] = e.entrega.split("·"); o.entrega = a.trim(); o.envio = b.join("·").trim().replace(/^envío\s*/i, "").replace(/^./, m => m.toUpperCase()); }
+  return o;
+}
 function armarPdf(c, interno){
   const e = emp(), {jsPDF} = window.jspdf;
   const d = new jsPDF({unit: "mm", format: "letter"});
@@ -851,12 +856,24 @@ function armarPdf(c, interno){
   d.setFont("helvetica", "bold"); d.setTextColor(255, 255, 255);
   d.text("TOTAL", M + IW - wT - 1.5, y + 4.6, {align: "right"}); d.text(L(cc.total), M + IW - wT / 2, y + 4.6, {align: "center"});
   y += 6.6 + 7;
-  const notas = ["Tiempo de entrega: " + e.entrega].concat(interno ? ["Condiciones: " + formaTxt(c.formaPago || "Efectivo")] : []).concat(["Validez: Esta cotización es válida por " + (c.validez || e.validez) + " días a partir de la fecha."]).concat(c.notas ? [c.notas] : []);
-  d.setFontSize(8.5); d.setFont("helvetica", "normal");
-  const nlines = notas.flatMap(t => d.splitTextToSize(t, IW - 4));
-  const nh = 9 + nlines.length * 3.9 + 3;
+  const items = [["Tiempo de entrega:", e.entrega], ["Envío:", e.envio],
+    ["Condiciones:", formaTxt(c.formaPago || "Efectivo")],
+    ["Validez:", "Esta cotización es válida por " + (c.validez || e.validez) + " días a partir de la fecha."]];
+  if (clean(c.notas)) items.push(["Nota:", clean(c.notas)]);
+  d.setFontSize(8.5);
+  const lab = Math.max(...items.map(([k]) => { d.setFont("helvetica", "bold"); return d.getTextWidth(k); })) + 2;
+  d.setFont("helvetica", "normal");
+  const filasN = items.map(([k, t]) => [k, String(t).split(/\r?\n/).flatMap(par => d.splitTextToSize(par, IW - 4 - lab))]);
+  const nh = 9 + filasN.reduce((a, [, ls]) => a + ls.length, 0) * 3.9 + 3;
+  if (y + nh + 30 > 272) { d.addPage(); y = 20; }
   fc([243, 244, 246]); d.rect(M, y, IW, nh, "F"); dc([170, 175, 185]); d.line(M, y, M, y + nh);
-  tc(INK); d.text("NOTAS", M + 1.5, y + 4.5); d.text(nlines, M + 1.5, y + 9);
+  tc(INK); d.setFont("helvetica", "bold"); d.text("NOTAS", M + 1.5, y + 4.5);
+  let ny = y + 9;
+  filasN.forEach(([k, ls]) => {
+    d.setFont("helvetica", "bold"); d.text(k, M + 1.5, ny);
+    d.setFont("helvetica", "normal"); d.text(ls, M + 1.5 + lab, ny);
+    ny += ls.length * 3.9;
+  });
   y += nh + 16;
   dc(INK); d.line(M, y, M + 68, y); y += 5.5;
   d.setFont("helvetica", "bold"); d.setFontSize(10.5); tc(INK); d.text(v.nombre || "", M, y); y += 5.5;
