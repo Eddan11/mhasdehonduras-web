@@ -132,6 +132,9 @@ input,select,textarea{font-size:16px}
 .cta{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);margin-top:8px;z-index:5}
 .btn.big{width:100%;min-height:54px;font-size:17px;border-radius:12px;box-shadow:0 6px 18px rgba(10,20,40,.18)}
 .ctarow{display:flex;gap:8px}.ctarow .sec{flex:0 0 34%;background:var(--card);box-shadow:0 6px 18px rgba(10,20,40,.12)}.ctarow .pri{flex:1}
+.cnt{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--line);color:var(--ink);font-size:11px;font-weight:800;text-align:center;line-height:18px;margin-left:2px}
+.cnt.hot{background:#D92D20;color:#fff}
+a.btn{color:inherit}
 </style>
 </head>
 <body>
@@ -196,7 +199,7 @@ const TABS = {
 };
 const TAB_NAME = {cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
-const ESTADO = {cotizada: ["Cotizada", "b-info"], aprobada: ["Aprobada", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""]};
+const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""]};
 
 function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
 const puede = (...roles) => roles.includes(rol());
@@ -243,8 +246,8 @@ const pctTxt = p => (Number.isInteger(p) ? p : p.toFixed(1)) + "%";
 const pagado = c => r2((c.pagos || []).reduce((a, p) => a + (Number(p.monto) || 0), 0));
 const saldo = c => r2((Number(c.total ?? c.monto) || 0) - pagado(c));
 function estadoPago(x, cobro){
-  if (saldo(x) <= 0.005) return ["Pagada", "b-ok"];
-  if (cobro) { const d = x.vence ? diffDays(today(), x.vence) : 0; return d > 0 ? [d + (d === 1 ? " día" : " días") + " sin cobrar", d > 7 ? "b-bad" : "b-warn"] : ["Por cobrar", "b-warn"]; }
+  if (saldo(x) <= 0.005) return [cobro ? "Finalizada" : "Pagada", "b-ok"];
+  if (cobro) { const d = x.vence ? diffDays(today(), x.vence) : 0; return d > 0 ? ["Espera de pago · " + d + (d === 1 ? " día" : " días"), d > 7 ? "b-bad" : "b-warn"] : ["Espera de pago", "b-warn"]; }
   if (x.vence && diffDays(today(), x.vence) > 0) return [diffDays(today(), x.vence) + " días vencida", "b-bad"];
   if (x.vence) { const d = diffDays(x.vence, today()); return [d === 0 ? "Vence hoy" : "Vence en " + d + " días", "b-warn"]; }
   return ["Pendiente", "b-warn"];
@@ -296,7 +299,8 @@ function draw0(){
 }
 function drawHeader(){
   const r = S.screen === "app" ? rol() : null;
-  $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}</button>`).join("") : "";
+  const pf = r && r !== "vendedor" ? S.cot.filter(c => !c.eliminada && c.estado === "aprobada").length : 0;
+  $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}${t === "cotizaciones" && pf ? ` <span class="cnt hot" title="Por facturar">${pf}</span>` : ""}</button>`).join("") : "";
   $("#who").innerHTML = S.u ? `<span>${esc(S.me.nombre || S.u.email)}${r ? " · " + ROL_NAME[r] : ""}</span><button class="out" data-a="salir">Salir</button>` : "";
 }
 const fv = k => esc(S.f[k] ?? "");
@@ -408,15 +412,19 @@ function totalsHtml(cc, simple){
 
 /* ---------- vista: cotizaciones ---------- */
 function vCotizaciones(){
-  const F = {activas: "Abiertas", cotizada: "Cotizadas", aprobada: "Aprobadas", facturada: "Facturadas", debe: "Con saldo", anulada: "Anuladas", todas: "Todas"};
+  const F = {cotizada: "Abiertas", aprobada: "Por facturar", debe: "Espera de pago", fin: "Finalizadas", anulada: "Anuladas", todas: "Todas"};
   if (S.admin) F.eliminadas = "Eliminadas";
+  if (!F[S.filtro]) S.filtro = puede("admin", "facturador") ? "aprobada" : "cotizada";
   const q = clean(S.f.bq).toLowerCase();
+  const vivas = S.cot.filter(c => !c.eliminada);
+  const cuenta = {cotizada: vivas.filter(c => c.estado === "cotizada").length, aprobada: vivas.filter(c => c.estado === "aprobada").length,
+    debe: vivas.filter(c => c.estado === "facturada" && saldo(c) > 0.005).length};
   let list = S.cot.filter(c => {
     if (S.filtro === "eliminadas") return !!c.eliminada;
     if (c.eliminada) return false;
     switch (S.filtro) {
-      case "activas": return c.estado === "cotizada" || c.estado === "aprobada";
       case "debe": return c.estado === "facturada" && saldo(c) > 0.005;
+      case "fin": return c.estado === "facturada" && saldo(c) <= 0.005;
       case "todas": return true;
       default: return c.estado === S.filtro;
     }
@@ -426,7 +434,7 @@ function vCotizaciones(){
   return `
   <h1>Cotizaciones</h1>
   <p class="sub">${esVend ? "Tus cotizaciones y en qué quedó cada una." : "Aprueba, factura y registra pagos desde aquí."}</p>
-  <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}${cuenta[k] ? ` <span class="cnt${k === "aprobada" && puede("admin", "facturador") ? " hot" : ""}">${cuenta[k]}</span>` : ""}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="bq">Buscar por número, cliente o factura</label><input id="bq" data-k="bq" value="${fv("bq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th>${esVend ? "" : "<th>Vendedor</th>"}<th class="num">Total</th><th>Estado</th></tr></thead><tbody>
@@ -434,10 +442,12 @@ function vCotizaciones(){
     return `<tr class="click" data-a="open" data-v="${esc(c.id)}" tabindex="0">
       <td><span class="stub">${esc(c.numero)}</span></td><td>${esc(c.cliente && c.cliente.nombre)}</td><td>${fdate(c.fecha)}</td>
       ${esVend ? "" : `<td>${esc(c.vendedorNombre || "")}</td>`}<td class="num">${L(c.total)}</td>
-      <td><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}</td></tr>`; }).join("")}
+      <td><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${!esVend && descTxt(c) ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ' <span class="badge">Enviada</span>' : ""}</td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">No hay cotizaciones en esta vista.</p>`}
   </div></div>`;
 }
+
+function descTxt(c){ const cc = calc(c.items); return cc.desc > 0 ? "Con descuento · " + L(cc.desc) + " (" + pctTxt(cc.sub ? Math.round(cc.desc / cc.sub * 1000) / 10 : 0) + ")" : ""; }
 
 /* ---------- vista: por cobrar ---------- */
 function vCobros(){
@@ -634,31 +644,38 @@ function mCot(){
   const c = S.cot.find(x => x.id === S.m.id);
   if (!c) return "";
   const [et, ec] = ESTADO[c.estado] || [c.estado, ""];
-  const r = rol(), mio = c.vendedor === S.me.uid;
-  const puedeAprobar = c.estado === "cotizada" && (r !== "vendedor" || mio);
-  const puedeFacturar = c.estado === "aprobada" && puede("admin", "facturador");
-  const puedeCobrar = c.estado === "facturada" && saldo(c) > 0.005 && puede("admin", "facturador");
-  const puedeAnular = (c.estado === "cotizada" && (r !== "vendedor" || mio)) || (c.estado === "aprobada" && puede("admin", "facturador"));
-  const mode = S.m.mode, cc = calc(c.items), full = puede("admin", "facturador");
+  const r = rol(), mio = c.vendedor === S.me.uid, fact = puede("admin", "facturador");
+  const abierta = c.estado === "cotizada" && !c.eliminada && (fact || mio);
+  const mode = S.m.mode, cc = calc(c.items), full = fact;
   let extra = "";
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
     extra = `<hr class="sep"><h2>Registrar factura</h2>
-    <p class="note">Emite la factura en Sube con estos mismos productos y copia aquí el número.</p>
+    ${cc.desc > 0 ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Esta cotización tiene descuento.</b><div class="totals" style="max-width:none">${totalsHtml(cc)}</div></div>` : ""}
+    <p class="note">Emite la factura con estos mismos productos y precios, y copia aquí el número.</p>
     <div class="row">
       <div class="field" style="flex:2 1 220px"><label for="fn">N.º de factura (SAR)</label><input id="fn" data-k="fac_num" value="${fv("fac_num")}" placeholder="000-001-01-00000001"></div>
       <div class="field"><label for="ff">Fecha</label><input id="ff" type="date" data-k="fac_fecha" value="${esc(S.f.fac_fecha || today())}"></div>
     </div>
     <div class="field"><label for="fp">Forma de pago</label><select id="fp" data-k="fac_fp">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado ?? (fp !== "Contra entrega")) ? "checked" : ""}> Ya pagó el total</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado ?? (fp !== "Contra entrega")) ? "checked" : ""}> Ya pagó el total (queda finalizada)</label>
     <div class="actions"><button class="btn pri" data-a="saveFac" ${S.busy ? "disabled" : ""}>Guardar factura</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
   } else if (mode === "pago") extra = pagoForm(c, "savePag");
   const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
+  let estadoNota = "";
+  if (c.estado === "aprobada") estadoNota = r === "vendedor" ? "Enviada a facturar" + (c.aprobada ? " el " + fdate(ymd(new Date(c.aprobada))) : "") + ". Ya no se puede editar." : "El cliente confirmó. Pendiente de facturar.";
+  // botones de abajo según estado y rol
+  let abajo = [];
+  if (abierta) abajo = [`<button class="btn" data-a="editar">Editar</button>`, `<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Registrar factura</button>`, `<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  else if (c.estado === "facturada" && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
+  if (S.admin && !c.eliminada) abajo.push(S.m.mas ? `<button class="btn danger" data-a="eliminar">Eliminar</button>` : `<button class="btn" data-a="mas">Más…</button>`);
   return `
   <div class="bigstub">${esc(c.numero)}</div>
   ${c.eliminada ? `<p class="note" style="color:var(--bad);font-weight:600">Eliminada el ${fdate(ymd(new Date(c.eliminadaEn || Date.now())))}. No aparece en listas ni reportes.</p>
     ${S.admin ? `<div class="actions" style="margin-top:6px"><button class="btn pri" data-a="restaurar">Restaurar</button><button class="btn danger" data-a="borrarDef">Borrar para siempre</button></div>` : ""}` : ""}
-  <div style="margin-top:8px"><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}</div>
+  <div style="margin-top:8px"><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ` <span class="badge">Enviada ${fdate(ymd(new Date(c.enviada)))}</span>` : ""}${full && cc.desc > 0 ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}</div>
+  ${estadoNota ? `<p class="note" style="margin-top:8px">${estadoNota}</p>` : ""}
   <dl class="kv">
     <dt>Cliente</dt><dd>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
     ${c.cliente && c.cliente.direccion ? `<dt>Dirección</dt><dd>${esc(c.cliente.direccion)}</dd>` : ""}
@@ -681,14 +698,11 @@ function mCot(){
   ${pagosHtml(c)}
   ${extra}
   ${mode === "ver" ? `<div class="actions">
-    ${window.jspdf ? `<button class="btn pri" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button>${full ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}` : ""}
-    <a class="btn" href="${esc(waLink(c))}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
-    ${puedeAprobar ? `<button class="btn" data-a="editar">Editar</button><button class="btn" data-a="guardarCerrar">Guardar</button><button class="btn pri" data-a="aprobar">El cliente aceptó</button>` : ""}
-    ${puedeFacturar ? `<button class="btn pri" data-a="modeFac">Registrar factura</button>` : ""}
-    ${puedeCobrar ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
-    ${puedeAnular ? `<button class="btn danger" data-a="anular">Anular</button>` : ""}
-    ${S.admin && !c.eliminada ? `<button class="btn danger" data-a="eliminar">Eliminar</button>` : ""}
-  </div>` : ""}`;
+    ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button>` : ""}
+    <a class="btn" data-a="waTxt" href="${esc(waLink(c))}" target="_blank" rel="noopener">Enviar texto</a>
+    ${full && window.jspdf ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}
+  </div>
+  ${abajo.length ? `<div class="actions">${abajo.join("")}</div>` : ""}` : ""}`;
 }
 function mProd(){
   const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : {};
@@ -918,7 +932,7 @@ function startData(){
 onAuthStateChanged(auth, u => entrar(u));
 async function entrar(u){
   if (meSub) { meSub(); meSub = null; }
-  stopData(); S.m = null;
+  stopData(); S.m = null; S.filtro = null; S.tab = null;
   S.u = u || null;
   if (!u) { S.admin = false; S.me = {uid: null, email: "", nombre: "", rol: "", ini: ""}; S.screen = "auth"; draw(); return; }
   if (u.email === ADMIN && !u.emailVerified) { S.screen = "verificar"; draw(); return; }
@@ -993,7 +1007,7 @@ const A = {
   qmas(v){ const i = S.cart[Number(v)]; if (i) i.cant++; draw(); },
   qmenos(v){ const i = S.cart[Number(v)]; if (i && i.cant > 1) i.cant--; draw(); },
   pdfInterno(){ const c = S.cot.find(x => x.id === S.m.id); if (c && window.jspdf) armarPdf(c, true).save("INTERNA " + nombrePdf(c)); },
-  async share(){ const c = S.cot.find(x => x.id === S.m.id); if (c) await compartirPdf(c); },
+  async share(){ const c = S.cot.find(x => x.id === S.m.id); if (c) { await compartirPdf(c); marcarEnviada(); } },
   rmp(v){ S.cart.splice(Number(v), 1); draw(); },
   vaciar(){ S.cart = []; draw(); },
   async saveCot(v){
@@ -1036,7 +1050,7 @@ const A = {
       if (conPdf) { try { descargarPdf(cot); } catch (err) { console.error(err); } }
       const editando = !!S.editId;
       A.nuevaBlanco(true);
-      S.tab = "cotizaciones"; S.filtro = "activas";
+      S.tab = "cotizaciones"; S.filtro = "cotizada";
       if (conPdf) { toast("Cotización " + numero + (editando ? " actualizada" : " lista")); S.m = {type: "cot", id: numero, mode: "ver"}; }
       else toast(numero + (editando ? " actualizada" : " guardada") + " como cotización abierta");
     } catch (e) { if (e && e.code === "cerrada") toast("Esa cotización ya no está abierta; no se puede editar."); else fallo(e, "guardar la cotización"); }
@@ -1060,7 +1074,7 @@ const A = {
     try { await deleteDoc(doc(db, "cotizaciones", S.m.id)); S.m = null; toast("Cotización borrada para siempre"); } catch (e) { fallo(e, "borrar"); }
     draw();
   },
-  async aprobar(){ await upd(doc(db, "cotizaciones", S.m.id), {estado: "aprobada", aprobada: Date.now()}, "Marcada como aprobada"); },
+  async aprobar(){ if (!confirm("¿El cliente confirmó? Se envía a facturar y ya no se podrá editar.")) return; await upd(doc(db, "cotizaciones", S.m.id), {estado: "aprobada", aprobada: Date.now()}, "Enviada a facturar"); },
   async anular(){ if (!confirm("¿Anular esta cotización? No se puede deshacer.")) return; if (await upd(doc(db, "cotizaciones", S.m.id), {estado: "anulada", anulada: Date.now()}, "Cotización anulada")) { S.m = null; draw(); } },
   async saveFac(){
     const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
@@ -1101,7 +1115,7 @@ const A = {
     if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
   },
   async delCxp(){ if (!confirm("¿Borrar esta cuenta por pagar?")) return; try { await deleteDoc(doc(db, "cxp", S.m.id)); S.m = null; toast("Borrada"); } catch (e) { fallo(e, "borrar"); } draw(); },
-  pdf(){ const c = S.cot.find(x => x.id === S.m.id); if (c) descargarPdf(c); },
+  pdf(){ const c = S.cot.find(x => x.id === S.m.id); if (c) { descargarPdf(c); marcarEnviada(); } },
   async saveRoles(){
     S.busy = true; draw(); let n = 0;
     try {
@@ -1155,7 +1169,9 @@ const A = {
     S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
-  guardarCerrar(){ S.m = null; toast("Queda como cotización abierta"); draw(); },
+  mas(){ S.m.mas = true; draw(); },
+  async devolver(){ if (!confirm("¿Devolver al vendedor? La cotización vuelve a quedar abierta para editarla.")) return; await upd(doc(db, "cotizaciones", S.m.id), {estado: "cotizada", devuelta: Date.now()}, "Devuelta al vendedor"); },
+  waTxt(){ marcarEnviada(); window.open(waLink(S.cot.find(x => x.id === S.m.id) || {}), "_blank", "noopener"); },
   cliNuevo(){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: null}; draw(); },
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
   async cliSave(){
@@ -1211,6 +1227,12 @@ const A = {
   }
 };
 function clearProd(){ Object.keys(S.f).filter(k => k.startsWith("pe_")).forEach(k => delete S.f[k]); }
+async function marcarEnviada(){
+  const c = S.m && S.cot.find(x => x.id === S.m.id);
+  if (!c || c.estado !== "cotizada" || c.eliminada) return;
+  if (!(puede("admin", "facturador") || c.vendedor === S.me.uid)) return;
+  try { await updateDoc(doc(db, "cotizaciones", c.id), {enviada: Date.now()}); } catch (e) { console.warn(e); }
+}
 function clearForm(){ Object.keys(S.f).filter(k => /^(fac_|p_)/.test(k)).forEach(k => delete S.f[k]); }
 function leerPago(x){
   const monto = r2(S.f.p_monto ?? saldo(x));
