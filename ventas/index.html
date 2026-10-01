@@ -528,23 +528,57 @@ function vPagar(){
 function statsCliente(c){
   const cs = S.cot.filter(x => !x.eliminada && x.cliente && (x.cliente.id === c.id));
   const fac = cs.filter(x => x.estado === "facturada");
-  return {n: cs.length, facturado: r2(fac.reduce((a, x) => a + (Number(x.total) || 0), 0)), saldo: r2(fac.reduce((a, x) => a + Math.max(0, saldo(x)), 0))};
+  const pedidos = cs.filter(x => x.estado === "aprobada" || x.estado === "facturada")
+    .map(x => ({f: (x.factura && x.factura.fecha) || x.fecha, x})).sort((a, b) => a.f.localeCompare(b.f));
+  const ult = pedidos.at(-1) || null;
+  let ciclo = Number(c.cicloDias) || 0, auto = false;
+  if (!ciclo && pedidos.length >= 2) {
+    const gaps = []; for (let k = 1; k < pedidos.length; k++) gaps.push(diffDays(pedidos.at(k).f, pedidos.at(k - 1).f));
+    const g = gaps.filter(d => d > 0); if (g.length) { ciclo = Math.round(g.reduce((a, b) => a + b, 0) / g.length); auto = true; }
+  }
+  if (!ciclo && ult) { ciclo = 30; auto = true; }
+  const prox = ult ? addDays(ult.f, ciclo) : "";
+  const falta = prox ? diffDays(prox, today()) : null;
+  const primera = cs.slice().sort((a, b) => (a.creado || 0) - (b.creado || 0))[0];
+  return {n: cs.length, pedidos: pedidos.length, facturado: r2(fac.reduce((a, x) => a + (Number(x.total) || 0), 0)), saldo: r2(fac.reduce((a, x) => a + Math.max(0, saldo(x)), 0)),
+    ultFecha: ult ? ult.f : "", ultItems: ult ? (ult.x.items || []).map(i => i.cant + " " + i.nombre).join(" · ") : "", ultCot: ult ? ult.x : null,
+    ciclo, auto, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
+}
+function recordatorio(st){
+  if (st.falta == null) return ["Sin pedidos", ""];
+  if (st.falta < 0) return ["Toca pedir · hace " + (-st.falta) + (st.falta === -1 ? " día" : " días"), "b-bad"];
+  if (st.falta === 0) return ["Toca pedir hoy", "b-bad"];
+  if (st.falta <= 7) return ["Próximo pedido en " + st.falta + (st.falta === 1 ? " día" : " días"), "b-warn"];
+  return ["Próximo pedido " + fdate(st.prox), "b-ok"];
+}
+function waRecordatorio(c, st){
+  let tel = String(c.tel || "").replace(/\D/g, ""); if (tel.length === 8) tel = "504" + tel;
+  const txt = `Hola ${c.nombre}, le saluda ${S.me.nombre || "MHAS de Honduras"} de MHAS de Honduras. Su último pedido fue el ${fdate(st.ultFecha)}: ${st.ultItems}. ¿Le preparamos el siguiente? Con gusto le cotizamos.`;
+  return `https://wa.me/${tel}?text=${encodeURIComponent(txt)}`;
 }
 function vClientes(){
-  const q = clean(S.f.cq).toLowerCase();
-  const list = S.cli.filter(c => !q || [c.nombre, c.rtn, c.tel, c.email, c.direccion].join(" ").toLowerCase().includes(q))
-    .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+  const q = clean(S.f.cq).toLowerCase(), fil = S.f.cfil || "todos";
+  const rows = S.cli.map(c => ({c, st: statsCliente(c)}));
+  const toca = rows.filter(r => r.st.falta != null && r.st.falta <= 7).length;
+  const list = rows.filter(({c}) => !q || [c.nombre, c.rtn, c.tel, c.email, c.direccion].join(" ").toLowerCase().includes(q))
+    .filter(({st}) => fil === "todos" || (st.falta != null && st.falta <= 7))
+    .sort((a, b) => fil === "toca" ? a.st.falta - b.st.falta : (a.c.nombre || "").localeCompare(b.c.nombre || ""));
   return `
   <h1>Clientes</h1>
-  <p class="sub">${S.cli.length} ${S.cli.length === 1 ? "cliente" : "clientes"}. Toca uno para editar sus datos.</p>
+  <p class="sub">${S.cli.length} ${S.cli.length === 1 ? "cliente" : "clientes"}. El próximo pedido se calcula con el promedio de días entre sus pedidos (30 días si solo tiene uno); puedes fijarlo en cada cliente.</p>
   <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="cliNuevo">+ Nuevo cliente</button><button class="btn" data-a="cliCsv">Descargar base (Excel)</button></div>
+  <div class="chips" role="group" aria-label="Filtrar clientes">
+    <button data-a="cfil" data-v="todos" aria-pressed="${fil === "todos"}">Todos</button>
+    <button data-a="cfil" data-v="toca" aria-pressed="${fil === "toca"}">Toca pedir${toca ? ` <span class="cnt hot">${toca}</span>` : ""}</button></div>
   <div class="field" style="max-width:360px"><label for="cq">Buscar por nombre, RTN, teléfono o correo</label><input id="cq" data-k="cq" value="${fv("cq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Cliente</th><th>RTN</th><th>WhatsApp</th><th>Correo</th><th class="num">Cotiz.</th><th class="num">Facturado</th><th class="num">Saldo</th></tr></thead><tbody>
-    ${list.map(c => { const st = statsCliente(c); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
-      <td><b>${esc(c.nombre)}</b>${c.direccion ? `<br><small class="muted">${esc(c.direccion)}</small>` : ""}</td><td>${esc(c.rtn || "")}</td><td>${esc(c.tel || "")}</td><td>${esc(c.email || "")}</td>
-      <td class="num">${st.n}</td><td class="num">${L(st.facturado)}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">${q ? "Ningún cliente coincide." : "Todavía no hay clientes."}</p>`}
+  ${list.length ? `<table><thead><tr><th>Cliente</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Creado por</th></tr></thead><tbody>
+    ${list.map(({c, st}) => { const [rt, rc] = recordatorio(st); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
+      <td><b>${esc(c.nombre)}</b><br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
+      <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
+      <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
+      <td class="num">${st.pedidos}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td><td><small>${esc(st.creadoPor || "—")}</small></td></tr>`; }).join("")}
+  </tbody></table>` : `<p class="empty">${q ? "Ningún cliente coincide." : fil === "toca" ? "Ningún cliente tiene pedido pendiente en los próximos 7 días." : "Todavía no hay clientes."}</p>`}
   </div></div>`;
 }
 
@@ -736,12 +770,16 @@ function mCli(){
   if (!c) return "";
   const g = (k, d) => S.f["ce_" + k] ?? d, st = c.id ? statsCliente(c) : null;
   return `<h1 style="padding-right:40px">${c.id ? "Editar cliente" : "Nuevo cliente"}</h1>
-  ${st ? `<p class="sub">${st.n} cotizaciones · facturado ${L(st.facturado)}${st.saldo > 0.005 ? " · debe " + L(st.saldo) : ""}</p>` : ""}
+  ${st ? `<p class="sub">${st.pedidos} pedidos · facturado ${L(st.facturado)}${st.saldo > 0.005 ? " · debe " + L(st.saldo) : ""}${st.creadoPor ? " · creado por " + esc(st.creadoPor) : ""}</p>
+  ${st.ultFecha ? `<div class="panel" style="padding:12px"><b>Último pedido: ${fdate(st.ultFecha)}</b> <span class="muted">(${esc(st.ultCot.numero)})</span><p class="note" style="margin:6px 0">${esc(st.ultItems)}</p>
+    <span class="badge ${recordatorio(st)[1]}">${recordatorio(st)[0]}</span>
+    ${c.tel ? `<div class="actions" style="margin-top:10px"><a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a></div>` : ""}</div>` : ""}` : ""}
   <div class="field"><label for="ce_nombre">Nombre o empresa</label><input id="ce_nombre" data-k="ce_nombre" value="${esc(g("nombre", c.nombre || ""))}" autocapitalize="words"></div>
   <div class="field"><label for="ce_dir">Dirección</label><input id="ce_dir" data-k="ce_dir" value="${esc(g("dir", c.direccion || ""))}"></div>
   <div class="field"><label for="ce_rtn">RTN</label><input id="ce_rtn" data-k="ce_rtn" value="${esc(g("rtn", c.rtn || ""))}" inputmode="numeric"></div>
   <div class="field"><label for="ce_tel">WhatsApp</label><input id="ce_tel" data-k="ce_tel" value="${esc(g("tel", c.tel || ""))}" inputmode="tel"></div>
   <div class="field"><label for="ce_email">Correo</label><input id="ce_email" type="email" data-k="ce_email" value="${esc(g("email", c.email || ""))}" inputmode="email" autocapitalize="off"></div>
+  <div class="field"><label for="ce_ciclo">Pide cada (días)</label><input id="ce_ciclo" type="number" min="0" step="1" inputmode="numeric" data-k="ce_ciclo" value="${esc(g("ciclo", c.cicloDias || ""))}" placeholder="Automático${st && st.auto && st.ultFecha ? " (" + st.ciclo + " días)" : ""}"></div>
   <p class="note">Los cambios aplican a cotizaciones nuevas; las ya hechas conservan los datos con que se crearon.</p>
   <div class="actions"><button class="btn pri big" data-a="cliSave" ${S.busy ? "disabled" : ""}>Guardar cliente</button></div>
   ${c.id && S.admin ? `<div class="actions"><button class="btn danger" data-a="cliDel">Borrar cliente</button></div>` : ""}`;
@@ -1026,7 +1064,7 @@ const A = {
     }
     S.busy = true; draw();
     try {
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid}); cliente.id = ref.id; }
+      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email}); cliente.id = ref.id; }
       const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
@@ -1172,17 +1210,18 @@ const A = {
   mas(){ S.m.mas = true; draw(); },
   async devolver(){ if (!confirm("¿Devolver al vendedor? La cotización vuelve a quedar abierta para editarla.")) return; await upd(doc(db, "cotizaciones", S.m.id), {estado: "cotizada", devuelta: Date.now()}, "Devuelta al vendedor"); },
   waTxt(){ marcarEnviada(); window.open(waLink(S.cot.find(x => x.id === S.m.id) || {}), "_blank", "noopener"); },
+  cfil(v){ S.f.cfil = v; draw(); },
   cliNuevo(){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: null}; draw(); },
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
   async cliSave(){
     const c = S.m.id ? S.cli.find(x => x.id === S.m.id) : null, g = (k, d) => S.f["ce_" + k] ?? d;
     const data = {nombre: clean(g("nombre", c ? c.nombre : "")), direccion: clean(g("dir", c ? c.direccion : "")), rtn: clean(g("rtn", c ? c.rtn : "")),
-      tel: clean(g("tel", c ? c.tel : "")), email: clean(g("email", c ? c.email : ""))};
+      tel: clean(g("tel", c ? c.tel : "")), email: clean(g("email", c ? c.email : "")), cicloDias: Math.max(0, Math.round(Number(g("ciclo", c ? c.cicloDias : 0)) || 0))};
     if (!data.nombre) return toast("Escribe el nombre del cliente.");
     S.busy = true; draw();
     try {
       if (c) await updateDoc(doc(db, "clientes", c.id), data);
-      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: Date.now(), creadoPor: S.me.uid}));
+      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email}));
       Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = null; toast("Cliente guardado");
     } catch (e) { fallo(e, "guardar el cliente"); }
     S.busy = false; draw();
@@ -1190,9 +1229,10 @@ const A = {
   async cliDel(){ if (!confirm("¿Borrar este cliente? Sus cotizaciones no se borran.")) return; try { await deleteDoc(doc(db, "clientes", S.m.id)); S.m = null; toast("Cliente borrado"); } catch (e) { fallo(e, "borrar el cliente"); } draw(); },
   cliCsv(){
     const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-    const rows = [["Nombre", "RTN", "Dirección", "WhatsApp", "Correo", "Cotizaciones", "Facturado (L.)", "Saldo pendiente (L.)", "Creado"]]
+    const rows = [["Nombre", "RTN", "Dirección", "WhatsApp", "Correo", "Creado por", "Fecha de creación", "Pedidos", "Último pedido (fecha)", "Último pedido (productos)", "Pide cada (días)", "Próximo pedido", "Facturado (L.)", "Saldo pendiente (L.)"]]
       .concat(S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")).map(c => { const st = statsCliente(c);
-        return [c.nombre, c.rtn, c.direccion, c.tel, c.email, st.n, st.facturado.toFixed(2), st.saldo.toFixed(2), c.creado ? fdate(ymd(new Date(c.creado))) : ""]; }));
+        return [c.nombre, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, fdate(st.ultFecha), st.ultItems,
+          st.ultFecha ? st.ciclo : "", fdate(st.prox), st.facturado.toFixed(2), st.saldo.toFixed(2)]; }));
     const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "clientes-mhas-" + today() + ".csv";
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
