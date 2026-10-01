@@ -211,8 +211,10 @@ const FORMA_TXT = {"Efectivo": "Pago en efectivo", "Contra entrega": "Pago contr
 const formaTxt = f => FORMA_TXT[f] || f || "";
 const sinIsv = p => r2((Number(p) || 0) / 1.15);
 const LU = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: Math.abs(n) < 1 ? 4 : 2});
-const uni = p => Math.max(1, Number(p.unidades) || 1);
-const unidadDe = p => p.unidad || "unidad";
+const SEEDMAP = Object.fromEntries(SEED.map(p => [p.id, p]));
+const uni = p => Math.max(1, Number(p.unidades) || Number((SEEDMAP[p.id] || {}).unidades) || 1);
+const unidadDe = p => p.unidad || (SEEDMAP[p.id] || {}).unidad || "unidad";
+const presDe = p => p.presentacion || (SEEDMAP[p.id] || {}).presentacion || "";
 const plural = (n, u) => n === 1 ? u : (u === "clisé" ? "clisés" : u + "s");
 function calc(items){
   const lines = (items || []).map(i => {
@@ -353,10 +355,10 @@ function vCotizar(){
       <select id="psel" data-k="psel" data-redraw="1"><option value="">Elige un producto…</option>
       ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(unidadDe(p))}</option>`).join("")}</optgroup>`).join("")}
       </select></div>
-    ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(psel.presentacion || "")} = ${L(psel.precio)} con ISV</p>
+    ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     ${uni(psel) > 1 ? `<div class="chips" role="group" aria-label="Cantidad en">
       <button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(plural(2, unidadDe(psel)))}</button>
-      <button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc((psel.presentacion || "paquete").toLowerCase())}</button></div>` : ""}` : ""}
+      <button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc((presDe(psel) || "paquete").toLowerCase())}</button></div>` : ""}` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
       <button class="btn pri grow" data-a="addSel" ${psel ? "" : "disabled"}>Agregar</button>
@@ -540,24 +542,16 @@ function vAjustes(){
   </div>
   <div class="panel">
     <h2>Productos y precios</h2>
-    ${S.prod.length ? `<p class="note">El precio es con ISV por presentación (caja o rollo). El sistema calcula solo el precio por unidad. Las cotizaciones ya hechas conservan su precio.</p>
-    <div class="scroll"><table><thead><tr><th>Producto</th><th>Presentación</th><th class="num">Precio con ISV</th><th class="num">Unitario sin ISV</th><th>Activo</th></tr></thead><tbody>
-      ${S.prod.map(p => `<tr><td>${esc(p.nombre)}</td><td class="muted">${esc(p.presentacion || "")}</td>
-        <td class="num"><input class="pin" type="number" min="0" step="0.01" data-k="pp_${esc(p.id)}" value="${esc(S.f["pp_" + p.id] ?? p.precio)}" aria-label="Precio de ${esc(p.nombre)}"></td><td class="num muted">${LU(p.precio / 1.15 / uni(p))}</td>
-        <td><input type="checkbox" style="width:20px;min-height:20px" data-k="pa_${esc(p.id)}" ${(S.f["pa_" + p.id] ?? (p.activo !== false)) ? "checked" : ""} aria-label="Activo"></td></tr>`).join("")}
-    </tbody></table></div>
-    <div class="actions"><button class="btn pri" data-a="savePrecios" ${S.busy ? "disabled" : ""}>Guardar precios</button></div>` : ""}
-    <p class="note">${S.prod.length ? "Para reemplazar todo con la data maestra" : "Todavía no hay productos. Carga la data maestra"} (${SEED.length} productos con precio por unidad y presentación).</p>
-    <div class="actions"><button class="btn${S.prod.length ? "" : " pri"}" data-a="seed" ${S.busy ? "disabled" : ""}>${S.prod.length ? "Actualizar con data maestra" : "Cargar catálogo"}</button></div>
+    <p class="note">Toca un producto para editarlo. El precio con ISV es por presentación (caja o rollo); el unitario sin ISV se calcula solo.</p>
+    <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button></div>
+    ${S.prod.length ? `<div class="scroll"><table><thead><tr><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th></tr></thead><tbody>
+      ${S.prod.map(p => `<tr class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"${p.activo === false ? ' style="opacity:.5"' : ""}>
+        <td>${esc(p.nombre)}${p.activo === false ? ' <span class="badge">Inactivo</span>' : ""}</td><td class="muted">${esc(presDe(p))}</td>
+        <td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td></tr>`).join("")}
+    </tbody></table></div>` : ""}
     <hr class="sep">
-    <h2>Agregar producto</h2>
-    <div class="row">
-      <div class="field" style="flex:2 1 220px"><label for="nn">Nombre</label><input id="nn" data-k="np_nombre" value="${fv("np_nombre")}"></div>
-      <div class="field"><label for="nc">Categoría</label><input id="nc" data-k="np_cat" value="${fv("np_cat")}" list="cats">
-        <datalist id="cats">${[...new Set(S.prod.map(p => p.categoria))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
-      <div class="field"><label for="npr">Precio (L.)</label><input id="npr" type="number" min="0" step="0.01" data-k="np_precio" value="${fv("np_precio")}"></div>
-    </div>
-    <div class="actions"><button class="btn" data-a="addProd" ${S.busy ? "disabled" : ""}>Agregar producto</button></div>
+    <p class="note">${S.prod.length ? "Reemplazar todo con la data maestra" : "Todavía no hay productos. Carga la data maestra"} (${SEED.length} productos).</p>
+    <div class="actions"><button class="btn${S.prod.length ? "" : " pri"}" data-a="seed" ${S.busy ? "disabled" : ""}>${S.prod.length ? "Actualizar con data maestra" : "Cargar catálogo"}</button></div>
   </div>`;
 }
 
@@ -565,7 +559,7 @@ function vAjustes(){
 function drawModal(){
   const md = $("#modal");
   if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "cot" ? mCot() : mCxp();
+  const html = S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : mCxp();
   if (!html) { md.classList.remove("open"); return; }
   $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
   md.classList.add("open");
@@ -643,6 +637,30 @@ function mCot(){
     ${puedeCobrar ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
     ${puedeAnular ? `<button class="btn danger" data-a="anular">Anular</button>` : ""}
   </div>` : ""}`;
+}
+function mProd(){
+  const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : {};
+  if (!p) return "";
+  const g = (k, d) => S.f["pe_" + k] ?? d;
+  const unidades = g("unidades", p.id ? uni(p) : 1), precio = g("precio", p.precio ?? "");
+  const unit = g("unit", precio !== "" ? Math.round(Number(precio) / 1.15 / (Number(unidades) || 1) * 10000) / 10000 : "");
+  return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
+  <div class="field"><label for="pe_nombre">Nombre (así sale en la cotización)</label><input id="pe_nombre" data-k="pe_nombre" value="${esc(g("nombre", p.nombre || ""))}"></div>
+  <div class="field"><label for="pe_cat">Categoría</label><input id="pe_cat" data-k="pe_cat" list="cats" value="${esc(g("cat", p.categoria || ""))}">
+    <datalist id="cats">${[...new Set(S.prod.map(x => x.categoria).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
+  <div class="row">
+    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" data-k="pe_unidad" list="unids" value="${esc(g("unidad", p.id ? unidadDe(p) : "unidad"))}" placeholder="rollo, etiqueta, caja…">
+      <datalist id="unids">${["rollo", "etiqueta", "caja", "unidad", "clisé", "paquete"].map(u => `<option value="${u}">`).join("")}</datalist></div>
+    <div class="field"><label for="pe_pres">Presentación</label><input id="pe_pres" data-k="pe_pres" value="${esc(g("pres", p.id ? presDe(p) : ""))}" placeholder="Caja de 50, Rollo de 500…"></div>
+  </div>
+  <div class="field"><label for="pe_unidades">Unidades por presentación</label><input id="pe_unidades" type="number" min="1" step="1" inputmode="numeric" data-k="pe_unidades" value="${esc(unidades)}"></div>
+  <div class="row">
+    <div class="field"><label for="pe_precio">Precio con ISV (presentación)</label><input id="pe_precio" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_precio" value="${esc(precio)}"></div>
+    <div class="field"><label for="pe_unit">Precio unitario sin ISV</label><input id="pe_unit" type="number" min="0" step="any" inputmode="decimal" data-k="pe_unit" value="${esc(unit)}"></div>
+  </div>
+  <p class="note">Si cambias uno de los dos precios, el otro se calcula solo.</p>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>
+  <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
 function mCxp(){
   const x = S.cxp.find(y => y.id === S.m.id);
@@ -997,30 +1015,24 @@ const A = {
     } catch (e) { fallo(e, "cargar el catálogo"); }
     S.busy = false; draw();
   },
-  async savePrecios(){
-    S.busy = true; draw(); let n = 0;
-    try {
-      for (const p of S.prod) {
-        const np = S.f["pp_" + p.id], na = S.f["pa_" + p.id];
-        const ch = {};
-        if (np != null && r2(np) !== r2(p.precio)) ch.precio = r2(np);
-        if (na != null && na !== (p.activo !== false)) ch.activo = na;
-        if (Object.keys(ch).length) { await updateDoc(doc(db, "productos", p.id), ch); n++; }
-      }
-      Object.keys(S.f).filter(k => k.startsWith("pp_") || k.startsWith("pa_")).forEach(k => delete S.f[k]);
-      toast(n ? n + " producto(s) actualizados" : "No había cambios");
-    } catch (e) { fallo(e, "guardar los precios"); }
-    S.busy = false; draw();
-  },
-  async addProd(){
-    const nom = clean(S.f.np_nombre), precio = r2(S.f.np_precio);
-    if (!nom || !(precio > 0)) return toast("Escribe nombre y precio.");
-    const id = "p-" + nom.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-    if (await upd(doc(db, "productos", id), {nombre: nom, categoria: clean(S.f.np_cat) || "Otros", precio, activo: true, orden: 999}, "Producto agregado", true))
-      ["np_nombre", "np_cat", "np_precio"].forEach(k => delete S.f[k]);
-    draw();
+  prodNuevo(){ clearProd(); S.m = {type: "prod", id: null}; draw(); },
+  prodEdit(v){ clearProd(); S.m = {type: "prod", id: v}; draw(); },
+  async prodSave(){
+    const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : null;
+    const g = (k, d) => S.f["pe_" + k] ?? d;
+    const nombre = clean(g("nombre", p ? p.nombre : ""));
+    const unidades = Math.max(1, Math.round(Number(g("unidades", p ? uni(p) : 1)) || 1));
+    const precio = r2(g("precio", p ? p.precio : 0));
+    if (!nombre) return toast("Escribe el nombre del producto.");
+    if (!(precio > 0)) return toast("Escribe el precio.");
+    const data = {nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
+      presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true)};
+    const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+    if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = 999; }
+    if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) { clearProd(); S.m = null; draw(); }
   }
 };
+function clearProd(){ Object.keys(S.f).filter(k => k.startsWith("pe_")).forEach(k => delete S.f[k]); }
 function clearForm(){ Object.keys(S.f).filter(k => /^(fac_|p_)/.test(k)).forEach(k => delete S.f[k]); }
 function leerPago(x){
   const monto = r2(S.f.p_monto ?? saldo(x));
@@ -1071,6 +1083,11 @@ document.addEventListener("input", e => {
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
   if (k) {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
+    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades") {
+      const un = Math.max(1, Number(($("#pe_unidades") || {}).value) || 1);
+      if (k === "pe_unit") { const v = r2(Number(t.value) * 1.15 * un); S.f.pe_precio = t.value === "" ? "" : v; const o = $("#pe_precio"); if (o) o.value = S.f.pe_precio; }
+      else { const pr = Number(($("#pe_precio") || {}).value); const v = Math.round(pr / 1.15 / un * 10000) / 10000; S.f.pe_unit = isFinite(v) && pr ? v : ""; const o = $("#pe_unit"); if (o) o.value = S.f.pe_unit; }
+    }
     if (k === "bq") draw();
   }
 });
