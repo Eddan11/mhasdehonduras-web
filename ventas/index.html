@@ -398,8 +398,11 @@ function totalsHtml(cc, simple){
 /* ---------- vista: cotizaciones ---------- */
 function vCotizaciones(){
   const F = {activas: "Abiertas", cotizada: "Cotizadas", aprobada: "Aprobadas", facturada: "Facturadas", debe: "Con saldo", anulada: "Anuladas", todas: "Todas"};
+  if (S.admin) F.eliminadas = "Eliminadas";
   const q = clean(S.f.bq).toLowerCase();
   let list = S.cot.filter(c => {
+    if (S.filtro === "eliminadas") return !!c.eliminada;
+    if (c.eliminada) return false;
     switch (S.filtro) {
       case "activas": return c.estado === "cotizada" || c.estado === "aprobada";
       case "debe": return c.estado === "facturada" && saldo(c) > 0.005;
@@ -427,7 +430,7 @@ function vCotizaciones(){
 
 /* ---------- vista: por cobrar ---------- */
 function vCobros(){
-  const fac = S.cot.filter(c => c.estado === "facturada");
+  const fac = S.cot.filter(c => c.estado === "facturada" && !c.eliminada);
   const pend = fac.filter(c => saldo(c) > 0.005).sort((a, b) => (a.vence || "").localeCompare(b.vence || ""));
   const porCobrar = r2(pend.reduce((a, c) => a + saldo(c), 0));
   const vencido = r2(pend.filter(c => c.vence && diffDays(today(), c.vence) > 7).reduce((a, c) => a + saldo(c), 0));
@@ -607,6 +610,8 @@ function mCot(){
   const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
   return `
   <div class="bigstub">${esc(c.numero)}</div>
+  ${c.eliminada ? `<p class="note" style="color:var(--bad);font-weight:600">Eliminada el ${fdate(ymd(new Date(c.eliminadaEn || Date.now())))}. No aparece en listas ni reportes.</p>
+    ${S.admin ? `<div class="actions" style="margin-top:6px"><button class="btn pri" data-a="restaurar">Restaurar</button><button class="btn danger" data-a="borrarDef">Borrar para siempre</button></div>` : ""}` : ""}
   <div style="margin-top:8px"><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}</div>
   <dl class="kv">
     <dt>Cliente</dt><dd>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
@@ -636,6 +641,7 @@ function mCot(){
     ${puedeFacturar ? `<button class="btn pri" data-a="modeFac">Registrar factura</button>` : ""}
     ${puedeCobrar ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
     ${puedeAnular ? `<button class="btn danger" data-a="anular">Anular</button>` : ""}
+    ${S.admin && !c.eliminada ? `<button class="btn danger" data-a="eliminar">Eliminar</button>` : ""}
   </div>` : ""}`;
 }
 function mProd(){
@@ -935,6 +941,16 @@ const A = {
   modeVer(){ S.m.mode = "ver"; clearForm(); draw(); },
   modeFac(){ S.m.mode = "factura"; clearForm(); draw(); },
   modePag(){ S.m.mode = "pago"; clearForm(); draw(); },
+  async eliminar(){
+    if (!confirm("¿Eliminar esta cotización? Se mueve a \"Eliminadas\" y puedes restaurarla después.")) return;
+    if (await upd(doc(db, "cotizaciones", S.m.id), {eliminada: true, eliminadaEn: Date.now(), eliminadaPor: S.me.uid}, "Cotización eliminada. Puedes restaurarla desde el filtro Eliminadas.")) { S.m = null; draw(); }
+  },
+  async restaurar(){ if (await upd(doc(db, "cotizaciones", S.m.id), {eliminada: false, eliminadaEn: null, eliminadaPor: null}, "Cotización restaurada")) { S.filtro = "todas"; draw(); } },
+  async borrarDef(){
+    if (!confirm("¿Borrar esta cotización para siempre? Esto no se puede deshacer.")) return;
+    try { await deleteDoc(doc(db, "cotizaciones", S.m.id)); S.m = null; toast("Cotización borrada para siempre"); } catch (e) { fallo(e, "borrar"); }
+    draw();
+  },
   async aprobar(){ await upd(doc(db, "cotizaciones", S.m.id), {estado: "aprobada", aprobada: Date.now()}, "Marcada como aprobada"); },
   async anular(){ if (!confirm("¿Anular esta cotización? No se puede deshacer.")) return; if (await upd(doc(db, "cotizaciones", S.m.id), {estado: "anulada", anulada: Date.now()}, "Cotización anulada")) { S.m = null; draw(); } },
   async saveFac(){
