@@ -544,6 +544,31 @@ function statsCliente(c){
     ultFecha: ult ? ult.f : "", ultItems: ult ? (ult.x.items || []).map(i => i.cant + " " + i.nombre).join(" · ") : "", ultCot: ult ? ult.x : null,
     ciclo, auto, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
 }
+let migrando = false;
+function migrarClientes(){
+  if (migrando) return;
+  const sin = S.cli.filter(c => !c.asignado);
+  if (!sin.length) return;
+  migrando = true;
+  setTimeout(async () => {
+    try {
+      const b = writeBatch(db); let n = 0;
+      S.cli.filter(c => !c.asignado).forEach(c => {
+        const prim = S.cot.filter(x => x.cliente && x.cliente.id === c.id).sort((a, z) => (a.creado || 0) - (z.creado || 0))[0];
+        const dueno = c.creadoPor || (prim && prim.vendedor) || S.me.uid;
+        b.update(doc(db, "clientes", c.id), {asignado: dueno}); n++;
+      });
+      if (n) await b.commit();
+    } catch (e) { console.error(e); }
+    migrando = false;
+  }, 2500);
+}
+const nomUsuario = id => (S.usuarios.find(u => u.id === id) || {}).nombre || "";
+const normNom = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+function duplicadoDe(c){
+  return S.cli.find(o => o.id !== c.id && o.asignado !== c.asignado &&
+    ((c.rtn && o.rtn && c.rtn.replace(/\D/g, "") === o.rtn.replace(/\D/g, "")) || (normNom(c.nombre) && normNom(c.nombre) === normNom(o.nombre))));
+}
 function recordatorio(st){
   if (st.falta == null) return ["Sin pedidos", ""];
   if (st.falta < 0) return ["Toca pedir · hace " + (-st.falta) + (st.falta === -1 ? " día" : " días"), "b-bad"];
@@ -572,12 +597,13 @@ function vClientes(){
     <button data-a="cfil" data-v="toca" aria-pressed="${fil === "toca"}">Toca pedir${toca ? ` <span class="cnt hot">${toca}</span>` : ""}</button></div>
   <div class="field" style="max-width:360px"><label for="cq">Buscar por nombre, RTN, teléfono o correo</label><input id="cq" data-k="cq" value="${fv("cq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Cliente</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Creado por</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>Cliente</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Vendedor</th></tr></thead><tbody>
     ${list.map(({c, st}) => { const [rt, rc] = recordatorio(st); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
       <td><b>${esc(c.nombre)}</b><br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
       <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
       <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
-      <td class="num">${st.pedidos}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td><td><small>${esc(st.creadoPor || "—")}</small></td></tr>`; }).join("")}
+      <td class="num">${st.pedidos}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td>
+      <td><small>${esc(nomUsuario(c.asignado) || st.creadoPor || "—")}</small>${S.admin && duplicadoDe(c) ? `<br><span class="badge b-bad">Posible duplicado</span>` : ""}</td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">${q ? "Ningún cliente coincide." : fil === "toca" ? "Ningún cliente tiene pedido pendiente en los próximos 7 días." : "Todavía no hay clientes."}</p>`}
   </div></div>`;
 }
@@ -774,6 +800,10 @@ function mCli(){
   ${st.ultFecha ? `<div class="panel" style="padding:12px"><b>Último pedido: ${fdate(st.ultFecha)}</b> <span class="muted">(${esc(st.ultCot.numero)})</span><p class="note" style="margin:6px 0">${esc(st.ultItems)}</p>
     <span class="badge ${recordatorio(st)[1]}">${recordatorio(st)[0]}</span>
     ${c.tel ? `<div class="actions" style="margin-top:10px"><a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a></div>` : ""}</div>` : ""}` : ""}
+  ${S.admin ? `<div class="field"><label for="ce_asignado">Vendedor asignado (solo él lo ve)</label><select id="ce_asignado" data-k="ce_asignado">
+    ${S.usuarios.filter(u => u.id === S.me.uid || u.rol === "vendedor" || u.rol === "facturador").map(u => `<option value="${esc(u.id)}" ${(g("asignado", c.asignado || S.me.uid)) === u.id ? "selected" : ""}>${esc(u.nombre || u.email)}${u.id === S.me.uid ? " (tú)" : ""}</option>`).join("")}
+  </select></div>
+  ${c.id && duplicadoDe(c) ? `<p class="note" style="color:var(--bad);font-weight:600">Posible duplicado: ${esc(nomUsuario(duplicadoDe(c).asignado) || "otro vendedor")} también tiene a “${esc(duplicadoDe(c).nombre)}”${duplicadoDe(c).rtn ? " (RTN " + esc(duplicadoDe(c).rtn) + ")" : ""}.</p>` : ""}` : ""}
   <div class="field"><label for="ce_nombre">Nombre o empresa</label><input id="ce_nombre" data-k="ce_nombre" value="${esc(g("nombre", c.nombre || ""))}" autocapitalize="words"></div>
   <div class="field"><label for="ce_dir">Dirección</label><input id="ce_dir" data-k="ce_dir" value="${esc(g("dir", c.direccion || ""))}"></div>
   <div class="field"><label for="ce_rtn">RTN</label><input id="ce_rtn" data-k="ce_rtn" value="${esc(g("rtn", c.rtn || ""))}" inputmode="numeric"></div>
@@ -959,7 +989,8 @@ function startData(){
   const fact = r === "admin" || r === "facturador";
   dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
   dataSubs.push(onSnapshot(collection(db, "productos"), q => { S.prod = mapDocs(q).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || (a.nombre || "").localeCompare(b.nombre || "")); render(); }, onErr));
-  dataSubs.push(onSnapshot(collection(db, "clientes"), q => { S.cli = mapDocs(q); render(); }, onErr));
+  const cliQ = fact ? collection(db, "clientes") : query(collection(db, "clientes"), where("asignado", "==", S.me.uid));
+  dataSubs.push(onSnapshot(cliQ, q => { S.cli = mapDocs(q); if (r === "admin") migrarClientes(); render(); }, onErr));
   const cq = fact ? query(collection(db, "cotizaciones"), orderBy("creado", "desc"), limit(1000))
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
@@ -1064,7 +1095,7 @@ const A = {
     }
     S.busy = true; draw();
     try {
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email}); cliente.id = ref.id; }
+      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
       const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
@@ -1220,8 +1251,8 @@ const A = {
     if (!data.nombre) return toast("Escribe el nombre del cliente.");
     S.busy = true; draw();
     try {
-      if (c) await updateDoc(doc(db, "clientes", c.id), data);
-      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email}));
+      if (c) { if (S.admin && S.f.ce_asignado != null && S.f.ce_asignado !== c.asignado) data.asignado = S.f.ce_asignado; await updateDoc(doc(db, "clientes", c.id), data); }
+      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.f.ce_asignado || S.me.uid}));
       Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = null; toast("Cliente guardado");
     } catch (e) { fallo(e, "guardar el cliente"); }
     S.busy = false; draw();
