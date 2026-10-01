@@ -1,1082 +1,521 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#14264B">
-<meta name="robots" content="noindex">
-<title>MHAS · Ventas</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MHAS Ventas">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MHAS de Honduras | Rollos térmicos, etiquetas y empaque en San Pedro Sula</title>
+<meta name="description" content="Proveedores de rollos térmicos y químicos, formas continuas, etiquetas, ribbons, clisés, stretch film y cinta adhesiva. Entrega inmediata en San Pedro Sula y envíos a todo Honduras.">
+<link rel="canonical" href="https://www.mhasdehonduras.com/">
+<link rel="icon" href="logo.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MHAS de Honduras — Catálogo de productos">
+<meta property="og:description" content="Rollos para punto de venta, etiquetas y empaque. Cotice por WhatsApp.">
+<meta property="og:image" content="https://www.mhasdehonduras.com/logo.png">
+<meta property="og:url" content="https://www.mhasdehonduras.com/">
+<meta name="theme-color" content="#1e3356">
+<meta name="facebook-domain-verification" content="c1z7d1wfhugb3iisxnvwbazmay4124" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
+<!-- Meta Pixel (conjunto de datos MHAS de Honduras) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq.disablePushState=true;
+fbq('init','28383545161288464');
+fbq('track','PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=28383545161288464&ev=PageView&noscript=1"></noscript>
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"LocalBusiness","name":"MHAS de Honduras","url":"https://www.mhasdehonduras.com/","logo":"https://www.mhasdehonduras.com/logo.png","telephone":"+504 2540-1090","email":"ventas@mhasdehonduras.com","address":{"@type":"PostalAddress","streetAddress":"33 calle, zona El Polvorín","addressLocality":"San Pedro Sula","addressRegion":"Cortés","postalCode":"21104","addressCountry":"HN"},"areaServed":"HN","sameAs":["https://www.facebook.com/profile.php?id=61567458963508","https://www.instagram.com/mhasdhonduras/"]}
+</script>
+
 <style>
-:root{
-  --paper:#F5F6F3;--card:#FFFFFF;--ink:#172033;--muted:#5B6474;--line:#DCE0E6;--chip:#EEF1F5;
-  --navy:#14264B;--gold:#E0A526;--accent:#14264B;--on-accent:#FFFFFF;
-  --ok:#1E7A4B;--ok-bg:#E4F3EA;--warn:#8A5200;--warn-bg:#FCF1DC;--bad:#B42318;--bad-bg:#FBE7E5;
-  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#0E1420;--card:#161E2E;--ink:#E8ECF2;--muted:#9AA4B5;--line:#2A3447;--chip:#1F2A3F;
-  --navy:#0B1630;--gold:#F0B93A;--accent:#F0B93A;--on-accent:#172033;
-  --ok:#5CCB8F;--ok-bg:#15301F;--warn:#F0B93A;--warn-bg:#33270E;--bad:#FF8A7E;--bad-bg:#3A1714;}}
-:root[data-theme="dark"]{
-  --paper:#0E1420;--card:#161E2E;--ink:#E8ECF2;--muted:#9AA4B5;--line:#2A3447;--chip:#1F2A3F;
-  --navy:#0B1630;--gold:#F0B93A;--accent:#F0B93A;--on-accent:#172033;
-  --ok:#5CCB8F;--ok-bg:#15301F;--warn:#F0B93A;--warn-bg:#33270E;--bad:#FF8A7E;--bad-bg:#3A1714;}
-*,*::before,*::after{box-sizing:inherit}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Archivo,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
-button,input,select,textarea{font:inherit;color:inherit}
-header{background:var(--navy);color:#fff;border-bottom:4px solid var(--gold)}
-.hwrap{max-width:1040px;margin:0 auto;padding:14px 18px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
-.brand{font-weight:800;font-size:20px;letter-spacing:-.01em;margin-right:auto}
-.brand span{color:var(--gold);font-weight:600}
-.who{display:flex;align-items:center;gap:8px;font-size:13px;opacity:.92}
-.who img{width:26px;height:26px;border-radius:50%}
-nav{max-width:1040px;margin:0 auto;padding:10px 12px 0;display:flex;gap:2px;overflow-x:auto}
-nav button{background:none;border:0;color:#C9D3E6;padding:10px 14px 12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;white-space:nowrap}
-nav button[aria-current="page"]{background:var(--paper);color:var(--ink)}
-nav button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
-main{max-width:1040px;margin:0 auto;padding:22px 18px 80px}
-h1{font-size:24px;line-height:1.2;margin:0 0 4px;font-weight:800;letter-spacing:-.015em}
-h2{font-size:17px;margin:0 0 12px;font-weight:700}
-.sub{color:var(--muted);margin:0 0 20px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media (max-width:760px){.grid2{grid-template-columns:1fr}}
-label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 4px}
-.field{margin-bottom:12px}
-input,select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 12px;min-height:42px}
-textarea{min-height:70px;resize:vertical}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-.row>.field{flex:1 1 150px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 14px;min-height:40px;font-weight:600;cursor:pointer;text-decoration:none}
-.btn:hover{border-color:var(--muted)}
-.btn.pri{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.btn.danger{color:var(--bad)}
-.btn.sm{min-height:32px;padding:4px 10px;font-size:13px}
-.btn:disabled{opacity:.5;cursor:default}
-.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
-tr:last-child td{border-bottom:0}
-.num{text-align:right;white-space:nowrap}
-tr.click{cursor:pointer}
-tr.click:hover td{background:var(--chip)}
-.stub{display:inline-block;font-weight:700;letter-spacing:.02em;padding:2px 8px 2px 7px;border-left:3px solid var(--gold);background:var(--chip);border-radius:0 6px 6px 0;white-space:nowrap}
-.bigstub{font-size:26px;font-weight:800;letter-spacing:.01em;border-left:5px solid var(--gold);padding:2px 0 2px 12px;line-height:1.15}
-.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
-.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--chip);color:var(--ink)}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.chips button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer}
-.chips button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-@media (max-width:620px){.stats{grid-template-columns:1fr}}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-.stat b{display:block;font-size:22px;font-weight:800}
-.stat span{font-size:13px;color:var(--muted)}
-.stat.alert b{color:var(--bad)}
-.plist{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
-.pitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
-.pitem:last-child{border-bottom:0}
-.pitem .n{flex:1;min-width:0}
-.pitem small{color:var(--muted)}
-.qty{width:74px;min-height:36px;padding:6px 8px;text-align:right}
-.pin{width:110px;min-height:36px;padding:6px 8px;text-align:right}
-.totals{margin-left:auto;max-width:300px}
-.totals div{display:flex;justify-content:space-between;padding:3px 0}
-.totals .t{font-weight:800;font-size:18px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
-.empty{color:var(--muted);text-align:center;padding:28px 12px}
-.note{font-size:13px;color:var(--muted)}
-.msg{padding:40px 20px;text-align:center;max-width:520px;margin:40px auto}
-#modal{position:fixed;inset:0;background:rgba(10,15,25,.55);display:none;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 24px) 12px 24px;overflow-y:auto;z-index:20}
-#modal.open{display:flex}
-.sheet{background:var(--card);border-radius:16px;width:100%;max-width:720px;padding:20px;position:relative}
-.x{position:absolute;top:12px;right:12px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:12px 0}
-.kv dt{color:var(--muted)}.kv dd{margin:0}
-.sep{border:0;border-top:1px solid var(--line);margin:16px 0}
-#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;display:none;z-index:30;max-width:90vw}
-.muted{color:var(--muted)}
-@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}}
+:root{--navy:#1e3356;--navy-2:#0f2038;--orange:#e35712;--gold:#ffa60f;--ink:#1c2533;--muted:#5b6573;--line:#e3e8ef;--bg:#ffffff;--soft:#f4f6fa;--wa:#1f9e55;color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{overflow-x:hidden;font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;font-size:17px}
+h1,h2,h3{font-family:"Poppins",system-ui,sans-serif;color:var(--navy);line-height:1.2}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:10px;font-weight:600;text-decoration:none;font-size:1rem;border:0;cursor:pointer;transition:filter .15s,transform .15s}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(1px)}
+.btn svg{width:20px;height:20px;fill:currentColor;flex:none}
+.btn-wa{background:var(--wa);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.6)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
 
-.authbox{max-width:440px;margin:30px auto}
-.authbox a{color:var(--accent);font-weight:600}
-.out{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:4px 10px;font-weight:600;cursor:pointer;margin-left:6px}
+/* header */
+header{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
+.nav img{height:44px;width:auto}
+.nav ul{display:flex;gap:26px;list-style:none;font-weight:600}
+.nav ul a{text-decoration:none;color:var(--navy)}
+.nav ul a:hover{color:var(--orange)}
+.nav .btn{padding:9px 16px;font-size:.95rem}
+@media(max-width:820px){.nav ul{display:none}}
 
-input,select,textarea{font-size:16px}
-.narrow{max-width:680px;margin:0 auto}
-.item{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--paper)}
-.ihead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.irow{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:10px;flex-wrap:wrap}
-.step{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
-.step button{width:44px;min-height:44px;border:0;background:var(--chip);font-size:20px;font-weight:700;cursor:pointer}
-.step input{width:96px;font-weight:700;border:0;border-radius:0;text-align:center;min-height:44px;padding:0 4px}
-.addrow{display:flex;gap:10px;align-items:stretch}
-.grow{flex:1}
-.mini{display:block;font-size:11px;margin:0 0 2px;color:var(--muted);font-weight:600;text-align:left}
-.dsc{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.dsc .mini{width:100%}
-.dsc .pin{width:110px;min-height:44px}
-.pct{font-weight:700;color:var(--muted);min-width:44px}
-.cta{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);margin-top:8px;z-index:5}
-.btn.big{width:100%;min-height:54px;font-size:17px;border-radius:12px;box-shadow:0 6px 18px rgba(10,20,40,.18)}
+/* hero */
+.hero{background:radial-gradient(120% 140% at 0% 0%,#2d4664 0%,var(--navy-2) 70%);color:#fff;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding-top:64px;padding-bottom:64px}
+.hero h1{color:#fff;font-size:clamp(2rem,4.4vw,3.1rem);margin-bottom:16px}
+.hero h1 span{color:var(--gold)}
+.hero p{color:#d6dde6;font-size:1.15rem;max-width:520px;margin-bottom:28px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px}
+.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.hero-grid img{background:#fff;border-radius:14px;width:100%;height:auto;aspect-ratio:1;object-fit:cover}
+
+.tag{display:inline-block;background:rgba(255,166,15,.15);color:var(--gold);font-weight:600;font-size:.85rem;padding:5px 12px;border-radius:99px;margin-bottom:18px;letter-spacing:.3px}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr;padding-top:44px;padding-bottom:44px}.hero-grid{max-width:420px}}
+
+/* beneficios */
+.benefits{background:var(--soft);border-bottom:1px solid var(--line)}
+.benefits .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding-top:26px;padding-bottom:26px}
+.benefit{display:flex;gap:12px;align-items:flex-start}
+.benefit .ic{flex:none;width:44px;height:44px;border-radius:50%;background:var(--orange);display:grid;place-items:center}
+.benefit .ic svg{width:22px;height:22px;fill:#fff}
+.benefit b{display:block;color:var(--navy);font-family:"Poppins",sans-serif;font-size:.98rem}
+.benefit span{color:var(--muted);font-size:.95rem}
+@media(max-width:860px){.benefits .wrap{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.benefits .wrap{grid-template-columns:1fr}}
+
+/* productos */
+section{padding:64px 0}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+.head h2{font-size:clamp(1.6rem,3vw,2.2rem)}
+.head p{color:var(--muted);max-width:560px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:30px}
+.chip{border:1.5px solid var(--line);background:#fff;color:var(--navy);padding:8px 14px;border-radius:99px;font-weight:600;font-size:.95rem;cursor:pointer;font-family:inherit}
+.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.cat{margin-bottom:44px}
+.cat h3{font-size:1.25rem;margin-bottom:4px}
+.cat>p{color:var(--muted);margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.card{border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:#fff;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 10px 28px rgba(30,51,86,.12);transform:translateY(-2px)}
+.card img{width:100%;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;padding:14px;border-bottom:1px solid var(--line)}
+.card .body{padding:16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card h4{font-family:"Poppins",sans-serif;color:var(--navy);font-size:1.02rem;line-height:1.25}
+.card .sub{color:var(--orange);font-weight:600;font-size:.92rem}
+.card .desc{color:var(--muted);font-size:.95rem;flex:1}
+.card .btn{margin-top:10px;padding:10px 14px;font-size:.95rem}
+
+/* custom */
+.custom{background:var(--navy);color:#fff;border-radius:18px;padding:34px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;border:2px solid var(--gold)}
+.custom h3{color:#fff;font-size:1.4rem;margin-bottom:6px}
+.custom p{color:#d6dde6}
+
+/* catálogo */
+.pdf{background:var(--soft)}
+.pdf .wrap{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:center}
+.pdf .cover{width:190px;border-radius:10px;box-shadow:0 12px 30px rgba(15,32,56,.25)}
+.pdf h2{margin-bottom:8px}.pdf p{color:var(--muted);margin-bottom:20px;max-width:560px}
+@media(max-width:640px){.pdf .wrap{grid-template-columns:1fr}.pdf .cover{width:150px}}
+
+/* contacto */
+.contact .wrap{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.clist{list-style:none;display:grid;gap:14px;margin-top:18px}
+.clist li{display:flex;gap:12px;align-items:flex-start}
+.clist .ic{flex:none;width:40px;height:40px;border-radius:10px;background:var(--soft);display:grid;place-items:center}
+.clist .ic svg{width:20px;height:20px;fill:var(--navy)}
+.clist small{display:block;color:var(--muted);font-size:.85rem}
+.contact .wrap>div{min-width:0}.js-call{white-space:nowrap}.clist li>div{min-width:0;overflow-wrap:anywhere}.clist a{text-decoration:none;font-weight:600;color:var(--navy)}
+.clist a:hover{color:var(--orange)}
+.conds{background:var(--soft);border-radius:14px;padding:24px}
+.conds h3{font-size:1.1rem;margin-bottom:10px}
+.conds ul{padding-left:18px;color:var(--muted);display:grid;gap:6px}
+.social{display:flex;gap:10px;margin-top:20px}
+.social a{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;color:#fff}
+.social svg{width:20px;height:20px;fill:#fff}
+@media(max-width:760px){.contact .wrap{grid-template-columns:1fr}}
+
+/* cotización por correo */
+.quote{background:var(--soft)}
+.quote .wrap{display:grid;grid-template-columns:1fr 1.4fr;gap:36px;align-items:start}
+.quote .intro p{color:var(--muted);margin-top:8px}
+.quote .intro ul{list-style:none;margin-top:18px;display:grid;gap:8px;color:var(--ink)}
+.quote .intro li::before{content:"✓ ";color:var(--wa);font-weight:700}
+.qform{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;box-shadow:0 10px 28px rgba(30,51,86,.08)}
+.qform .full{grid-column:1/-1}
+.qform label{display:block;font-weight:600;font-size:.9rem;color:var(--navy);margin-bottom:5px}
+.qform label small{font-weight:400;color:var(--muted)}
+.qform input,.qform select,.qform textarea{width:100%;font:inherit;font-size:1rem;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.qform input:focus,.qform select:focus,.qform textarea:focus{outline:none;border-color:var(--navy)}
+.qform textarea{min-height:96px;resize:vertical}
+.qform .btn{justify-content:center;border:0;cursor:pointer;font-size:1rem;width:100%}
+.qform .btn[disabled]{opacity:.6;cursor:wait}
+.qform .hp{position:absolute;left:-9999px}
+.qmsg{grid-column:1/-1;border-radius:10px;padding:12px 14px;font-weight:600;display:none}
+.qmsg.ok{display:block;background:#e7f6ee;color:#16683a}
+.qmsg.err{display:block;background:#fdecea;color:#a3261a}
+.qbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.qbtn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 8px;border-radius:10px;font-weight:700;font-size:.92rem;text-decoration:none;border:1.5px solid var(--line);background:#fff;color:var(--navy);transition:background .15s,border-color .15s}
+.qbtn img,.card .qbtn img{width:22px;height:22px;flex:none;padding:0!important;border:0!important;aspect-ratio:auto;background:none;object-fit:contain}
+.qbtn.wa{border-color:#1f9e55;background:#1f9e55;color:#fff}
+.qbtn.wa:hover{background:#17844a;border-color:#17844a}
+.qbtn.mail{border-color:#1a6fd6;background:#1a6fd6;color:#fff}.qbtn.mail:hover{background:#155bb0;border-color:#155bb0}
+.conds .qbtns{margin-top:20px}.conds .qbtn{padding:12px 10px;font-size:1rem}
+.social a{width:44px;height:44px;border-radius:0;background:none!important}
+.social img{width:44px;height:44px;display:block;transition:transform .15s}
+.social a:hover img{transform:scale(1.08)}
+.clist .ic img{width:24px;height:24px}
+@media(max-width:860px){.quote .wrap{grid-template-columns:1fr}}
+@media(max-width:560px){.qform{grid-template-columns:1fr;padding:18px}}
+
+footer{background:var(--navy-2);color:#b9c3d0;padding:28px 0;font-size:.92rem;border-top:6px solid var(--gold)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+.float-wa{position:fixed;right:18px;bottom:18px;z-index:60;width:58px;height:58px;border-radius:50%;background:var(--wa);display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.float-wa svg{width:30px;height:30px;fill:#fff}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media(max-width:560px){.hero-grid{display:none}.grid{grid-template-columns:1fr 1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:none}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}.qbtns{grid-template-columns:1fr;gap:6px}.qbtn{font-size:.88rem;padding:8px 6px}.qbtn img,.card .qbtn img{width:20px;height:20px}.conds .qbtns{grid-template-columns:1fr 1fr}section{padding:44px 0}.custom{padding:24px}}
+
+/* visor de imagen */
+.card img{cursor:zoom-in}
+.card .zoomhint{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;background:rgba(30,51,86,.82);display:flex;align-items:center;justify-content:center;pointer-events:none}
+.card .zoomhint svg{width:17px;height:17px}
+.card .imgw{position:relative}
+.lb{position:fixed;inset:0;z-index:1000;background:rgba(10,18,32,.62);display:flex;align-items:center;justify-content:center;padding:24px;overscroll-behavior:contain;opacity:0;visibility:hidden;transition:opacity .22s ease,visibility 0s linear .22s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.lb.open{opacity:1;visibility:visible;transition:opacity .22s ease}
+.lb-box{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:calc(100dvh - 48px);overflow-y:auto;position:relative;box-shadow:0 24px 70px rgba(0,0,0,.35);transform:scale(.92);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.lb.open .lb-box{transform:scale(1)}
+.lb-media{background:#fff;border-bottom:1px solid var(--line)}
+.lb-stage{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#fff}
+.lb-stage img,.lb-stage video,.lb-stage iframe{display:block;width:100%;height:100%;object-fit:contain;border:0;background:#fff}
+.lb-stage video,.lb-stage iframe{background:#000}
+.lb-thumbs{display:none;gap:8px;padding:10px 12px;overflow-x:auto;border-top:1px solid var(--line)}
+.lb-thumbs.show{display:flex}
+.lb-thumbs button{flex:none;width:58px;height:58px;border-radius:10px;border:2px solid var(--line);background:#fff center/contain no-repeat;cursor:pointer;padding:0;position:relative}
+.lb-thumbs button[aria-current="true"]{border-color:var(--navy)}
+.lb-thumbs button.vid::after{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;border-left:14px solid rgba(30,51,86,.9);border-top:9px solid transparent;border-bottom:9px solid transparent}
+.lb-body{padding:18px 20px 20px}
+.lb-body h4{font-family:"Poppins",system-ui,sans-serif;color:var(--navy);font-size:1.3rem;line-height:1.25;margin:0 0 4px}
+.lb-body .sub{color:var(--orange);font-weight:700;margin-bottom:8px}
+.lb-body p{color:var(--ink);font-size:1.03rem;line-height:1.55;margin:0}
+.lb-body .qbtns{grid-template-columns:1fr 1fr!important;margin-top:16px}
+.lb-body .qbtn{padding:12px 10px;font-size:1rem}
+.lb-body .qbtn img{width:22px;height:22px;aspect-ratio:auto;border:0;padding:0;background:none}
+.lb-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(30,51,86,.9);color:#fff;font-size:25px;line-height:1;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center}
+body.lb-lock{overflow:hidden}
+@media(min-width:900px){.lb-box{max-width:820px;display:grid;grid-template-columns:420px minmax(0,1fr);align-items:center}.lb-media{border-bottom:0;border-right:1px solid var(--line)}.lb-body{padding:28px 26px}.lb-body h4{font-size:1.45rem}}
+@media(max-width:560px){.lb{padding:28px 18px}.lb-box{max-height:calc(100dvh - 56px)}.lb-stage{aspect-ratio:auto;height:min(42dvh,354px)}.lb-body{padding:14px 16px 16px}.lb-body h4{font-size:1.25rem}.lb-body p{font-size:1.02rem;line-height:1.5}.lb-x{width:38px;height:38px;font-size:24px}}
+@media(prefers-reduced-motion:reduce){.lb,.lb-box{transition:none}}
 </style>
 </head>
 <body>
+
 <header>
-  <div class="hwrap">
-    <div class="brand">MHAS <span>Ventas</span></div>
-    <div class="who" id="who"></div>
+  <div class="wrap nav">
+    <a href="#inicio" aria-label="MHAS de Honduras, inicio"><img src="logo.png" alt="MHAS de Honduras" width="89" height="44"></a>
+    <ul>
+      <li><a href="#productos">Productos</a></li>
+      <li><a href="#catalogo">Catálogo PDF</a></li>
+      <li><a href="#cotizar">Cotizar por correo</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+    <a class="btn btn-wa js-wa" data-item="Consulta general" href="https://wa.me/50431666059" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>Cotizar
+    </a>
   </div>
-  <nav id="tabs" aria-label="Secciones"></nav>
 </header>
-<main id="view"><div class="msg">Cargando…</div></main>
-<div id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
-<div id="toast" role="status"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail,
-  sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, query, where, orderBy,
-  limit, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBbmsIVGmC8sZ3D9rmDPBmkZkq6H5zzgqw",
-  authDomain: "mhas-ventas.firebaseapp.com",
-  projectId: "mhas-ventas",
-  storageBucket: "mhas-ventas.firebasestorage.app",
-  messagingSenderId: "1005397208940",
-  appId: "1:1005397208940:web:b19d4d967221034ee90d49"
-};
-const ADMIN = "mhasdehondurashn@gmail.com";
-const SEED = [{"id": "rollo-80", "nombre": "Rollo Térmico 80 mm x 60 mm – Caja 50", "precio": 1840.0, "categoria": "Rollos para punto de venta", "orden": 1}, {"id": "rollo-57", "nombre": "Rollo Térmico 57 mm x 40 mm – Caja 50", "precio": 700.0, "categoria": "Rollos para punto de venta", "orden": 2}, {"id": "quimico-2", "nombre": "Rollo Químico 2 Partes – Caja 50", "precio": 1610.0, "categoria": "Rollos para punto de venta", "orden": 3}, {"id": "quimico-3", "nombre": "Rollo Químico 3 Partes – Caja 50", "precio": 1750.0, "categoria": "Rollos para punto de venta", "orden": 4}, {"id": "forma-2", "nombre": "Forma Continua 2 Partes – 1,500 juegos", "precio": 1265.0, "categoria": "Formas continuas", "orden": 5}, {"id": "forma-3", "nombre": "Forma Continua 3 Partes – 1,000 juegos", "precio": 1380.0, "categoria": "Formas continuas", "orden": 6}, {"id": "etq-2x1", "nombre": "Etiqueta Térmica 2\" x 1\"", "precio": 184.0, "categoria": "Etiquetas", "orden": 7}, {"id": "etq-4x6", "nombre": "Etiqueta Térmica 4\" x 6\"", "precio": 402.5, "categoria": "Etiquetas", "orden": 8}, {"id": "etq-3x5", "nombre": "Etiqueta Térmica 3\" x 5\"", "precio": 480.0, "categoria": "Etiquetas", "orden": 9}, {"id": "etq-4x4", "nombre": "Etiqueta Térmica 4\" x 4\"", "precio": 590.0, "categoria": "Etiquetas", "orden": 10}, {"id": "etq-precio", "nombre": "Etiqueta Térmica de Precio", "precio": 171.35, "categoria": "Etiquetas", "orden": 11}, {"id": "etq-bopp", "nombre": "Etiqueta 1\" x 4\" BOPP", "precio": 1035.0, "categoria": "Etiquetas", "orden": 12}, {"id": "etq-2x2", "nombre": "Etiqueta Personalizada 2\" x 2\"", "precio": 8000.0, "categoria": "Etiquetas", "orden": 13}, {"id": "etq-impresa", "nombre": "Etiqueta Impresa Personalizada", "precio": 1000.0, "categoria": "Etiquetas", "orden": 14}, {"id": "ribbon-110", "nombre": "Ribbon 110 mm x 300 m", "precio": 500.0, "categoria": "Impresión de etiquetas", "orden": 15}, {"id": "ribbon-76", "nombre": "Ribbon 76 mm x 360 m", "precio": 345.0, "categoria": "Impresión de etiquetas", "orden": 16}, {"id": "clises", "nombre": "Clisés – Placas de impresión", "precio": 780.0, "categoria": "Impresión de etiquetas", "orden": 17}, {"id": "stretch-negro", "nombre": "Stretch Film Negro 18\" x 1200 pies – 15 micras", "precio": 260.0, "categoria": "Empaque y embalaje", "orden": 18}, {"id": "stretch-1500", "nombre": "Stretch Film 18\" x 1500 pies – 18 micras", "precio": 350.0, "categoria": "Empaque y embalaje", "orden": 19}, {"id": "stretch-1200", "nombre": "Stretch Film 18\" x 1200 pies – 15 micras", "precio": 260.0, "categoria": "Empaque y embalaje", "orden": 20}, {"id": "stretch-1200-18", "nombre": "Stretch Film 18\" x 1200 pies – 18 micras", "precio": 270.0, "categoria": "Empaque y embalaje", "orden": 21}, {"id": "stretch-1000", "nombre": "Stretch Film 18\" x 1000 pies – 15 micras", "precio": 145.0, "categoria": "Empaque y embalaje", "orden": 22}, {"id": "stretch-1000-18", "nombre": "Stretch Film 18\" x 1000 pies – 18 micras", "precio": 150.0, "categoria": "Empaque y embalaje", "orden": 23}, {"id": "cinta-2x100", "nombre": "Cinta Adhesiva 2\" x 100 yd", "precio": 28.0, "categoria": "Empaque y embalaje", "orden": 24}, {"id": "cinta-2x200", "nombre": "Cinta Adhesiva 2\" x 200 yd", "precio": 39.0, "categoria": "Empaque y embalaje", "orden": 25}, {"id": "cinta-3x100", "nombre": "Cinta Adhesiva 3\" x 100 yd", "precio": 35.0, "categoria": "Empaque y embalaje", "orden": 26}, {"id": "cinta-cafe", "nombre": "Cinta Adhesiva Café 2\" x 200 yd", "precio": 44.0, "categoria": "Empaque y embalaje", "orden": 27}];
-const LOGO = "data:image/jpeg;base64,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";
-
-const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
-auth.languageCode = "es";
-const db = getFirestore(fbApp);
-
-/* ---------- utilidades ---------- */
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const L = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
-function ymd(d){ const z = new Date(d.getTime() - d.getTimezoneOffset() * 6e4); return z.toISOString().slice(0, 10); }
-const today = () => ymd(new Date());
-const addDays = (s, n) => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + Number(n || 0)); return ymd(d); };
-const diffDays = (a, b) => Math.round((new Date(a + "T12:00:00") - new Date(b + "T12:00:00")) / 864e5);
-const fdate = s => { if (!s) return ""; const [y, m, d] = s.split("-"); return `${d}/${m}/${y}`; };
-const clean = s => String(s || "").trim();
-
-/* ---------- estado ---------- */
-const S = {
-  screen: "cargando", authMode: "login", u: null, admin: false,
-  me: {uid: null, email: "", nombre: "", rol: "", ini: ""},
-  cfg: {emp: {}}, prod: [], cli: [], cot: [], cxp: [], usuarios: [],
-  tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
-};
-const TABS = {
-  admin: ["cotizar", "cotizaciones", "cobros", "pagar", "perfil", "ajustes"],
-  facturador: ["cotizar", "cotizaciones", "cobros", "pagar", "perfil"],
-  vendedor: ["cotizar", "cotizaciones", "perfil"]
-};
-const TAB_NAME = {cotizar: "Nueva cotización", cotizaciones: "Cotizaciones", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
-const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
-const ESTADO = {cotizada: ["Cotizada", "b-info"], aprobada: ["Aprobada", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""]};
-
-function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
-const puede = (...roles) => roles.includes(rol());
-function iniciales(){
-  const c = String(S.me.ini || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
-  if (c) return c;
-  const n = (S.me.nombre || "").split(/\s+/).filter(Boolean);
-  const g = n.length >= 2 ? n[0][0] + n[1][0] : (n[0] || "MH").slice(0, 2);
-  return g.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4) || "MH";
-}
-const FORMAS = ["Efectivo", "Contra entrega", "Cheque", "Transferencia", "Tarjeta", "Link de pago"];
-const FORMA_TXT = {"Efectivo": "Pago en efectivo", "Contra entrega": "Pago contra entrega", "Cheque": "Pago con cheque", "Transferencia": "Pago con transferencia", "Tarjeta": "Pago con tarjeta", "Link de pago": "Pago con link de pago"};
-const formaTxt = f => FORMA_TXT[f] || f || "";
-const sinIsv = p => r2((Number(p) || 0) / 1.15);
-function calc(items){
-  const lines = (items || []).map(i => {
-    const u = sinIsv(i.precio), bruto = r2(u * i.cant);
-    const desc = Math.min(bruto, Math.max(0, r2(i.desc)));
-    const imp = r2(bruto - desc);
-    return {u, bruto, desc, pct: bruto ? Math.round(desc / bruto * 1000) / 10 : 0, imp, un: i.cant ? r2(imp / i.cant) : 0,
-      conIsv: r2(i.cant * (Number(i.precio) || 0) - desc * 1.15)};
-  });
-  const sub = r2(lines.reduce((a, l) => a + l.bruto, 0));
-  const desc = r2(lines.reduce((a, l) => a + l.desc, 0));
-  const total = r2(lines.reduce((a, l) => a + l.conIsv, 0));
-  const base = r2(sub - desc);
-  const unidades = (items || []).reduce((a, i) => a + (Number(i.cant) || 0), 0);
-  return {lines, sub, desc, base, isv: r2(total - base), total, unidades, n: lines.length};
-}
-const pctTxt = p => (Number.isInteger(p) ? p : p.toFixed(1)) + "%";
-const pagado = c => r2((c.pagos || []).reduce((a, p) => a + (Number(p.monto) || 0), 0));
-const saldo = c => r2((Number(c.total ?? c.monto) || 0) - pagado(c));
-function estadoPago(x, cobro){
-  if (saldo(x) <= 0.005) return ["Pagada", "b-ok"];
-  if (cobro) { const d = x.vence ? diffDays(today(), x.vence) : 0; return d > 0 ? [d + (d === 1 ? " día" : " días") + " sin cobrar", d > 7 ? "b-bad" : "b-warn"] : ["Por cobrar", "b-warn"]; }
-  if (x.vence && diffDays(today(), x.vence) > 0) return [diffDays(today(), x.vence) + " días vencida", "b-bad"];
-  if (x.vence) { const d = diffDays(x.vence, today()); return [d === 0 ? "Vence hoy" : "Vence en " + d + " días", "b-warn"]; }
-  return ["Pendiente", "b-warn"];
-}
-
-/* ---------- mensajes ---------- */
-let toastT;
-function toast(t){ const el = $("#toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = "none", 3500); }
-function fallo(e, que){
-  console.error(e);
-  const c = e && e.code;
-  if (c === "permission-denied") toast("No tienes permiso para " + que + ".");
-  else if (c === "unavailable") toast("Sin conexión. Intenta de nuevo.");
-  else toast("No se pudo " + que + ".");
-}
-const authError = c => ({
-  "auth/invalid-credential": "Correo o contraseña incorrectos.", "auth/wrong-password": "Correo o contraseña incorrectos.",
-  "auth/user-not-found": "No hay una cuenta con ese correo.", "auth/email-already-in-use": "Ya existe una cuenta con ese correo. Inicia sesión.",
-  "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.", "auth/invalid-email": "Ese correo no es válido.",
-  "auth/too-many-requests": "Demasiados intentos. Espera unos minutos.", "auth/network-request-failed": "Sin conexión. Intenta de nuevo."
-}[c] || "No se pudo completar. Intenta de nuevo.");
-
-/* ---------- render ---------- */
-let pend = false;
-function render(){
-  const a = document.activeElement;
-  if (a && a.matches && a.matches("#view input,#view textarea,#view select,#sheet input,#sheet textarea,#sheet select")) { pend = true; return; }
-  pend = false; draw();
-}
-document.addEventListener("focusout", () => { if (pend) setTimeout(() => { const a = document.activeElement; if (!(a && a.matches && a.matches("input,textarea,select"))) render(); }, 0); });
-function draw(){
-  const ae = document.activeElement, fid = ae && ae.id && ae.matches("input,textarea,select") ? ae.id : null;
-  let ss = null, se = null; try { if (fid) { ss = ae.selectionStart; se = ae.selectionEnd; } } catch (_) {}
-  draw0();
-  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, se); } catch (_) {} } }
-}
-function draw0(){
-  drawHeader();
-  const v = $("#view");
-  if (S.screen === "cargando") { v.innerHTML = `<div class="msg">Cargando…</div>`; drawModal(); return; }
-  if (S.screen === "auth") { v.innerHTML = vAuth(); drawModal(); return; }
-  if (S.screen === "verificar") { v.innerHTML = vVerificar(); drawModal(); return; }
-  const r = rol();
-  if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
-  if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {cotizar: vCotizar, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
-  v.innerHTML = fn();
-  drawModal();
-}
-function drawHeader(){
-  const r = S.screen === "app" ? rol() : null;
-  $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}</button>`).join("") : "";
-  $("#who").innerHTML = S.u ? `<span>${esc(S.me.nombre || S.u.email)}${r ? " · " + ROL_NAME[r] : ""}</span><button class="out" data-a="salir">Salir</button>` : "";
-}
-const fv = k => esc(S.f[k] ?? "");
-
-/* ---------- vistas: acceso ---------- */
-function vAuth(){
-  const m = S.authMode;
-  return `<div class="authbox panel">
-    <h1>${m === "login" ? "Entrar" : m === "registro" ? "Crear cuenta" : "Recuperar contraseña"}</h1>
-    <p class="sub">${m === "login" ? "Sistema de cotizaciones de MHAS de Honduras." : m === "registro" ? "Después de crearla, el administrador te asigna tu rol." : "Te enviamos un enlace para crear una contraseña nueva."}</p>
-    ${m === "registro" ? `<div class="field"><label for="an">Nombre completo</label><input id="an" data-k="a_nombre" value="${fv("a_nombre")}" autocomplete="name"></div>` : ""}
-    <div class="field"><label for="ae">Correo</label><input id="ae" type="email" data-k="a_email" value="${fv("a_email")}" autocomplete="email" inputmode="email"></div>
-    ${m !== "reset" ? `<div class="field"><label for="ap">Contraseña</label><input id="ap" type="password" data-k="a_pass" value="${fv("a_pass")}" autocomplete="${m === "login" ? "current-password" : "new-password"}"></div>` : ""}
-    <div class="actions"><button class="btn pri" data-a="authGo" ${S.busy ? "disabled" : ""}>${m === "login" ? "Entrar" : m === "registro" ? "Crear cuenta" : "Enviar enlace"}</button></div>
-    <p class="note" style="margin-top:16px">${m === "login"
-      ? `<a href="#" data-a="authMode" data-v="registro">Crear cuenta</a> · <a href="#" data-a="authMode" data-v="reset">Olvidé mi contraseña</a>`
-      : `<a href="#" data-a="authMode" data-v="login">Volver a entrar</a>`}</p>
-  </div>`;
-}
-function vVerificar(){
-  return `<div class="authbox panel"><h1>Verifica tu correo</h1>
-    <p class="sub">Te enviamos un enlace a <b>${esc(S.u && S.u.email)}</b>. Ábrelo (revisa también spam) y luego toca el botón.</p>
-    <div class="actions"><button class="btn pri" data-a="yaVerifique" ${S.busy ? "disabled" : ""}>Ya verifiqué</button>
-    <button class="btn" data-a="reenviar">Reenviar correo</button></div></div>`;
-}
-
-/* ---------- vista: nueva cotización ---------- */
-function vCotizar(){
-  const sel = S.f.cli_sel || "";
-  const cliOpts = S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""))
-    .map(c => `<option value="${esc(c.id)}" ${sel === c.id ? "selected" : ""}>${esc(c.nombre)}${c.rtn ? " · " + esc(c.rtn) : ""}</option>`).join("");
-  const nuevo = sel === "__nuevo";
-  const cliSel = S.cli.find(c => c.id === sel);
-  const cc = calc(S.cart);
-  const edPrecio = puede("admin");
-  const cats = [];
-  S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
-  const psel = S.prod.find(p => p.id === S.f.psel);
-  return `<div class="narrow">
-  <h1>Nueva cotización</h1>
-  <p class="sub">Número: <span class="stub">COT-${esc(iniciales())}-····</span></p>
-  <div class="panel">
-    <h2>Cliente</h2>
-    <div class="field"><label for="cli_sel">Cliente</label>
-      <select id="cli_sel" data-k="cli_sel" data-redraw="1">
-        <option value="">Elige un cliente…</option>
-        <option value="__nuevo" ${nuevo ? "selected" : ""}>+ Cliente nuevo</option>
-        ${cliOpts}
-      </select></div>
-    ${nuevo ? `
-    <div class="field"><label for="cn">Nombre o empresa</label><input id="cn" data-k="cli_nombre" value="${fv("cli_nombre")}" autocomplete="off" autocapitalize="words"></div>
-    <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" value="${fv("cli_dir")}" placeholder="San Pedro Sula, Cortés"></div>
-    <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" value="${fv("cli_rtn")}" inputmode="numeric"></div>
-    <div class="field"><label for="ct">WhatsApp</label><input id="ct" data-k="cli_tel" value="${fv("cli_tel")}" inputmode="tel" placeholder="9999-9999"></div>
-    <div class="field"><label for="ce">Correo (opcional)</label><input id="ce" type="email" data-k="cli_email" value="${fv("cli_email")}" inputmode="email" autocapitalize="off"></div>` : ""}
-    ${cliSel ? `<p class="note">${[cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : "", cliSel.tel].filter(Boolean).map(esc).join(" · ") || "Sin datos adicionales"}</p>` : ""}
-    <div class="field"><label for="fpg">Forma de pago</label>
-      <select id="fpg" data-k="fpago">${FORMAS.map(f => `<option value="${f}" ${(S.f.fpago || "Efectivo") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
-  </div>
-  <div class="panel">
-    <h2>Agregar producto</h2>
-    ${S.prod.length ? `
-    <div class="field"><label for="psel">Producto</label>
-      <select id="psel" data-k="psel" data-redraw="1"><option value="">Elige un producto…</option>
-      ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${esc(p.nombre)} · ${L(sinIsv(p.precio))}</option>`).join("")}</optgroup>`).join("")}
-      </select></div>
-    ${psel ? `<p class="note" style="margin:-4px 0 12px">Precio sin ISV <b>${L(sinIsv(psel.precio))}</b> · con ISV ${L(psel.precio)}</p>` : ""}
-    <div class="addrow">
-      <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
-      <button class="btn pri grow" data-a="addSel" ${psel ? "" : "disabled"}>Agregar</button>
-    </div>` : `<p class="empty">Todavía no hay productos cargados.${S.admin ? " Cárgalos en Ajustes." : ""}</p>`}
-  </div>
-  <div class="panel">
-    <h2>Productos de la cotización</h2>
-    ${S.cart.length ? S.cart.map((i, n) => { const l = cc.lines[n]; return `<div class="item">
-      <div class="ihead"><b>${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
-      <div class="irow">
-        <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${i.cant}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div>
-        <div class="num">${edPrecio ? `<label class="mini">Precio unit. sin ISV</label><input class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cpr="${n}" value="${l.u}">` : `<span class="muted">${L(l.u)} c/u</span>`}</div>
+<main id="inicio">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <span class="tag">San Pedro Sula · Envíos a todo Honduras</span>
+        <h1>Proveedores de insumos para <span>oficinas y negocios</span></h1>
+        <p>Papel térmico y químico, formas continuas, etiquetas, ribbons, clisés, stretch film y cinta adhesiva. Precios preferenciales por volumen.</p>
+        <div class="ctas">
+          <a class="btn btn-wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>Cotizar por WhatsApp
+          </a>
+          <a class="btn btn-ghost" href="#productos">Ver productos</a>
+        </div>
       </div>
-      <div class="irow">
-        <div class="dsc"><label class="mini" for="d${n}">Descuento L.</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.desc || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
-        <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b></div>
-      </div></div>`; }).join("") + `<p class="note">Precios sin ISV.</p><div class="totals" id="ctot">${totalsHtml(cc)}</div>`
-    : `<p class="empty">Todavía no agregas productos.</p>`}
-    <div class="field" style="margin-top:12px"><label for="nt">Notas (opcional)</label><textarea id="nt" data-k="notas">${fv("notas")}</textarea></div>
-    ${S.cart.length ? `<button class="btn" data-a="vaciar">Vaciar</button>` : ""}
-  </div>
-  <div class="cta"><button class="btn pri big" id="ctabtn" data-a="saveCot" ${S.busy || !S.cart.length ? "disabled" : ""}>${S.busy ? "Guardando…" : "Cotizar" + (S.cart.length ? " · " + L(cc.total) : "")}</button></div>
-  </div>`;
-}
-function totalsHtml(cc, simple){
-  if (simple) return `<div><span class="muted">Subtotal</span><span>${L(cc.base)}</span></div>
-    <div><span class="muted">ISV 15%</span><span>${L(cc.isv)}</span></div>
-    <div class="t"><span>Total</span><span>${L(cc.total)}</span></div>`;
-  return `<div><span class="muted">${cc.n} ${cc.n === 1 ? "producto" : "productos"} · ${cc.unidades} ${cc.unidades === 1 ? "unidad" : "unidades"}</span><span></span></div>
-    <div><span class="muted">Subtotal</span><span>${L(cc.sub)}</span></div>
-    ${cc.desc > 0 ? `<div><span class="muted">Descuento (${pctTxt(cc.sub ? Math.round(cc.desc / cc.sub * 1000) / 10 : 0)})</span><span>− ${L(cc.desc)}</span></div>
-    <div><span class="muted">Subtotal con descuento</span><span>${L(cc.base)}</span></div>` : ""}
-    <div><span class="muted">ISV 15%</span><span>${L(cc.isv)}</span></div>
-    <div class="t"><span>Total</span><span>${L(cc.total)}</span></div>`;
-}
-
-/* ---------- vista: cotizaciones ---------- */
-function vCotizaciones(){
-  const F = {activas: "Abiertas", cotizada: "Cotizadas", aprobada: "Aprobadas", facturada: "Facturadas", debe: "Con saldo", anulada: "Anuladas", todas: "Todas"};
-  const q = clean(S.f.bq).toLowerCase();
-  let list = S.cot.filter(c => {
-    switch (S.filtro) {
-      case "activas": return c.estado === "cotizada" || c.estado === "aprobada";
-      case "debe": return c.estado === "facturada" && saldo(c) > 0.005;
-      case "todas": return true;
-      default: return c.estado === S.filtro;
-    }
-  });
-  if (q) list = list.filter(c => [c.numero, c.cliente && c.cliente.nombre, c.factura && c.factura.numero].join(" ").toLowerCase().includes(q));
-  const esVend = rol() === "vendedor";
-  return `
-  <h1>Cotizaciones</h1>
-  <p class="sub">${esVend ? "Tus cotizaciones y en qué quedó cada una." : "Aprueba, factura y registra pagos desde aquí."}</p>
-  <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}</button>`).join("")}</div>
-  <div class="field" style="max-width:360px"><label for="bq">Buscar por número, cliente o factura</label><input id="bq" data-k="bq" value="${fv("bq")}" autocomplete="off"></div>
-  <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th>${esVend ? "" : "<th>Vendedor</th>"}<th class="num">Total</th><th>Estado</th></tr></thead><tbody>
-  ${list.map(c => { const [et, ec] = ESTADO[c.estado] || [c.estado, ""]; const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
-    return `<tr class="click" data-a="open" data-v="${esc(c.id)}" tabindex="0">
-      <td><span class="stub">${esc(c.numero)}</span></td><td>${esc(c.cliente && c.cliente.nombre)}</td><td>${fdate(c.fecha)}</td>
-      ${esVend ? "" : `<td>${esc(c.vendedorNombre || "")}</td>`}<td class="num">${L(c.total)}</td>
-      <td><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}</td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">No hay cotizaciones en esta vista.</p>`}
-  </div></div>`;
-}
-
-/* ---------- vista: por cobrar ---------- */
-function vCobros(){
-  const fac = S.cot.filter(c => c.estado === "facturada");
-  const pend = fac.filter(c => saldo(c) > 0.005).sort((a, b) => (a.vence || "").localeCompare(b.vence || ""));
-  const porCobrar = r2(pend.reduce((a, c) => a + saldo(c), 0));
-  const vencido = r2(pend.filter(c => c.vence && diffDays(today(), c.vence) > 7).reduce((a, c) => a + saldo(c), 0));
-  const mes = today().slice(0, 7);
-  const cobradoMes = r2(fac.reduce((a, c) => a + (c.pagos || []).filter(p => (p.fecha || "").startsWith(mes)).reduce((x, p) => x + (Number(p.monto) || 0), 0), 0));
-  const porCli = {};
-  pend.forEach(c => { const k = (c.cliente && c.cliente.nombre) || "Sin nombre"; (porCli[k] = porCli[k] || {n: 0, s: 0, max: -1e9}); porCli[k].n++; porCli[k].s += saldo(c); porCli[k].max = Math.max(porCli[k].max, c.vence ? diffDays(today(), c.vence) : 0); });
-  const cli = Object.entries(porCli).sort((a, b) => b[1].s - a[1].s);
-  return `
-  <h1>Por cobrar</h1>
-  <p class="sub">Facturas con saldo pendiente, de la más antigua a la más reciente.</p>
-  <div class="stats">
-    <div class="stat"><b>${L(porCobrar)}</b><span>Pendiente de cobro</span></div>
-    <div class="stat ${vencido > 0 ? "alert" : ""}"><b>${L(vencido)}</b><span>Más de 7 días sin cobrar</span></div>
-    <div class="stat"><b>${L(cobradoMes)}</b><span>Cobrado este mes</span></div>
-  </div>
-  ${cli.length ? `<div class="panel"><h2>Quién debe</h2><div class="scroll"><table><thead><tr><th>Cliente</th><th class="num">Facturas</th><th class="num">Saldo</th><th>Situación</th></tr></thead><tbody>
-    ${cli.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num">${L(v.s)}</td><td>${v.max > 0 ? `<span class="badge ${v.max > 7 ? "b-bad" : "b-warn"}">${v.max} días sin cobrar</span>` : `<span class="badge b-warn">Por cobrar</span>`}</td></tr>`).join("")}
-  </tbody></table></div></div>` : ""}
-  <div class="panel"><h2>Facturas pendientes</h2><div class="scroll">
-  ${pend.length ? `<table><thead><tr><th>Factura</th><th>Cliente</th><th>Fecha</th><th class="num">Saldo</th><th>Situación</th><th></th></tr></thead><tbody>
-    ${pend.map(c => { const ep = estadoPago(c, true); return `<tr>
-      <td>${esc(c.factura && c.factura.numero)}<br><small class="muted">${esc(c.numero)}</small></td><td>${esc(c.cliente && c.cliente.nombre)}</td>
-      <td>${fdate(c.vence)}</td><td class="num">${L(saldo(c))}</td><td><span class="badge ${ep[1]}">${ep[0]}</span></td>
-      <td><button class="btn sm" data-a="cobrar" data-v="${esc(c.id)}">Registrar pago</button></td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">No hay nada pendiente de cobro.</p>`}
-  </div></div>`;
-}
-
-/* ---------- vista: por pagar ---------- */
-function vPagar(){
-  const pend = S.cxp.filter(x => saldo(x) > 0.005).sort((a, b) => (a.vence || "").localeCompare(b.vence || ""));
-  const pag = S.cxp.filter(x => saldo(x) <= 0.005).sort((a, b) => (b.vence || "").localeCompare(a.vence || ""));
-  const total = r2(pend.reduce((a, x) => a + saldo(x), 0));
-  const semana = r2(pend.filter(x => x.vence && diffDays(x.vence, today()) >= 0 && diffDays(x.vence, today()) <= 7).reduce((a, x) => a + saldo(x), 0));
-  const vencido = r2(pend.filter(x => x.vence && diffDays(today(), x.vence) > 0).reduce((a, x) => a + saldo(x), 0));
-  const fila = x => { const ep = estadoPago(x); return `<tr class="click" data-a="openCxp" data-v="${esc(x.id)}" tabindex="0">
-    <td>${esc(x.proveedor)}<br><small class="muted">${esc(x.concepto || "")}${x.factura ? " · Fact. " + esc(x.factura) : ""}</small></td>
-    <td>${fdate(x.vence)}</td><td class="num">${L(x.monto)}</td><td class="num">${L(saldo(x))}</td><td><span class="badge ${ep[1]}">${ep[0]}</span></td></tr>`; };
-  return `
-  <h1>Por pagar</h1>
-  <p class="sub">Lo que MHAS debe a proveedores, ordenado por fecha de vencimiento.</p>
-  <div class="stats">
-    <div class="stat"><b>${L(total)}</b><span>Total por pagar</span></div>
-    <div class="stat"><b>${L(semana)}</b><span>Vence en los próximos 7 días</span></div>
-    <div class="stat ${vencido > 0 ? "alert" : ""}"><b>${L(vencido)}</b><span>Ya vencido</span></div>
-  </div>
-  <div class="panel">
-    ${S.cxpForm ? `<h2>Nueva cuenta por pagar</h2>
-      <div class="row">
-        <div class="field"><label for="xp">Proveedor</label><input id="xp" data-k="x_prov" value="${fv("x_prov")}" list="provs" autocomplete="off">
-          <datalist id="provs">${[...new Set(S.cxp.map(x => x.proveedor))].map(p => `<option value="${esc(p)}">`).join("")}</datalist></div>
-        <div class="field"><label for="xc">Concepto</label><input id="xc" data-k="x_conc" value="${fv("x_conc")}" placeholder="Compra de rollos 80x60"></div>
+      <div class="hero-grid" aria-hidden="true">
+        <img src="img/rollo-80.jpg" alt="" width="400" height="400">
+        <img src="img/etq-4x6.jpg" alt="" width="400" height="400">
+        <img src="img/ribbon-110.jpg" alt="" width="400" height="400">
+        <img src="img/quimico-3.jpg" alt="" width="400" height="400">
+        <img src="img/stretch-1500.jpg" alt="" width="400" height="400">
+        <img src="img/etq-impresa.jpg" alt="" width="400" height="400">
       </div>
-      <div class="row">
-        <div class="field"><label for="xf">N.º de factura del proveedor</label><input id="xf" data-k="x_fact" value="${fv("x_fact")}"></div>
-        <div class="field"><label for="xm">Monto (L.)</label><input id="xm" type="number" min="0" step="0.01" data-k="x_monto" value="${fv("x_monto")}"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label for="xd">Fecha</label><input id="xd" type="date" data-k="x_fecha" value="${esc(S.f.x_fecha || today())}"></div>
-        <div class="field"><label for="xv">Vence</label><input id="xv" type="date" data-k="x_vence" value="${esc(S.f.x_vence || addDays(today(), 30))}"></div>
-      </div>
-      <div class="actions"><button class="btn pri" data-a="saveCxp" ${S.busy ? "disabled" : ""}>Guardar cuenta por pagar</button><button class="btn" data-a="cxpForm">Cancelar</button></div>`
-    : `<button class="btn pri" data-a="cxpForm">Agregar cuenta por pagar</button>`}
-  </div>
-  <div class="panel"><h2>Pendientes</h2><div class="scroll">
-    ${pend.length ? `<table><thead><tr><th>Proveedor</th><th>Vence</th><th class="num">Monto</th><th class="num">Saldo</th><th>Situación</th></tr></thead><tbody>${pend.map(fila).join("")}</tbody></table>` : `<p class="empty">No debes nada a proveedores.</p>`}
-  </div></div>
-  ${pag.length ? `<div class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Pagadas (${pag.length})</h2><button class="btn sm" data-a="verPagadas">${S.verPagadas ? "Ocultar" : "Ver"}</button></div>
-    ${S.verPagadas ? `<div class="scroll" style="margin-top:10px"><table><tbody>${pag.map(fila).join("")}</tbody></table></div>` : ""}</div>` : ""}`;
-}
-
-/* ---------- vista: mi perfil ---------- */
-function vPerfil(){
-  const m = S.me;
-  return `<div class="narrow">
-  <h1>Mi perfil</h1>
-  <p class="sub">Estos datos salen al pie de cada cotización que hagas.</p>
-  <div class="panel">
-    <div class="field"><label for="mn">Nombre</label><input id="mn" data-k="me_nombre" value="${esc(S.f.me_nombre ?? m.nombre)}" autocapitalize="words"></div>
-    <div class="field"><label for="mc">Cargo</label><input id="mc" data-k="me_cargo" value="${esc(S.f.me_cargo ?? (m.cargo || "Ventas"))}" placeholder="Mercadeo y Ventas"></div>
-    <div class="field"><label for="mt">Teléfono</label><input id="mt" data-k="me_tel" value="${esc(S.f.me_tel ?? m.tel)}" inputmode="tel" placeholder="3166-6059"></div>
-    <div class="field"><label for="mco">Correo</label><input id="mco" type="email" data-k="me_correo" value="${esc(S.f.me_correo ?? (m.correo || m.email))}" inputmode="email" autocapitalize="off"></div>
-    <div class="actions"><button class="btn pri big" data-a="savePerfil" ${S.busy ? "disabled" : ""}>Guardar perfil</button></div>
-  </div></div>`;
-}
-
-/* ---------- vista: ajustes ---------- */
-function vAjustes(){
-  const otros = S.usuarios.filter(u => u.id !== S.me.uid).sort((a, b) => (a.nombre || a.email || "").localeCompare(b.nombre || b.email || ""));
-  return `
-  <h1>Ajustes</h1>
-  <p class="sub">Solo tú como administrador ves esta sección.</p>
-  <div class="panel">
-    <h2>Personas y roles</h2>
-    <p class="note">Cada persona entra a esta página y toca “Crear cuenta”. Aparece aquí y le asignas su rol. Las iniciales van en el número de sus cotizaciones.</p>
-    <div class="scroll"><table><thead><tr><th>Persona</th><th>Rol</th><th>Iniciales</th></tr></thead><tbody>
-      <tr><td>${esc(S.me.nombre || "Tú")}<br><small class="muted">${esc(S.me.email)}</small></td><td>Administrador</td>
-        <td><input style="max-width:90px" data-k="ini_${esc(S.me.uid)}" value="${esc(S.f["ini_" + S.me.uid] ?? (S.me.ini || iniciales()))}" maxlength="4"></td></tr>
-      ${otros.map(u => `<tr><td>${esc(u.nombre || "Sin nombre")}<br><small class="muted">${esc(u.email || "")}</small></td>
-        <td><select data-k="rol_${esc(u.id)}">${[["", "Sin acceso"], ["vendedor", "Vendedor"], ["facturador", "Facturador"]].map(([v, t]) => `<option value="${v}" ${(S.f["rol_" + u.id] ?? (u.rol || "")) === v ? "selected" : ""}>${t}</option>`).join("")}</select></td>
-        <td><input style="max-width:90px" data-k="ini_${esc(u.id)}" value="${esc(S.f["ini_" + u.id] ?? (u.ini || ""))}" maxlength="4" placeholder="Ej. JP"></td></tr>`).join("")}
-    </tbody></table></div>
-    ${otros.length ? "" : `<p class="note">Todavía nadie más ha creado su cuenta.</p>`}
-    <div class="actions"><button class="btn pri" data-a="saveRoles" ${S.busy ? "disabled" : ""}>Guardar roles</button></div>
-  </div>
-  <div class="panel">
-    <h2>Datos de la empresa en el PDF</h2>
-    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["validez", "Validez (días)"]]
-      .map(([k, t]) => `<div class="field"><label for="em_${k}">${t}</label><input id="em_${k}" data-k="em_${k}" ${k === "validez" ? 'type="number" min="1"' : ""} value="${esc(S.f["em_" + k] ?? emp()[k])}"></div>`).join("")}
-    <div class="actions"><button class="btn pri" data-a="saveEmpresa" ${S.busy ? "disabled" : ""}>Guardar datos</button></div>
-  </div>
-  <div class="panel">
-    <h2>Productos y precios</h2>
-    ${S.prod.length ? `<p class="note">Los precios incluyen ISV. Las cotizaciones ya hechas conservan su precio.</p>
-    <div class="scroll"><table><thead><tr><th>Producto</th><th>Categoría</th><th class="num">Precio con ISV</th><th>Activo</th></tr></thead><tbody>
-      ${S.prod.map(p => `<tr><td>${esc(p.nombre)}</td><td class="muted">${esc(p.categoria || "")}</td>
-        <td class="num"><input class="pin" type="number" min="0" step="0.01" data-k="pp_${esc(p.id)}" value="${esc(S.f["pp_" + p.id] ?? p.precio)}" aria-label="Precio de ${esc(p.nombre)}"></td>
-        <td><input type="checkbox" style="width:20px;min-height:20px" data-k="pa_${esc(p.id)}" ${(S.f["pa_" + p.id] ?? (p.activo !== false)) ? "checked" : ""} aria-label="Activo"></td></tr>`).join("")}
-    </tbody></table></div>
-    <div class="actions"><button class="btn pri" data-a="savePrecios" ${S.busy ? "disabled" : ""}>Guardar precios</button></div>`
-    : `<p class="note">Todavía no hay productos. Carga los ${SEED.length} productos del catálogo de MHAS con sus precios actuales.</p>
-    <div class="actions"><button class="btn pri" data-a="seed" ${S.busy ? "disabled" : ""}>Cargar catálogo</button></div>`}
-    <hr class="sep">
-    <h2>Agregar producto</h2>
-    <div class="row">
-      <div class="field" style="flex:2 1 220px"><label for="nn">Nombre</label><input id="nn" data-k="np_nombre" value="${fv("np_nombre")}"></div>
-      <div class="field"><label for="nc">Categoría</label><input id="nc" data-k="np_cat" value="${fv("np_cat")}" list="cats">
-        <datalist id="cats">${[...new Set(S.prod.map(p => p.categoria))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
-      <div class="field"><label for="npr">Precio (L.)</label><input id="npr" type="number" min="0" step="0.01" data-k="np_precio" value="${fv("np_precio")}"></div>
     </div>
-    <div class="actions"><button class="btn" data-a="addProd" ${S.busy ? "disabled" : ""}>Agregar producto</button></div>
-  </div>`;
-}
+  </div>
 
-/* ---------- modal ---------- */
-function drawModal(){
-  const md = $("#modal");
-  if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "cot" ? mCot() : mCxp();
-  if (!html) { md.classList.remove("open"); return; }
-  $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
-  md.classList.add("open");
-}
-function pagosHtml(x){
-  const p = x.pagos || [];
-  if (!p.length) return "";
-  return `<h2 style="margin-top:16px">Pagos</h2><div class="scroll"><table><tbody>${p.map(pg => `<tr><td>${fdate(pg.fecha)}</td><td>${esc(pg.metodo || "")}${pg.ref ? " · " + esc(pg.ref) : ""}</td><td class="num">${L(pg.monto)}</td></tr>`).join("")}</tbody></table></div>`;
-}
-function pagoForm(x, act){
-  return `<hr class="sep"><h2>Registrar pago</h2>
-  <div class="row">
-    <div class="field"><label for="pm">Monto (L.)</label><input id="pm" type="number" min="0" step="0.01" data-k="p_monto" value="${esc(S.f.p_monto ?? saldo(x))}"></div>
-    <div class="field"><label for="pf">Fecha</label><input id="pf" type="date" data-k="p_fecha" value="${esc(S.f.p_fecha || today())}"></div>
-  </div>
-  <div class="row">
-    <div class="field"><label for="pme">Método</label><select id="pme" data-k="p_met">${FORMAS.concat(x.formaPago ? [] : ["Depósito"]).map(m => `<option value="${m}" ${(S.f.p_met || x.formaPago || "Transferencia") === m ? "selected" : ""}>${m}</option>`).join("")}</select></div>
-    <div class="field"><label for="pr">Referencia (opcional)</label><input id="pr" data-k="p_ref" value="${fv("p_ref")}"></div>
-  </div>
-  <div class="actions"><button class="btn pri" data-a="${act}" ${S.busy ? "disabled" : ""}>Guardar pago</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
-}
-function mCot(){
-  const c = S.cot.find(x => x.id === S.m.id);
-  if (!c) return "";
-  const [et, ec] = ESTADO[c.estado] || [c.estado, ""];
-  const r = rol(), mio = c.vendedor === S.me.uid;
-  const puedeAprobar = c.estado === "cotizada" && (r !== "vendedor" || mio);
-  const puedeFacturar = c.estado === "aprobada" && puede("admin", "facturador");
-  const puedeCobrar = c.estado === "facturada" && saldo(c) > 0.005 && puede("admin", "facturador");
-  const puedeAnular = (c.estado === "cotizada" && (r !== "vendedor" || mio)) || (c.estado === "aprobada" && puede("admin", "facturador"));
-  const mode = S.m.mode, cc = calc(c.items), full = puede("admin", "facturador");
-  let extra = "";
-  if (mode === "factura") {
-    const fp = S.f.fac_fp || c.formaPago || "Efectivo";
-    extra = `<hr class="sep"><h2>Registrar factura</h2>
-    <p class="note">Emite la factura en Sube con estos mismos productos y copia aquí el número.</p>
-    <div class="row">
-      <div class="field" style="flex:2 1 220px"><label for="fn">N.º de factura (SAR)</label><input id="fn" data-k="fac_num" value="${fv("fac_num")}" placeholder="000-001-01-00000001"></div>
-      <div class="field"><label for="ff">Fecha</label><input id="ff" type="date" data-k="fac_fecha" value="${esc(S.f.fac_fecha || today())}"></div>
+  <div class="benefits">
+    <div class="wrap">
+      <div class="benefit"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 5h11v10H3zM14 8h4l3 4v3h-7zM7 19a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm10 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg></div><div><b>Entrega inmediata</b><span>En San Pedro Sula</span></div></div>
+      <div class="benefit"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l9 4.5v11L12 22l-9-4.5v-11z"/></svg></div><div><b>Precios por volumen</b><span>Mejores precios por caja</span></div></div>
+      <div class="benefit"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></div><div><b>Envíos nacionales</b><span>A todo Honduras</span></div></div>
+      <div class="benefit"><div class="ic"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div><div><b>ISV incluido</b><span>Factura a nombre de su empresa</span></div></div>
     </div>
-    <div class="field"><label for="fp">Forma de pago</label><select id="fp" data-k="fac_fp">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado ?? (fp !== "Contra entrega")) ? "checked" : ""}> Ya pagó el total</label>
-    <div class="actions"><button class="btn pri" data-a="saveFac" ${S.busy ? "disabled" : ""}>Guardar factura</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
-  } else if (mode === "pago") extra = pagoForm(c, "savePag");
-  const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
-  return `
-  <div class="bigstub">${esc(c.numero)}</div>
-  <div style="margin-top:8px"><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}</div>
-  <dl class="kv">
-    <dt>Cliente</dt><dd>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
-    ${c.cliente && c.cliente.direccion ? `<dt>Dirección</dt><dd>${esc(c.cliente.direccion)}</dd>` : ""}
-    ${c.cliente && c.cliente.tel ? `<dt>WhatsApp</dt><dd>${esc(c.cliente.tel)}</dd>` : ""}
-    ${c.cliente && c.cliente.email ? `<dt>Correo</dt><dd>${esc(c.cliente.email)}</dd>` : ""}
-    <dt>Fecha</dt><dd>${fdate(c.fecha)} · válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}</dd>
-    <dt>Vendedor</dt><dd>${esc(c.vendedorNombre || "")}</dd>
-    ${full && c.formaPago ? `<dt>Forma de pago</dt><dd>${esc(formaTxt(c.formaPago))}</dd>` : ""}
-    ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}</dd>` : ""}
-  </dl>
-  ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${i.cant}</td><td>${esc(i.nombre)}</td><td class="num">${L(l.u)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
-  </tbody></table></div>`
-  : `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Total</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${i.cant}</td><td>${esc(i.nombre)}</td><td class="num">${L(l.un)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
-  </tbody></table></div>`}
-  <p class="note">Precios sin ISV.</p>
-  <div class="totals">${totalsHtml(cc, !full)}${c.estado === "facturada" ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
-  ${c.notas ? `<p class="note">${esc(c.notas)}</p>` : ""}
-  ${pagosHtml(c)}
-  ${extra}
-  ${mode === "ver" ? `<div class="actions">
-    ${window.jspdf ? `<button class="btn pri" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button>${full ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}` : ""}
-    <a class="btn" href="${esc(waLink(c))}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
-    ${puedeAprobar ? `<button class="btn pri" data-a="aprobar">El cliente aceptó</button>` : ""}
-    ${puedeFacturar ? `<button class="btn pri" data-a="modeFac">Registrar factura</button>` : ""}
-    ${puedeCobrar ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
-    ${puedeAnular ? `<button class="btn danger" data-a="anular">Anular</button>` : ""}
-  </div>` : ""}`;
-}
-function mCxp(){
-  const x = S.cxp.find(y => y.id === S.m.id);
-  if (!x) return "";
-  const ep = estadoPago(x);
-  return `<h1 style="padding-right:40px">${esc(x.proveedor)}</h1>
-  <span class="badge ${ep[1]}">${ep[0]}</span>
-  <dl class="kv">
-    ${x.concepto ? `<dt>Concepto</dt><dd>${esc(x.concepto)}</dd>` : ""}
-    ${x.factura ? `<dt>Factura</dt><dd>${esc(x.factura)}</dd>` : ""}
-    <dt>Fecha</dt><dd>${fdate(x.fecha)}</dd><dt>Vence</dt><dd>${fdate(x.vence)}</dd>
-    <dt>Monto</dt><dd>${L(x.monto)}</dd><dt>Saldo</dt><dd><b>${L(saldo(x))}</b></dd>
-  </dl>
-  ${pagosHtml(x)}
-  ${S.m.mode === "pago" ? pagoForm(x, "savePagCxp") : `<div class="actions">
-    ${saldo(x) > 0.005 ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
-    ${puede("admin") ? `<button class="btn danger" data-a="delCxp">Borrar</button>` : ""}</div>`}`;
-}
+  </div>
 
-/* ---------- WhatsApp y PDF ---------- */
-function waLink(c){
-  const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
-  const cc = calc(c.items);
-  (c.items || []).forEach((i, n) => lines.push(`${i.cant} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
-  lines.push("", `Subtotal: ${L(cc.base)}`, `ISV 15%: ${L(cc.isv)}`, `*Total: ${L(cc.total)}*`);
-  lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
-  let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
-  if (tel.length === 8) tel = "504" + tel;
-  return `https://wa.me/${tel}?text=${encodeURIComponent(lines.join("\n"))}`;
-}
-const EMP_DEF = {nombre: "MHAS DE HONDURAS S DE RL", rtn: "05019018067606", direccion: "33 calle zona el polvorín, Res. Valle Escondido, S.P.S.",
-  pbx: "2540-1090", whatsapp: "3166-6059", correo: "comercial@mhasdehonduras.com",
-  entrega: "Inmediato en San Pedro Sula · envío a nivel nacional (flete se paga al recibir)", validez: 15};
-function emp(){ const e = S.cfg.emp || {}, o = {}; for (const k in EMP_DEF) o[k] = (e[k] !== undefined && e[k] !== "") ? e[k] : EMP_DEF[k]; return o; }
-function armarPdf(c, interno){
-  const e = emp(), {jsPDF} = window.jspdf;
-  const d = new jsPDF({unit: "mm", format: "letter"});
-  const W = 215.9, M = 18, cx = W / 2, IW = W - 2 * M;
-  const NAVY = [31, 56, 100], INK = [30, 30, 30], GRAY = [105, 110, 120], LINE = [205, 210, 220], YEL = [255, 248, 222], LAB = [232, 235, 242];
-  const tc = a => d.setTextColor(a[0], a[1], a[2]), fc = a => d.setFillColor(a[0], a[1], a[2]), dc = a => d.setDrawColor(a[0], a[1], a[2]);
-  const cc = calc(c.items), hasD = !!interno && cc.desc > 0;
-  const v = c.vendedorInfo || {nombre: c.vendedorNombre || ""};
-  try { d.addImage(LOGO, "JPEG", M, 20, 30, 14.8); } catch (_) {}
-  if (interno) { d.setFont("helvetica", "bold"); d.setFontSize(8.5); d.setTextColor(180, 35, 24); d.text("COPIA INTERNA", W - M, 14, {align: "right"}); }
-  d.setFont("helvetica", "bold"); d.setFontSize(16); tc(NAVY); d.text(e.nombre, cx + 6, 28, {align: "center"});
-  d.setFont("helvetica", "normal"); d.setFontSize(9.5); tc(GRAY);
-  let y = 34;
-  [e.rtn ? "RTN: " + e.rtn : "", e.direccion, [e.pbx ? "PBX " + e.pbx : "", e.whatsapp ? "WhatsApp " + e.whatsapp : "", e.correo].filter(Boolean).join("  ·  ")]
-    .filter(Boolean).forEach(t => { d.text(t, cx + 6, y, {align: "center"}); y += 5; });
-  y += 6;
-  const half = IW / 2, rh = 6.2;
-  dc(LINE); d.setLineWidth(0.2);
-  [["COTIZACIÓN #", c.numero], ["FECHA", fdate(c.fecha)]].forEach(([k, val]) => {
-    fc(LAB); d.rect(M, y, half, rh, "FD"); fc(YEL); d.rect(M + half, y, half, rh, "FD");
-    d.setFont("helvetica", "bold"); d.setFontSize(9.5); tc(GRAY); d.text(k, M + 1.5, y + 4.3);
-    d.setFont("helvetica", "normal"); tc(INK); d.text(String(val), M + IW - 1.5, y + 4.3, {align: "right"}); y += rh;
+  <section id="productos">
+    <div class="wrap">
+      <div class="head">
+        <div><h2>Catálogo de productos</h2></div>
+      </div>
+      <div class="chips" role="group" aria-label="Filtrar por categoría">
+        <button class="chip" aria-pressed="true" data-f="all">Todos</button>
+        <button class="chip" aria-pressed="false" data-f="pos">Rollos POS</button>
+        <button class="chip" aria-pressed="false" data-f="formas">Formas continuas</button>
+        <button class="chip" aria-pressed="false" data-f="etiquetas">Etiquetas</button>
+        <button class="chip" aria-pressed="false" data-f="impresion">Impresión de etiquetas</button>
+        <button class="chip" aria-pressed="false" data-f="empaque">Empaque</button>
+      </div>
+      <div id="cats"></div>
+
+      <div class="custom">
+        <div>
+          <h3>¿Necesita un producto que no aparece aquí?</h3>
+          <p>Escríbanos. Conseguimos medidas, materiales y presentaciones especiales según la necesidad de su negocio.</p>
+        </div>
+        <a class="btn btn-orange js-wa" data-item="Producto especial" href="https://wa.me/50431666059" target="_blank" rel="noopener">Consultar por WhatsApp</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="pdf" id="catalogo">
+    <div class="wrap">
+      <img class="cover" src="img/catalogo-portada.jpg" alt="Portada del catálogo MHAS" width="190" height="269">
+      <div>
+        <h2>Descargue el catálogo en PDF</h2>
+        <p>Todos nuestros productos en un solo archivo para compartir con su departamento de compras.</p>
+        <a class="btn btn-orange" id="dlpdf" href="catalogo.pdf?v=2" download="Catalogo-MHAS-de-Honduras.pdf">Descargar catálogo (PDF)</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote" id="cotizar">
+    <div class="wrap">
+      <div class="intro">
+        <h2>Solicite su cotización por correo</h2>
+        <p>Llene el formulario y le enviamos la cotización formal a su correo, lista para su departamento de compras.</p>
+        <ul>
+          <li>Respuesta en horario hábil</li>
+          <li>Precios con ISV incluido</li>
+          <li>Factura a nombre de su empresa</li>
+        </ul>
+      </div>
+      <form class="qform" id="qform" novalidate>
+        <div><label for="q-nombre">Nombre *</label><input id="q-nombre" name="Nombre" required autocomplete="name"></div>
+        <div><label for="q-empresa">Empresa</label><input id="q-empresa" name="Empresa" autocomplete="organization"></div>
+        <div><label for="q-tel">Teléfono / WhatsApp *</label><input id="q-tel" name="Teléfono" type="tel" required inputmode="tel" autocomplete="tel" placeholder="9999-9999"></div>
+        <div><label for="q-email">Correo *</label><input id="q-email" name="email" type="email" required autocomplete="email" placeholder="compras@empresa.com"></div>
+        <div><label for="q-rtn">RTN <small>(si requiere factura)</small></label><input id="q-rtn" name="RTN" inputmode="numeric"></div>
+        <div><label for="q-ciudad">Ciudad</label><input id="q-ciudad" name="Ciudad" placeholder="San Pedro Sula"></div>
+        <div><label for="q-prod">Producto *</label><select id="q-prod" name="Producto" required></select></div>
+        <div><label for="q-cant">Cantidad *</label><input id="q-cant" name="Cantidad" required placeholder="Ej. 10 cajas, 50 rollos"></div>
+        <div class="full"><label for="q-det">Detalles u otros productos</label><textarea id="q-det" name="Detalles" placeholder="Medidas, frecuencia de compra, fecha de entrega, otros productos…"></textarea></div>
+        <input class="hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="full"><button class="btn btn-orange" type="submit" id="q-btn">Enviar solicitud de cotización</button></div>
+        <div class="qmsg" id="q-msg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="contact" id="contacto">
+    <div class="wrap">
+      <div>
+        <h2>Contáctenos</h2>
+        <ul class="clist">
+          <li><span class="ic"><img src="img/icons/whatsapp.png" alt=""></span><div><small>WhatsApp</small><a class="js-wa" data-item="Contacto" href="https://wa.me/50431666059" target="_blank" rel="noopener">+504 3166-6059</a></div></li>
+          <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><div><small>PBX</small><a class="js-call" href="tel:+50425401090">2540-1090</a></div></li>
+          <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><div><small>Ventas</small><a class="js-call" href="tel:+50494689500">+504 9468-9500</a> · <a class="js-call" href="tel:+50499458993">+504 9945-8993</a></div></li>
+          <li><span class="ic"><img src="img/icons/correo.png" alt=""></span><div><small>Correo</small><a class="js-mail" href="mailto:ventas@mhasdehonduras.com">ventas@mhasdehonduras.com</a><br><a class="js-mail" href="mailto:comercial@mhasdehonduras.com">comercial@mhasdehonduras.com</a></div></li>
+          <li><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span><div><small>Dirección</small><a href="https://www.google.com/maps/search/?api=1&query=33+calle+El+Polvor%C3%ADn+San+Pedro+Sula" target="_blank" rel="noopener">33 calle, zona El Polvorín, San Pedro Sula, Cortés</a></div></li>
+        </ul>
+        <div class="social">
+          <a href="https://www.facebook.com/profile.php?id=61567458963508" target="_blank" rel="noopener" aria-label="Facebook"><img src="img/icons/facebook.png" alt="Facebook"></a>
+          <a href="https://www.instagram.com/mhasdhonduras/" target="_blank" rel="noopener" aria-label="Instagram"><img src="img/icons/instagram.png" alt="Instagram"></a>
+          <a class="js-wa" data-item="Contacto" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="WhatsApp"><img src="img/icons/whatsapp.png" alt="WhatsApp"></a>
+          <a class="js-mail" href="mailto:ventas@mhasdehonduras.com" aria-label="Correo"><img src="img/icons/correo.png" alt="Correo"></a>
+        </div>
+      </div>
+      <div class="conds">
+        <h3>Condiciones</h3>
+        <ul>
+          <li>Entrega inmediata en San Pedro Sula.</li>
+          <li>Envíos a nivel nacional; el flete se paga al recibir.</li>
+          <li>Cotizaciones con ISV incluido, sujetas a cambio sin previo aviso.</li>
+          <li>Precios preferenciales por volumen.</li>
+          <li>Atendemos empresas, comercios, oficinas, almacenes y cualquier tipo de negocio.</li>
+        </ul>
+        <div class="qbtns"><a class="qbtn wa js-wa" data-item="Cotización" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-item="" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; <span id="y">2026</span> MHAS de Honduras · San Pedro Sula, Honduras</span>
+    <span>www.mhasdehonduras.com</span>
+  </div>
+</footer>
+
+<a class="float-wa js-wa" data-item="Consulta general" href="https://wa.me/50431666059" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+</a>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Imagen del producto"><div class="lb-box"><button class="lb-x" id="lb-x" aria-label="Cerrar">&times;</button><div class="lb-media"><div class="lb-stage" id="lb-stage"></div><div class="lb-thumbs" id="lb-thumbs" aria-label="Más imágenes"></div></div><div class="lb-body"><h4 id="lb-t"></h4><div class="sub" id="lb-s"></div><p id="lb-d"></p><div class="qbtns" id="lb-q"></div></div></div></div>
+<script>
+var WA='50431666059';
+var CATS=[
+ {id:'pos',t:'Rollos para punto de venta',d:'Papel térmico y químico para facturación y comprobantes',p:[
+  ['rollo-80','Rollo Térmico 80 mm','El estándar para cajas POS','Papel térmico para impresoras POS de 80 mm. Imprime nítido sin tinta ni cinta. Ideal para supermercados, restaurantes y ferreterías.'],
+  ['rollo-57','Rollo Térmico 57 mm','Para datáfonos y POS portátiles','Formato angosto para terminales POS portátiles, datáfonos y cajas registradoras compactas.'],
+  ['quimico-2','Rollo Químico 2 Partes','Original y copia sin carbón','Papel autocopiativo para impresoras de impacto. Un comprobante para el cliente y otro para su archivo.'],
+  ['quimico-3','Rollo Químico 3 Partes','Original y dos copias','Papel autocopiativo con original y dos copias para control de caja, bodega y contabilidad.']]},
+ {id:'formas',t:'Formas continuas',d:'Papel continuo con perforación lateral para impresoras matriciales',p:[
+  ['forma-2','Forma Continua 2 partes','Original y copia','Copia autocopiativa sin papel carbón para facturas, reportes y guías.'],
+  ['forma-3','Forma Continua 3 partes','Original y 2 copias','Una copia para el cliente, otra para archivo y otra para control interno.']]},
+ {id:'etiquetas',t:'Etiquetas',d:'Térmicas, de polipropileno y personalizadas para cualquier tipo de negocio',p:[
+  ['etq-2x1','Etiqueta Térmica 2" x 1"','Códigos de barra e inventario','Tamaño estándar para códigos de barra, inventario y control de activos. Térmica directa, no necesita ribbon.'],
+  ['etq-4x6','Etiqueta Térmica 4" x 6"','Lista para guías de paquetería','Tamaño estándar para guías de envío y paquetería. Compatible con impresoras térmicas de escritorio.'],
+  ['etq-3x5','Etiqueta Térmica 3" x 5"','Rotulado de cajas y bodega','Formato grande para identificar cajas, bodega y despacho.'],
+  ['etq-4x4','Etiqueta Térmica 4" x 4"','Identificación de producto y lotes','Formato cuadrado para identificar producto, lotes y cajas medianas.'],
+  ['etq-precio','Etiqueta Térmica de Precio','Precios claros en anaquel','Para precios y códigos de barra en producto y anaquel. Rápida de aplicar y fácil de leer.'],
+  ['etq-bopp','Etiqueta 1" x 4" BOPP','Resiste humedad y roce','Polipropileno resistente a la humedad y al roce. Ideal para envases, químicos y productos de limpieza.'],
+  ['etq-2x2','Etiqueta Personalizada 2" x 2"','Su logo en cada empaque','Sticker con su logo para sellar bolsas, cajas y empaques. Dele a su producto una imagen profesional.'],
+  ['etq-impresa','Etiqueta Impresa Personalizada','Diseñada a la medida de su marca','Con su logo y diseño, en el tamaño y los colores que su marca necesita.']]},
+ {id:'impresion',t:'Impresión de etiquetas',d:'Cintas de transferencia y placas personalizadas',p:[
+  ['ribbon-110','Ribbon 110 mm x 300 m','Impresión duradera en etiquetas','Cinta de transferencia térmica para impresoras de etiquetas de 110 mm.'],
+  ['ribbon-76','Ribbon 76 mm x 360 m','Más metros, mayor rendimiento','Cinta de transferencia térmica de 76 mm para impresoras de escritorio.'],
+  ['clises','Clisés – Placas de impresión','Se hace una vez y se reutiliza','Placa de impresión para etiquetas personalizadas. Se elabora una sola vez por diseño y se reutiliza en cada pedido.']]},
+ {id:'empaque',t:'Empaque y embalaje',d:'Materiales flexibles y resistentes para empaquetar productos',p:[
+  ['stretch-negro','Stretch Film Negro 18" x 1200 pies','Protege del sol y el polvo','Película estirable negra que protege la mercadería del sol, el polvo y la humedad. Ideal para diferenciar pedidos.'],
+  ['stretch-1500','Stretch Film 18" x 1500 pies','Máximo rendimiento por rollo','Película estirable transparente de 18 micras para cargas pesadas y paletizado frecuente.'],
+  ['stretch-1200','Stretch Film 18" x 1200 pies','Rendimiento y resistencia','Película estirable transparente para paletizar, agrupar y asegurar la carga. Disponible en 15 y 18 micras.'],
+  ['stretch-1000','Stretch Film 18" x 1000 pies','Práctico y económico','Rollo liviano y fácil de manejar. Disponible en 15 y 18 micras.'],
+  ['cinta-2x100','Cinta Adhesiva 2" x 100 yd','Sellado firme de cajas','Cinta de embalaje transparente con buena adhesión en cartón.'],
+  ['cinta-2x200','Cinta Adhesiva 2" x 200 yd','Doble rendimiento en despacho','Cinta de embalaje de mayor rendimiento, con menos cambios de rollo.'],
+  ['cinta-3x100','Cinta Adhesiva 3" x 100 yd','Más ancho, más seguridad','Para cajas grandes y pesadas. Cubre más superficie y refuerza el cierre.'],
+  ['cinta-cafe','Cinta Adhesiva Café 2" x 200 yd','Discreta en cajas de cartón','Se integra al cartón kraft y da una presentación más limpia.']]}
+];
+// versión de fotos: cuando cambies fotos de productos, sube este número (2, 3, 4...)
+var IMGV='2';
+function waUrl(item){return 'https://wa.me/'+WA+'?text='+encodeURIComponent('Hola MHAS, vi su página web y quiero cotizar: '+item);}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+var html='';
+CATS.forEach(function(c){
+  html+='<div class="cat" data-cat="'+c.id+'"><h3>'+c.t+'</h3><p>'+c.d+'</p><div class="grid">';
+  c.p.forEach(function(p){
+    html+='<article class="card"><div class="imgw"><img loading="lazy" src="img/'+p[0]+'.jpg?v='+IMGV+'" data-big="img/meta/'+p[0]+'.jpg?v='+IMGV+'" data-more="'+esc((p[4]||[]).join('|'))+'" alt="'+esc(p[1])+'" width="400" height="400" role="button" tabindex="0" aria-label="Ver imagen grande: '+esc(p[1])+'"><span class="zoomhint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg></span></div><div class="body"><h4>'+esc(p[1])+'</h4><div class="sub">'+p[2]+'</div><p class="desc">'+p[3]+'</p><div class="qbtns"><a class="qbtn wa js-wa" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" data-cat="'+esc(c.t)+'" href="'+waUrl(p[1])+'" target="_blank" rel="noopener" aria-label="Cotizar por WhatsApp">Cotizar<img src="img/icons/whatsapp-blanco.png" alt=""></a><a class="qbtn mail js-quote" data-pid="mhas-'+p[0]+'" data-item="'+esc(p[1])+'" href="#cotizar" aria-label="Cotizar por correo">Cotizar<img src="img/icons/correo-blanco.png" alt=""></a></div></div></article>';
   });
-  y += 6;
-  const cl = c.cliente || {};
-  [["Cliente:", cl.nombre], ["Dirección:", cl.direccion], ["RTN:", cl.rtn]].forEach(([k, val]) => {
-    fc(YEL); d.rect(M + half, y, half, 5.6, "F");
-    d.setFont("helvetica", "bold"); d.setFontSize(9.5); tc(INK); d.text(k, M, y + 4);
-    d.setFont("helvetica", "normal"); d.text(d.splitTextToSize(String(val || ""), half - 3)[0] || "", M + half + 1.5, y + 4); y += 5.6;
-  });
-  y += 6;
-  // columnas
-  const wC = 18, wP = 31, wT = 31, wD = hasD ? 27 : 0, wN = IW - wC - wP - wT - wD;
-  const xs = [M, M + wC, M + wC + wN, M + wC + wN + wP, M + wC + wN + wP + wD];
-  const heads = ["CANT.", "PRODUCTO", "PRECIO UNIT."].concat(hasD ? ["DESCUENTO"] : []).concat(["TOTAL"]);
-  const widths = [wC, wN, wP].concat(hasD ? [wD] : []).concat([wT]);
-  const header = () => {
-    fc(NAVY); d.rect(M, y, IW, 6.6, "F"); d.setFont("helvetica", "bold"); d.setFontSize(9.5); d.setTextColor(255, 255, 255);
-    let x = M; heads.forEach((h, i) => { d.text(h, x + widths[i] / 2, y + 4.6, {align: "center"}); x += widths[i]; }); y += 6.6;
-  };
-  header();
-  d.setFont("helvetica", "normal"); d.setFontSize(9.5);
-  const filas = Math.max((c.items || []).length, 12);
-  for (let r = 0; r < filas; r++) {
-    const it = (c.items || [])[r], l = it ? cc.lines[r] : null;
-    const nl = it ? d.splitTextToSize(it.nombre, wN - 3) : [""];
-    const h = Math.max(5.8, nl.length * 4.2 + 1.6);
-    if (y + h > 240) { d.addPage(); y = 20; header(); d.setFont("helvetica", "normal"); d.setFontSize(9.5); }
-    fc(YEL); d.rect(M, y, wC + wN, h, "F"); dc(LINE);
-    let x = M; widths.forEach(w => { d.rect(x, y, w, h); x += w; });
-    if (it) {
-      tc(INK);
-      d.text(String(it.cant), M + wC / 2, y + 4.1, {align: "center"});
-      d.text(nl, M + wC + 1.5, y + 4.1);
-      d.text(L(interno ? l.u : l.un), xs[2] + wP / 2, y + 4.1, {align: "center"});
-      if (hasD) d.text(l.desc ? L(l.desc) + " (" + pctTxt(l.pct) + ")" : "", xs[3] + wD / 2, y + 4.1, {align: "center"});
-      d.text(L(l.imp), M + IW - wT / 2, y + 4.1, {align: "center"});
-    }
-    y += h;
-  }
-  const tot = [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
-  if (y + tot.length * 6 + 70 > 270) { d.addPage(); y = 20; }
-  tot.forEach(([k, val]) => {
-    dc(LINE); d.rect(M, y, IW - wT, 6); d.rect(M + IW - wT, y, wT, 6);
-    d.setFont("helvetica", "bold"); tc(INK); d.text(k, M + IW - wT - 1.5, y + 4.2, {align: "right"});
-    d.setFont("helvetica", "normal"); d.text(val, M + IW - wT / 2, y + 4.2, {align: "center"}); y += 6;
-  });
-  fc(NAVY); d.rect(M, y, IW, 6.6, "F"); d.setDrawColor(255, 255, 255); d.line(M + IW - wT, y, M + IW - wT, y + 6.6);
-  d.setFont("helvetica", "bold"); d.setTextColor(255, 255, 255);
-  d.text("TOTAL", M + IW - wT - 1.5, y + 4.6, {align: "right"}); d.text(L(cc.total), M + IW - wT / 2, y + 4.6, {align: "center"});
-  y += 6.6 + 7;
-  const notas = ["Tiempo de entrega: " + e.entrega].concat(interno ? ["Condiciones: " + formaTxt(c.formaPago || "Efectivo")] : []).concat(["Validez: Esta cotización es válida por " + (c.validez || e.validez) + " días a partir de la fecha."]).concat(c.notas ? [c.notas] : []);
-  d.setFontSize(8.5); d.setFont("helvetica", "normal");
-  const nlines = notas.flatMap(t => d.splitTextToSize(t, IW - 4));
-  const nh = 9 + nlines.length * 3.9 + 3;
-  fc([243, 244, 246]); d.rect(M, y, IW, nh, "F"); dc([170, 175, 185]); d.line(M, y, M, y + nh);
-  tc(INK); d.text("NOTAS", M + 1.5, y + 4.5); d.text(nlines, M + 1.5, y + 9);
-  y += nh + 16;
-  dc(INK); d.line(M, y, M + 68, y); y += 5.5;
-  d.setFont("helvetica", "bold"); d.setFontSize(10.5); tc(INK); d.text(v.nombre || "", M, y); y += 5.5;
-  d.setFont("helvetica", "normal"); d.setFontSize(9.5); tc(GRAY);
-  d.text([v.cargo, v.tel ? "Tel. " + v.tel : "", v.correo].filter(Boolean).join("  ·  "), M, y);
-  return d;
-}
-function nombrePdf(c){ return "Cotizacion " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"; }
-function descargarPdf(c){ if (!window.jspdf) return; armarPdf(c).save(nombrePdf(c)); }
-async function compartirPdf(c){
-  if (!window.jspdf) return;
-  const d = armarPdf(c), name = nombrePdf(c);
-  try {
-    const file = new File([d.output("blob")], name, {type: "application/pdf"});
-    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: "Cotización " + c.numero}); return; }
-  } catch (err) { if (err && err.name === "AbortError") return; }
-  d.save(name);
-}
-
-/* ---------- datos ---------- */
-let dataSubs = [], meSub = null, subKey = null;
-function stopData(){ dataSubs.forEach(u => u()); dataSubs = []; subKey = null; }
-const mapDocs = q => q.docs.map(d => Object.assign({id: d.id}, d.data()));
-const onErr = e => { console.error(e); if (e && e.code === "permission-denied") toast("Sin permiso para ver parte de los datos."); };
-function startData(){
-  const r = rol(), key = S.me.uid + ":" + r;
-  if (subKey === key) return;
-  stopData(); subKey = key;
-  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = [];
-  if (!r) return;
-  const fact = r === "admin" || r === "facturador";
-  dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
-  dataSubs.push(onSnapshot(collection(db, "productos"), q => { S.prod = mapDocs(q).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || (a.nombre || "").localeCompare(b.nombre || "")); render(); }, onErr));
-  dataSubs.push(onSnapshot(collection(db, "clientes"), q => { S.cli = mapDocs(q); render(); }, onErr));
-  const cq = fact ? query(collection(db, "cotizaciones"), orderBy("creado", "desc"), limit(1000))
-                  : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
-  dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
-  if (fact) dataSubs.push(onSnapshot(collection(db, "cxp"), q => { S.cxp = mapDocs(q); render(); }, onErr));
-  if (r === "admin") dataSubs.push(onSnapshot(collection(db, "usuarios"), q => { S.usuarios = mapDocs(q); render(); }, onErr));
-}
-
-onAuthStateChanged(auth, u => entrar(u));
-async function entrar(u){
-  if (meSub) { meSub(); meSub = null; }
-  stopData(); S.m = null;
-  S.u = u || null;
-  if (!u) { S.admin = false; S.me = {uid: null, email: "", nombre: "", rol: "", ini: ""}; S.screen = "auth"; draw(); return; }
-  if (u.email === ADMIN && !u.emailVerified) { S.screen = "verificar"; draw(); return; }
-  S.admin = u.email === ADMIN && u.emailVerified;
-  S.screen = "cargando"; draw();
-  const ref = doc(db, "usuarios", u.uid);
-  try {
-    const s = await getDoc(ref);
-    if (!s.exists()) await setDoc(ref, {nombre: u.displayName || clean(S.f.a_nombre), email: u.email, rol: "", ini: "", creado: Date.now()});
-  } catch (e) { console.error(e); }
-  meSub = onSnapshot(ref, s => {
-    const d = s.exists() ? s.data() : {};
-    S.me = {uid: u.uid, email: u.email, nombre: d.nombre || u.displayName || "", rol: d.rol || "", ini: d.ini || "", cargo: d.cargo || "", tel: d.tel || "", correo: d.correo || ""};
-    S.screen = "app"; startData(); render();
-  }, e => { console.error(e); S.me = {uid: u.uid, email: u.email, nombre: u.displayName || "", rol: "", ini: ""}; S.screen = "app"; startData(); draw(); });
-}
-
-/* ---------- correlativo ---------- */
-async function siguienteNumero(ini){
-  const ref = doc(db, "contadores", ini);
-  const n = await runTransaction(db, async tx => {
-    const s = await tx.get(ref);
-    const n = (s.exists() ? Number(s.data().ultimo) || 0 : 0) + 1;
-    tx.set(ref, {ultimo: n});
-    return n;
-  });
-  return "COT-" + ini + "-" + String(n).padStart(4, "0");
-}
-
-/* ---------- acciones ---------- */
-const A = {
-  authMode(v){ S.authMode = v; draw(); },
-  async authGo(){
-    const email = clean(S.f.a_email).toLowerCase(), pass = S.f.a_pass || "";
-    if (!email) return toast("Escribe tu correo.");
-    S.busy = true; draw();
-    try {
-      if (S.authMode === "login") { if (!pass) throw {code: "auth/invalid-credential"}; await signInWithEmailAndPassword(auth, email, pass); }
-      else if (S.authMode === "registro") {
-        const nom = clean(S.f.a_nombre); if (!nom) { S.busy = false; draw(); return toast("Escribe tu nombre."); }
-        const cr = await createUserWithEmailAndPassword(auth, email, pass);
-        await updateProfile(cr.user, {displayName: nom});
-        if (email === ADMIN) await sendEmailVerification(cr.user);
-        try { await updateDoc(doc(db, "usuarios", cr.user.uid), {nombre: nom}); } catch (_) {}
-      } else { await sendPasswordResetEmail(auth, email); toast("Te enviamos el enlace a " + email + "."); S.authMode = "login"; }
-      delete S.f.a_pass;
-    } catch (e) { toast(authError(e && e.code)); }
-    S.busy = false; draw();
-  },
-  async yaVerifique(){
-    S.busy = true; draw();
-    try { await auth.currentUser.reload(); await auth.currentUser.getIdToken(true); } catch (e) { console.error(e); }
-    S.busy = false;
-    if (auth.currentUser && auth.currentUser.emailVerified) entrar(auth.currentUser);
-    else { toast("Aún no aparece verificado. Abre el enlace del correo."); draw(); }
-  },
-  async reenviar(){ try { await sendEmailVerification(auth.currentUser); toast("Correo reenviado."); } catch (e) { toast(authError(e && e.code)); } },
-  async salir(){ await signOut(auth); S.f = {}; S.cart = []; },
-  tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
-  addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
-  addSel(){
-    const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
-    const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
-    const i = S.cart.find(x => x.id === p.id);
-    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant});
-    delete S.f.psel; delete S.f.pcant; draw();
-  },
-  pmas(){ S.f.pcant = Math.max(1, Math.round(Number(S.f.pcant) || 1) + 1); draw(); },
-  pmenos(){ S.f.pcant = Math.max(1, Math.round(Number(S.f.pcant) || 1) - 1); draw(); },
-  qmas(v){ const i = S.cart[Number(v)]; if (i) i.cant++; draw(); },
-  qmenos(v){ const i = S.cart[Number(v)]; if (i && i.cant > 1) i.cant--; draw(); },
-  pdfInterno(){ const c = S.cot.find(x => x.id === S.m.id); if (c && window.jspdf) armarPdf(c, true).save("INTERNA " + nombrePdf(c)); },
-  async share(){ const c = S.cot.find(x => x.id === S.m.id); if (c) await compartirPdf(c); },
-  rmp(v){ S.cart.splice(Number(v), 1); draw(); },
-  vaciar(){ S.cart = []; draw(); },
-  async saveCot(){
-    const sel = S.f.cli_sel || "";
-    if (!sel) return toast("Elige o crea un cliente.");
-    if (!S.cart.length) return toast("Agrega al menos un producto.");
-    let cliente;
-    if (sel === "__nuevo") {
-      const nom = clean(S.f.cli_nombre);
-      if (!nom) return toast("Escribe el nombre del cliente.");
-      cliente = {nombre: nom, direccion: clean(S.f.cli_dir), rtn: clean(S.f.cli_rtn), tel: clean(S.f.cli_tel), email: clean(S.f.cli_email)};
-    } else {
-      const c = S.cli.find(x => x.id === sel); if (!c) return toast("Ese cliente ya no existe.");
-      cliente = {id: c.id, nombre: c.nombre, direccion: c.direccion || "", rtn: c.rtn || "", tel: c.tel || "", email: c.email || ""};
-    }
-    S.busy = true; draw();
-    try {
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid}); cliente.id = ref.id; }
-      const numero = await siguienteNumero(iniciales());
-      const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: r2(i.precio), desc: 0}));
-      const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
-      const total = calc(items).total;
-      const e = emp();
-      const nueva = {numero, cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
-        vendedor: S.me.uid, vendedorNombre: S.me.nombre || S.me.email,
-        vendedorInfo: {nombre: S.me.nombre || S.me.email, cargo: S.me.cargo || "Ventas", tel: S.me.tel || e.whatsapp, correo: S.me.correo || S.me.email},
-        fecha: today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
-      await setDoc(doc(db, "cotizaciones", numero), nueva);
-      try { descargarPdf(nueva); } catch (err) { console.error(err); }
-      S.cart = []; ["cli_sel", "cli_nombre", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant"].forEach(k => delete S.f[k]);
-      toast("Cotización " + numero + " guardada");
-      S.m = {type: "cot", id: numero, mode: "ver"}; S.tab = "cotizaciones"; S.filtro = "activas";
-    } catch (e) { fallo(e, "guardar la cotización"); }
-    S.busy = false; draw();
-  },
-  filtro(v){ S.filtro = v; draw(); },
-  open(v){ S.m = {type: "cot", id: v, mode: "ver"}; clearForm(); draw(); },
-  cobrar(v){ S.m = {type: "cot", id: v, mode: "pago"}; clearForm(); draw(); },
-  openCxp(v){ S.m = {type: "cxp", id: v, mode: "ver"}; clearForm(); draw(); },
-  close(){ S.m = null; draw(); },
-  modeVer(){ S.m.mode = "ver"; clearForm(); draw(); },
-  modeFac(){ S.m.mode = "factura"; clearForm(); draw(); },
-  modePag(){ S.m.mode = "pago"; clearForm(); draw(); },
-  async aprobar(){ await upd(doc(db, "cotizaciones", S.m.id), {estado: "aprobada", aprobada: Date.now()}, "Marcada como aprobada"); },
-  async anular(){ if (!confirm("¿Anular esta cotización? No se puede deshacer.")) return; if (await upd(doc(db, "cotizaciones", S.m.id), {estado: "anulada", anulada: Date.now()}, "Cotización anulada")) { S.m = null; draw(); } },
-  async saveFac(){
-    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
-    const num = clean(S.f.fac_num); if (!num) return toast("Escribe el número de factura.");
-    const fecha = S.f.fac_fecha || today();
-    const fp = S.f.fac_fp || c.formaPago || "Efectivo";
-    const yaPago = S.f.fac_pagado ?? (fp !== "Contra entrega");
-    const pagos = (c.pagos || []).slice();
-    if (yaPago && saldo(c) > 0) pagos.push({monto: saldo(c), fecha, metodo: fp, ref: "", por: S.me.uid});
-    const ok = await upd(doc(db, "cotizaciones", c.id), {estado: "facturada", formaPago: fp, factura: {numero: num, fecha, formaPago: fp, por: S.me.uid}, vence: fecha, pagos}, "Factura registrada");
-    if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
-  },
-  async savePag(){
-    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
-    const p = leerPago(c); if (!p) return;
-    const ok = await upd(doc(db, "cotizaciones", c.id), {pagos: (c.pagos || []).concat([p])}, "Pago registrado");
-    if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
-  },
-  cxpForm(){ S.cxpForm = !S.cxpForm; draw(); },
-  verPagadas(){ S.verPagadas = !S.verPagadas; draw(); },
-  async saveCxp(){
-    const prov = clean(S.f.x_prov), monto = r2(S.f.x_monto);
-    if (!prov) return toast("Escribe el proveedor.");
-    if (!(monto > 0)) return toast("Escribe un monto mayor que cero.");
-    S.busy = true; draw();
-    try {
-      await addDoc(collection(db, "cxp"), {proveedor: prov, concepto: clean(S.f.x_conc), factura: clean(S.f.x_fact), monto,
-        fecha: S.f.x_fecha || today(), vence: S.f.x_vence || addDays(today(), 30), pagos: [], creado: Date.now(), creadoPor: S.me.uid});
-      ["x_prov", "x_conc", "x_fact", "x_monto", "x_fecha", "x_vence"].forEach(k => delete S.f[k]);
-      S.cxpForm = false; toast("Cuenta por pagar guardada");
-    } catch (e) { fallo(e, "guardar la cuenta por pagar"); }
-    S.busy = false; draw();
-  },
-  async savePagCxp(){
-    const x = S.cxp.find(y => y.id === S.m.id); if (!x) return;
-    const p = leerPago(x); if (!p) return;
-    const ok = await upd(doc(db, "cxp", x.id), {pagos: (x.pagos || []).concat([p])}, "Pago registrado");
-    if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
-  },
-  async delCxp(){ if (!confirm("¿Borrar esta cuenta por pagar?")) return; try { await deleteDoc(doc(db, "cxp", S.m.id)); S.m = null; toast("Borrada"); } catch (e) { fallo(e, "borrar"); } draw(); },
-  pdf(){ const c = S.cot.find(x => x.id === S.m.id); if (c) descargarPdf(c); },
-  async saveRoles(){
-    S.busy = true; draw(); let n = 0;
-    try {
-      for (const u of S.usuarios) {
-        const ch = {};
-        if (u.id !== S.me.uid) { const r = S.f["rol_" + u.id]; if (r != null && r !== (u.rol || "")) ch.rol = r; }
-        const iv = S.f["ini_" + u.id];
-        if (iv != null) { const v = String(iv).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4); if (v !== (u.ini || "")) ch.ini = v; }
-        if (Object.keys(ch).length) { await updateDoc(doc(db, "usuarios", u.id), ch); n++; }
-      }
-      Object.keys(S.f).filter(k => k.startsWith("rol_") || k.startsWith("ini_")).forEach(k => delete S.f[k]);
-      toast(n ? "Roles guardados" : "No había cambios");
-    } catch (e) { fallo(e, "guardar los roles"); }
-    S.busy = false; draw();
-  },
-  async saveEmpresa(){
-    const cur = emp(), e = {};
-    Object.keys(EMP_DEF).forEach(k => { const v = S.f["em_" + k]; e[k] = k === "validez" ? Math.max(1, Number(v ?? cur.validez) || 15) : clean(v ?? cur[k]); });
-    if (await upd(doc(db, "config", "app"), {emp: e}, "Datos guardados", true)) Object.keys(S.f).filter(k => k.startsWith("em_")).forEach(k => delete S.f[k]);
-    draw();
-  },
-  async savePerfil(){
-    const m = S.me, ch = {nombre: clean(S.f.me_nombre ?? m.nombre), cargo: clean(S.f.me_cargo ?? (m.cargo || "Ventas")), tel: clean(S.f.me_tel ?? m.tel), correo: clean(S.f.me_correo ?? (m.correo || m.email))};
-    if (!ch.nombre) return toast("Escribe tu nombre.");
-    if (await upd(doc(db, "usuarios", m.uid), ch, "Perfil guardado")) ["me_nombre", "me_cargo", "me_tel", "me_correo"].forEach(k => delete S.f[k]);
-    draw();
-  },
-  async seed(){
-    S.busy = true; draw();
-    try {
-      const b = writeBatch(db);
-      SEED.forEach(p => b.set(doc(db, "productos", p.id), {nombre: p.nombre, precio: p.precio, categoria: p.categoria, orden: p.orden, activo: true}));
-      await b.commit(); toast("Catálogo cargado");
-    } catch (e) { fallo(e, "cargar el catálogo"); }
-    S.busy = false; draw();
-  },
-  async savePrecios(){
-    S.busy = true; draw(); let n = 0;
-    try {
-      for (const p of S.prod) {
-        const np = S.f["pp_" + p.id], na = S.f["pa_" + p.id];
-        const ch = {};
-        if (np != null && r2(np) !== r2(p.precio)) ch.precio = r2(np);
-        if (na != null && na !== (p.activo !== false)) ch.activo = na;
-        if (Object.keys(ch).length) { await updateDoc(doc(db, "productos", p.id), ch); n++; }
-      }
-      Object.keys(S.f).filter(k => k.startsWith("pp_") || k.startsWith("pa_")).forEach(k => delete S.f[k]);
-      toast(n ? n + " producto(s) actualizados" : "No había cambios");
-    } catch (e) { fallo(e, "guardar los precios"); }
-    S.busy = false; draw();
-  },
-  async addProd(){
-    const nom = clean(S.f.np_nombre), precio = r2(S.f.np_precio);
-    if (!nom || !(precio > 0)) return toast("Escribe nombre y precio.");
-    const id = "p-" + nom.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-    if (await upd(doc(db, "productos", id), {nombre: nom, categoria: clean(S.f.np_cat) || "Otros", precio, activo: true, orden: 999}, "Producto agregado", true))
-      ["np_nombre", "np_cat", "np_precio"].forEach(k => delete S.f[k]);
-    draw();
-  }
-};
-function clearForm(){ Object.keys(S.f).filter(k => /^(fac_|p_)/.test(k)).forEach(k => delete S.f[k]); }
-function leerPago(x){
-  const monto = r2(S.f.p_monto ?? saldo(x));
-  if (!(monto > 0)) { toast("Escribe un monto mayor que cero."); return null; }
-  if (monto > saldo(x) + 0.005) { toast("El pago es mayor que el saldo (" + L(saldo(x)) + ")."); return null; }
-  return {monto, fecha: S.f.p_fecha || today(), metodo: S.f.p_met || x.formaPago || "Transferencia", ref: clean(S.f.p_ref), por: S.me.uid};
-}
-async function upd(ref, data, msg, merge){
-  S.busy = true; draw();
-  try {
-    if (merge) await setDoc(ref, data, {merge: true}); else await updateDoc(ref, data);
-    toast(msg); S.busy = false; draw(); return true;
-  } catch (e) { fallo(e, "guardar"); S.busy = false; draw(); return false; }
-}
-
-function refrescarCarrito(){
-  const cc = calc(S.cart);
-  cc.lines.forEach((l, n) => {
-    const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
-    const p = document.getElementById("pct" + n); if (p) p.textContent = l.desc ? pctTxt(l.pct) : "0%";
-  });
-  const t = document.getElementById("ctot"); if (t) t.innerHTML = totalsHtml(cc);
-  const b = document.getElementById("ctabtn"); if (b && !S.busy) b.textContent = "Cotizar · " + L(cc.total);
-}
-function leerCarrito(t){
-  const n = Number(t.dataset.cq ?? t.dataset.cd ?? t.dataset.cpr), i = S.cart[n]; if (!i) return null;
-  const v = Number(t.value);
-  if (t.dataset.cq != null) { if (v >= 1) i.cant = Math.round(v); }
-  else if (t.dataset.cd != null) i.desc = Math.max(0, r2(t.value));
-  else if (t.value !== "" && v >= 0) i.precio = r2(v * 1.15);
-  return i;
-}
-
-/* ---------- eventos ---------- */
-document.addEventListener("click", e => {
-  const b = e.target.closest("[data-a]"); if (!b) return;
-  const f = A[b.dataset.a]; if (f) { e.preventDefault(); f(b.dataset.v); }
+  html+='</div></div>';
 });
-$("#modal").addEventListener("click", e => { if (e.target.id === "modal") { S.m = null; draw(); } });
-document.addEventListener("focusin", e => { const t = e.target; if (t.matches && t.matches('input[type="number"]')) setTimeout(() => { try { t.select(); } catch (_) {} }, 0); });
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && S.m) { S.m = null; draw(); }
-  if (e.key === "Enter" && e.target.matches("tr.click")) e.target.click();
-  if (e.key === "Enter" && S.screen === "auth" && e.target.matches("#view input")) A.authGo();
-});
-document.addEventListener("input", e => {
-  const t = e.target, k = t.dataset.k;
-  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
-  if (k) {
-    S.f[k] = t.type === "checkbox" ? t.checked : t.value;
-    if (k === "bq") draw();
-  }
-});
-document.addEventListener("change", e => {
-  const t = e.target;
-  if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
-  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) {
-    const i = leerCarrito(t);
-    if (i && t.dataset.cq != null) t.value = i.cant;
-    if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; if (l.desc !== i.desc) i.desc = l.desc; t.value = i.desc || ""; }
-    refrescarCarrito(); return;
-  }
-  if (t.dataset.k === "fac_fp") delete S.f.fac_pagado;
-  if (t.dataset.redraw || t.dataset.k === "fac_fp") draw();
-});
-draw();
+document.getElementById('cats').innerHTML=html;
 
+// enlaces de WhatsApp con texto del producto
+document.querySelectorAll('.js-wa').forEach(function(a){a.href=waUrl(a.getAttribute('data-item')||'Consulta general');});
+
+// eventos del píxel
+function pidOf(name){var r=null;CATS.forEach(function(c){c.p.forEach(function(p){if(p[1]===name)r='mhas-'+p[0];});});return r;}
+function withIds(o,id){if(id){o.content_ids=[id];o.content_type='product';}return o;}
+function track(ev,params){try{if(window.fbq)fbq('track',ev,params||{});}catch(e){}}
+document.addEventListener('click',function(e){
+  var a=e.target.closest('a');if(!a)return;
+  if(a.classList.contains('js-wa')){track('Contact',withIds({content_name:a.getAttribute('data-item')||'WhatsApp',content_category:a.getAttribute('data-cat')||'General',method:'whatsapp'},a.getAttribute('data-pid')));}
+  else if(a.classList.contains('js-call')){track('Contact',{method:'phone'});}
+  else if(a.classList.contains('js-mail')){track('Contact',{method:'email'});}
+  else if(a.id==='dlpdf'){track('ViewContent',{content_name:'Catálogo PDF'});}
+});
+
+
+// visor de imagen grande
+(function(){
+  var lb=document.getElementById('lb'),stage=document.getElementById('lb-stage'),thumbs=document.getElementById('lb-thumbs'),last=null,skipPop=false;
+  function yt(u){var m=u.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:null;}
+  function isVid(u){return /\.(mp4|webm)(\?|$)/i.test(u)||!!yt(u);}
+  function show(u,alt){stage.innerHTML='';var el;
+    if(yt(u)){el=document.createElement('iframe');el.src='https://www.youtube-nocookie.com/embed/'+yt(u)+'?rel=0';el.allow='autoplay; encrypted-media; picture-in-picture';el.allowFullscreen=true;el.title=alt;}
+    else if(isVid(u)){el=document.createElement('video');el.src=u;el.controls=true;el.playsInline=true;el.preload='metadata';}
+    else{el=document.createElement('img');el.src=u;el.alt=alt;}
+    stage.appendChild(el);
+    [].forEach.call(thumbs.children,function(b){b.setAttribute('aria-current',b.getAttribute('data-u')===u?'true':'false');});}
+  function open(img){
+    var card=img.closest('.card');last=img;
+    var list=[img.getAttribute('data-big')||img.src].concat((img.getAttribute('data-more')||'').split('|').filter(Boolean));
+    thumbs.innerHTML='';thumbs.classList.toggle('show',list.length>1);
+    if(list.length>1)list.forEach(function(u,i){var t=document.createElement('button');t.type='button';t.setAttribute('data-u',u);t.setAttribute('aria-label',(isVid(u)?'Video ':'Imagen ')+(i+1));if(isVid(u)){t.className='vid';}else{t.style.backgroundImage='url("'+u+'")';}thumbs.appendChild(t);});
+    show(list[0],img.alt);
+    var first=stage.firstChild;if(first&&first.tagName==='IMG')first.onerror=function(){first.onerror=null;first.src=img.src;};
+    document.getElementById('lb-t').textContent=card.querySelector('h4').textContent;
+    document.getElementById('lb-s').textContent=card.querySelector('.sub').textContent;
+    document.getElementById('lb-d').textContent=card.querySelector('.desc').textContent;
+    document.getElementById('lb-q').innerHTML=card.querySelector('.qbtns').innerHTML;
+    lb.classList.add('open');document.body.classList.add('lb-lock');lb.querySelector('.lb-box').scrollTop=0;
+    document.getElementById('lb-x').focus({preventScroll:true});
+    var pe=card.querySelector('[data-pid]'),pid=pe?pe.getAttribute('data-pid'):null;
+    track('ViewContent',withIds({content_name:img.alt,method:'imagen'},pid));
+    if(history.pushState)history.pushState({lb:1},'');
+  }
+  function close(fromPop){if(!lb.classList.contains('open'))return;var v=stage.querySelector('video');if(v)v.pause();setTimeout(function(){if(!lb.classList.contains('open'))stage.innerHTML='';},260);lb.classList.remove('open');document.body.classList.remove('lb-lock');if(!fromPop&&history.state&&history.state.lb){skipPop=true;history.back();}if(last)last.focus({preventScroll:true});}
+  document.getElementById('cats').addEventListener('click',function(e){var i=e.target.closest('.card img');if(i)open(i);});
+  document.getElementById('cats').addEventListener('keydown',function(e){var i=e.target.closest('.card img');if(i&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(i);}});
+  document.getElementById('lb-x').addEventListener('click',function(){close();});
+  thumbs.addEventListener('click',function(e){var b=e.target.closest('button');if(b)show(b.getAttribute('data-u'),document.getElementById('lb-t').textContent);});
+  lb.addEventListener('click',function(e){if(e.target===lb)close();if(e.target.closest('#lb-q .js-quote')){if(history.state&&history.state.lb)history.replaceState(null,'');close(true);}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  window.addEventListener('popstate',function(){if(skipPop){skipPop=false;return;}close(true);});
+})();
+// filtros
+document.querySelectorAll('.chip').forEach(function(b){
+  b.addEventListener('click',function(){
+    var f=b.getAttribute('data-f');
+    document.querySelectorAll('.chip').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    document.querySelectorAll('.cat').forEach(function(c){c.style.display=(f==='all'||c.getAttribute('data-cat')===f)?'':'none';});
+  });
+});
+// formulario de cotización (llega por correo a comercial@)
+var QMAIL='comercial@mhasdehonduras.com';
+var sel=document.getElementById('q-prod');
+sel.innerHTML='<option value="">Seleccione un producto</option>'+CATS.map(function(c){return '<optgroup label="'+esc(c.t)+'">'+c.p.map(function(p){return '<option>'+esc(p[1])+'</option>';}).join('')+'</optgroup>';}).join('')+'<option>Otro / varios productos</option>';
+document.addEventListener('click',function(e){
+  var a=e.target.closest('.js-quote');if(!a)return;
+  var it=a.getAttribute('data-item');if(it)sel.value=it;
+  track('ViewContent',withIds({content_name:it||'Formulario cotización',method:'email'},a.getAttribute('data-pid')||pidOf(it)));
+  setTimeout(function(){document.getElementById(it?'q-cant':'q-nombre').focus({preventScroll:true});},500);
+});
+var qf=document.getElementById('qform'),qm=document.getElementById('q-msg'),qb=document.getElementById('q-btn');
+function qmsg(t,ok){qm.className='qmsg '+(ok?'ok':'err');qm.textContent=t;}
+qf.addEventListener('input',function(){if(qm.className.indexOf('err')>-1)qm.className='qmsg';});
+qf.addEventListener('submit',function(e){
+  e.preventDefault();
+  var bad=[].slice.call(qf.querySelectorAll('[required]')).filter(function(i){return !i.value.trim()||(i.type==='email'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(i.value));});
+  if(bad.length){qmsg('Por favor complete: '+bad.map(function(i){return qf.querySelector('label[for="'+i.id+'"]').textContent.replace(' *','');}).join(', ')+'.',false);bad[0].focus();return;}
+  var d={},fd=new FormData(qf);fd.forEach(function(v,k){d[k]=v;});
+  if(d._honey)return;
+  var now=new Date(),ref='COT-'+String(now.getFullYear()).slice(2)+('0'+(now.getMonth()+1)).slice(-2)+('0'+now.getDate()).slice(-2)+'-'+('0'+now.getHours()).slice(-2)+('0'+now.getMinutes()).slice(-2);
+  d['Referencia']=ref;
+  d._subject='Solicitud de cotización '+ref+' – '+(d.Empresa||d.Nombre)+' – '+d.Producto;
+  d._template='table';d._captcha='false';d._replyto=d.email;
+  d._autoresponse='Gracias por contactar a MHAS de Honduras. Recibimos su solicitud de cotización ('+ref+') de: '+d.Producto+' – '+d.Cantidad+'. Le enviaremos la cotización a este correo en horario hábil. Si es urgente, escríbanos al WhatsApp +504 3166-6059.';
+  qb.disabled=true;qb.textContent='Enviando…';
+  fetch('https://formsubmit.co/ajax/'+QMAIL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(d)})
+  .then(function(r){return r.json().then(function(j){if(!r.ok||String(j.success)==='false')throw new Error(j.message||'error');return j;});})
+  .then(function(){
+    qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
+    try{var ph=(d['Teléfono']||'').replace(/\D/g,'');if(ph.length===8)ph='504'+ph;fbq('init','28383545161288464',{em:(d.email||'').trim().toLowerCase(),ph:ph,fn:(d.Nombre||'').trim().split(' ')[0].toLowerCase(),ct:(d.Ciudad||'').trim().toLowerCase().replace(/\s/g,''),country:'hn'});}catch(x){}
+    track('Lead',withIds({content_name:d.Producto,content_category:'Cotización por correo',method:'email'},pidOf(d.Producto)));
+    qf.reset();
+  })
+  .catch(function(){qmsg('No se pudo enviar. Escríbanos a '+QMAIL+' o al WhatsApp +504 3166-6059.',false);})
+  .finally(function(){qb.disabled=false;qb.textContent='Enviar solicitud de cotización';});
+});
+
+document.getElementById('y').textContent=new Date().getFullYear();
 </script>
 </body>
 </html>
