@@ -131,6 +131,7 @@ input,select,textarea{font-size:16px}
 .pct{font-weight:700;color:var(--muted);min-width:44px}
 .cta{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);margin-top:8px;z-index:5}
 .btn.big{width:100%;min-height:54px;font-size:17px;border-radius:12px;box-shadow:0 6px 18px rgba(10,20,40,.18)}
+.ctarow{display:flex;gap:8px}.ctarow .sec{flex:0 0 34%;background:var(--card);box-shadow:0 6px 18px rgba(10,20,40,.12)}.ctarow .pri{flex:1}
 </style>
 </head>
 <body>
@@ -185,13 +186,13 @@ const clean = s => String(s || "").trim();
 const S = {
   screen: "cargando", authMode: "login", u: null, admin: false,
   me: {uid: null, email: "", nombre: "", rol: "", ini: ""},
-  cfg: {emp: {}}, prod: [], cli: [], cot: [], cxp: [], usuarios: [], bor: [], draftId: null,
+  cfg: {emp: {}}, prod: [], cli: [], cot: [], cxp: [], usuarios: [], editId: null,
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
 };
 const TABS = {
-  admin: ["cotizar", "espera", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
-  facturador: ["cotizar", "espera", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil"],
-  vendedor: ["cotizar", "espera", "cotizaciones", "productos", "perfil"]
+  admin: ["cotizar", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
+  facturador: ["cotizar", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil"],
+  vendedor: ["cotizar", "cotizaciones", "perfil"]
 };
 const TAB_NAME = {cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
@@ -289,7 +290,7 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {cotizar: vCotizar, espera: vEspera, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
+  const fn = {cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -335,10 +336,10 @@ function vCotizar(){
   S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const psel = S.prod.find(p => p.id === S.f.psel);
   return `<div class="narrow">
-  <h1>Nueva cotización</h1>
-  <p class="sub">Número: <span class="stub">COT-${esc(iniciales())}-····</span></p>
-  ${S.draftId ? `<div class="panel" style="border-color:var(--gold)"><b>Continuando una cotización en espera.</b> <span class="note">Al tocar Cotizar se confirma y sale de “En espera”.</span>
-    <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="nuevaBlanco">Empezar una nueva en blanco</button></div></div>` : ""}
+  <h1>${S.editId ? "Editar cotización" : "Nueva cotización"}</h1>
+  <p class="sub">Número: <span class="stub">${S.editId ? esc(S.editId) : "COT-" + esc(iniciales()) + "-····"}</span></p>
+  ${S.editId ? `<div class="panel" style="border-color:var(--gold)"><b>Editando ${esc(S.editId)}</b> <span class="note">· cotización abierta. Guarda los cambios o toca Cotizar para generar el PDF actualizado.</span>
+    <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="nuevaBlanco">Cancelar edición</button></div></div>` : ""}
   <div class="panel">
     <h2>Cliente</h2>
     <div class="field"><label for="cli_sel">Cliente</label>
@@ -387,9 +388,10 @@ function vCotizar(){
       </div></div>`; }).join("") + `<p class="note">Precios sin ISV.</p><div class="totals" id="ctot">${totalsHtml(cc)}</div>`
     : `<p class="empty">Todavía no agregas productos.</p>`}
     <div class="field" style="margin-top:12px"><label for="nt">Notas (opcional)</label><textarea id="nt" data-k="notas">${fv("notas")}</textarea></div>
-    <div class="actions">${S.cart.length ? `<button class="btn" data-a="guardarEspera" ${S.busy ? "disabled" : ""}>${S.draftId ? "Actualizar en espera" : "Guardar en espera"}</button><button class="btn" data-a="vaciar">Vaciar</button>` : ""}</div>
+    ${S.cart.length ? `<button class="btn" data-a="vaciar">Vaciar</button>` : ""}
   </div>
-  <div class="cta"><button class="btn pri big" id="ctabtn" data-a="saveCot" ${S.busy || !S.cart.length ? "disabled" : ""}>${S.busy ? "Guardando…" : "Cotizar" + (S.cart.length ? " · " + L(cc.total) : "")}</button></div>
+  <div class="cta ctarow"><button class="btn big sec" data-a="saveCot" data-v="g" ${S.busy || !S.cart.length ? "disabled" : ""}>Guardar</button><button class="btn pri big" id="ctabtn" data-a="saveCot" data-v="c" ${S.busy || !S.cart.length ? "disabled" : ""}>${S.busy ? "Guardando…" : "Cotizar" + (S.cart.length ? " · " + L(cc.total) : "")}</button></div>
+  <p class="note" style="text-align:center">Guardar la deja como cotización abierta para seguir editándola; Cotizar además genera el PDF.</p>
   </div>`;
 }
 function totalsHtml(cc, simple){
@@ -512,21 +514,6 @@ function vPagar(){
     ${S.verPagadas ? `<div class="scroll" style="margin-top:10px"><table><tbody>${pag.map(fila).join("")}</tbody></table></div>` : ""}</div>` : ""}`;
 }
 
-/* ---------- vista: en espera ---------- */
-function vEspera(){
-  const list = S.bor.slice().sort((a, b) => (b.actualizado || 0) - (a.actualizado || 0));
-  return `<div class="narrow">
-  <h1>En espera</h1>
-  <p class="sub">Cotizaciones que guardaste sin confirmar. Continúa una para terminarla y tocar Cotizar.</p>
-  ${list.length ? list.map(b => { const cc = calc(b.cart || []); return `<div class="panel">
-    <div class="ihead"><b>${esc(b.cliNombre || "Sin cliente")}</b><span class="muted">${fdate(ymd(new Date(b.actualizado || Date.now())))}</span></div>
-    <p class="note" style="margin:6px 0">${(b.cart || []).map(i => esc(i.cant + " " + i.nombre)).join(" · ")}</p>
-    <div class="ihead"><b>${L(cc.total)}</b><span class="muted">${cc.n} ${cc.n === 1 ? "producto" : "productos"}</span></div>
-    <div class="actions"><button class="btn pri" data-a="continuar" data-v="${esc(b.id)}">Continuar</button><button class="btn danger" data-a="borrarEspera" data-v="${esc(b.id)}">Borrar</button></div>
-  </div>`; }).join("") : `<p class="empty">No tienes cotizaciones en espera. En “Nueva cotización” toca “Guardar en espera” para dejar una pendiente.</p>`}
-  </div>`;
-}
-
 /* ---------- vista: clientes ---------- */
 function statsCliente(c){
   const cs = S.cot.filter(x => !x.eliminada && x.cliente && (x.cliente.id === c.id));
@@ -558,8 +545,8 @@ function vProductos(){
   const list = S.prod.filter(p => adm || p.activo !== false).filter(p => !q || [codDe(p), p.nombre, p.categoria, presDe(p)].join(" ").toLowerCase().includes(q));
   return `
   <h1>Productos</h1>
-  <p class="sub">${adm ? "Toca un producto para editarlo. El precio con ISV es por presentación; el unitario sin ISV se calcula solo." : "Lista de productos y códigos. Si falta uno, agrégalo con “Nuevo producto”."}</p>
-  <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button></div>
+  <p class="sub">${adm ? "Toca un producto para editarlo. El precio con ISV es por presentación; el unitario sin ISV se calcula solo." : "Lista de productos, códigos y precios."}</p>
+  ${adm ? `<div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button></div>` : ""}
   <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th></tr></thead><tbody>
@@ -696,7 +683,7 @@ function mCot(){
   ${mode === "ver" ? `<div class="actions">
     ${window.jspdf ? `<button class="btn pri" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button>${full ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}` : ""}
     <a class="btn" href="${esc(waLink(c))}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
-    ${puedeAprobar ? `<button class="btn pri" data-a="aprobar">El cliente aceptó</button>` : ""}
+    ${puedeAprobar ? `<button class="btn" data-a="editar">Editar</button><button class="btn" data-a="guardarCerrar">Guardar</button><button class="btn pri" data-a="aprobar">El cliente aceptó</button>` : ""}
     ${puedeFacturar ? `<button class="btn pri" data-a="modeFac">Registrar factura</button>` : ""}
     ${puedeCobrar ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
     ${puedeAnular ? `<button class="btn danger" data-a="anular">Anular</button>` : ""}
@@ -710,7 +697,7 @@ function mProd(){
   const unidades = g("unidades", p.id ? uni(p) : 1), precio = g("precio", p.precio ?? "");
   const unit = g("unit", precio !== "" ? Math.round(Number(precio) / 1.15 / (Number(unidades) || 1) * 10000) / 10000 : "");
   const adm = puede("admin");
-  if (p.id && !adm) return "";
+  if (!adm) return "";
   return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
   <div class="field"><label for="pe_codigo">Código</label><input id="pe_codigo" data-k="pe_codigo" value="${esc(g("codigo", p.id ? codDe(p) : sugerirCodigo(g("cat", ""))))}" autocapitalize="characters" placeholder="ETQ-012"></div>
   <div class="field"><label for="pe_nombre">Nombre (así sale en la cotización)</label><input id="pe_nombre" data-k="pe_nombre" value="${esc(g("nombre", p.nombre || ""))}"></div>
@@ -898,7 +885,7 @@ function startData(){
   const r = rol(), key = S.me.uid + ":" + r;
   if (subKey === key) return;
   stopData(); subKey = key;
-  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = []; S.bor = [];
+  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = [];
   if (!r) return;
   const fact = r === "admin" || r === "facturador";
   dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
@@ -907,7 +894,6 @@ function startData(){
   const cq = fact ? query(collection(db, "cotizaciones"), orderBy("creado", "desc"), limit(1000))
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
-  dataSubs.push(onSnapshot(query(collection(db, "borradores"), where("owner", "==", S.me.uid)), q => { S.bor = mapDocs(q); render(); }, onErr));
   if (fact) dataSubs.push(onSnapshot(collection(db, "cxp"), q => { S.cxp = mapDocs(q); render(); }, onErr));
   if (r === "admin") dataSubs.push(onSnapshot(collection(db, "usuarios"), q => { S.usuarios = mapDocs(q); render(); }, onErr));
 }
@@ -993,7 +979,8 @@ const A = {
   async share(){ const c = S.cot.find(x => x.id === S.m.id); if (c) await compartirPdf(c); },
   rmp(v){ S.cart.splice(Number(v), 1); draw(); },
   vaciar(){ S.cart = []; draw(); },
-  async saveCot(){
+  async saveCot(v){
+    const conPdf = v !== "g";
     const sel = S.f.cli_sel || "";
     if (!sel) return toast("Elige o crea un cliente.");
     if (!S.cart.length) return toast("Agrega al menos un producto.");
@@ -1009,22 +996,33 @@ const A = {
     S.busy = true; draw();
     try {
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid}); cliente.id = ref.id; }
-      const numero = await siguienteNumero(iniciales());
       const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
       const e = emp();
-      const nueva = {numero, cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
-        vendedor: S.me.uid, vendedorNombre: S.me.nombre || S.me.email,
-        vendedorInfo: {nombre: S.me.nombre || S.me.email, cargo: S.me.cargo || "Ventas", tel: S.me.tel || e.whatsapp, correo: S.me.correo || S.me.email},
-        fecha: today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
-      await setDoc(doc(db, "cotizaciones", numero), nueva);
-      try { descargarPdf(nueva); } catch (err) { console.error(err); }
-      if (S.draftId) { try { await deleteDoc(doc(db, "borradores", S.draftId)); } catch (_) {} S.draftId = null; }
-      S.cart = []; ["cli_sel", "cli_nombre", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant"].forEach(k => delete S.f[k]);
-      toast("Cotización " + numero + " guardada");
-      S.m = {type: "cot", id: numero, mode: "ver"}; S.tab = "cotizaciones"; S.filtro = "activas";
-    } catch (e) { fallo(e, "guardar la cotización"); }
+      let numero, cot;
+      if (S.editId) {
+        const prev = S.cot.find(x => x.id === S.editId);
+        if (!prev || prev.estado !== "cotizada") throw {code: "cerrada"};
+        numero = prev.id;
+        const ch = {cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", fecha: today(), actualizado: Date.now()};
+        await updateDoc(doc(db, "cotizaciones", numero), ch);
+        cot = Object.assign({}, prev, ch);
+      } else {
+        numero = await siguienteNumero(iniciales());
+        cot = {numero, cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
+          vendedor: S.me.uid, vendedorNombre: S.me.nombre || S.me.email,
+          vendedorInfo: {nombre: S.me.nombre || S.me.email, cargo: S.me.cargo || "Ventas", tel: S.me.tel || e.whatsapp, correo: S.me.correo || S.me.email},
+          fecha: today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
+        await setDoc(doc(db, "cotizaciones", numero), cot);
+      }
+      if (conPdf) { try { descargarPdf(cot); } catch (err) { console.error(err); } }
+      const editando = !!S.editId;
+      A.nuevaBlanco(true);
+      S.tab = "cotizaciones"; S.filtro = "activas";
+      if (conPdf) { toast("Cotización " + numero + (editando ? " actualizada" : " lista")); S.m = {type: "cot", id: numero, mode: "ver"}; }
+      else toast(numero + (editando ? " actualizada" : " guardada") + " como cotización abierta");
+    } catch (e) { if (e && e.code === "cerrada") toast("Esa cotización ya no está abierta; no se puede editar."); else fallo(e, "guardar la cotización"); }
     S.busy = false; draw();
   },
   filtro(v){ S.filtro = v; draw(); },
@@ -1125,34 +1123,22 @@ const A = {
     } catch (e) { fallo(e, "cargar el catálogo"); }
     S.busy = false; draw();
   },
-  async guardarEspera(){
-    if (!S.cart.length) return toast("Agrega al menos un producto.");
-    const sel = S.f.cli_sel || "", cs = S.cli.find(x => x.id === sel);
-    const data = {owner: S.me.uid, cliSel: sel, cliNombre: sel === "__nuevo" ? clean(S.f.cli_nombre) : (cs ? cs.nombre : ""),
-      f: {cli_nombre: S.f.cli_nombre || "", cli_dir: S.f.cli_dir || "", cli_rtn: S.f.cli_rtn || "", cli_tel: S.f.cli_tel || "", cli_email: S.f.cli_email || "", fpago: S.f.fpago || "Efectivo", notas: S.f.notas || ""},
-      cart: S.cart.map(i => ({id: i.id, nombre: i.nombre, precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0})),
-      total: calc(S.cart).total, actualizado: Date.now()};
-    S.busy = true; draw();
-    try {
-      if (S.draftId) await setDoc(doc(db, "borradores", S.draftId), data);
-      else { data.creado = Date.now(); await addDoc(collection(db, "borradores"), data); }
-      A.nuevaBlanco(true); toast("Guardada en espera"); S.tab = "espera";
-    } catch (e) { fallo(e, "guardar en espera"); }
-    S.busy = false; draw();
-  },
   nuevaBlanco(silencio){
-    S.draftId = null; S.cart = [];
+    S.editId = null; S.cart = [];
     ["cli_sel", "cli_nombre", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant", "pmodo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
-  continuar(v){
-    const b = S.bor.find(x => x.id === v); if (!b) return;
+  editar(){
+    const c = S.cot.find(x => x.id === S.m.id); if (!c || c.estado !== "cotizada") return;
     A.nuevaBlanco(true);
-    Object.assign(S.f, b.f || {}); S.f.cli_sel = (b.cliSel && (b.cliSel === "__nuevo" || S.cli.some(c => c.id === b.cliSel))) ? b.cliSel : (b.cliNombre ? "__nuevo" : "");
-    if (S.f.cli_sel === "__nuevo" && !S.f.cli_nombre) S.f.cli_nombre = b.cliNombre || "";
-    S.cart = (b.cart || []).map(i => Object.assign({}, i)); S.draftId = b.id; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
+    const cl = c.cliente || {};
+    if (cl.id && S.cli.some(x => x.id === cl.id)) S.f.cli_sel = cl.id;
+    else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
+    S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || "";
+    S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0}));
+    S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
-  async borrarEspera(v){ if (!confirm("¿Borrar esta cotización en espera?")) return; try { await deleteDoc(doc(db, "borradores", v)); if (S.draftId === v) S.draftId = null; toast("Borrada"); } catch (e) { fallo(e, "borrar"); } },
+  guardarCerrar(){ S.m = null; toast("Queda como cotización abierta"); draw(); },
   cliNuevo(){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: null}; draw(); },
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
   async cliSave(){
