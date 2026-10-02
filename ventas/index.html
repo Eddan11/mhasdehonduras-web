@@ -307,7 +307,7 @@ function draw0(){
 function drawHeader(){
   const r = S.screen === "app" ? rol() : null;
   const pf = r && r !== "vendedor" ? S.cot.filter(c => !c.eliminada && c.estado === "aprobada").length : 0;
-  const pp = r === "admin" ? S.convs.filter(c => c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now()).length : 0;
+  const pp = r === "admin" ? S.convs.filter(c => (c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now()) || c.consultaProduccion).length : 0;
   $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}${t === "cotizaciones" && pf ? ` <span class="cnt hot" title="Por facturar">${pf}</span>` : ""}${t === "chats" && pp ? ` <span class="cnt hot" title="Piden persona">${pp}</span>` : ""}</button>`).join("") : "";
   $("#who").innerHTML = S.u ? `<span>${esc(S.me.nombre || S.u.email)}${r ? " · " + ROL_NAME[r] : ""}</span><button class="out" data-a="salir">Salir</button>` : "";
 }
@@ -549,7 +549,7 @@ function vChats(){
     ${S.convs.slice().sort((a, b) => (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0)).map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
       <td><b>${esc(c.nombre || "Sin nombre")}</b>${c.noLeidos ? ` <span class="cnt">${c.noLeidos}</span>` : ""}<br><small class="muted">${esc(c.tel || c.id)}</small></td>
       <td><small>${esc(c.ultimoTexto || "")}</small>${c.ultimaCotizacion ? `<br><span class="stub">${esc(c.ultimaCotizacion)}</span>` : ""}</td>
-      <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}</td>
+      <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}${c.consultaProduccion ? `<br><span class="badge b-warn">Consultar producción</span><br><small class="muted">${esc(c.consultaProduccion)}</small>` : ""}</td>
       <td><small>${horaTxt(c.actualizado)}</small></td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">Todavía no hay chats. Cuando el agente esté activo, aquí verás cada conversación.</p>`}
   </div></div>`;
@@ -868,6 +868,8 @@ function mChat(){
   const quien = {cliente: c.nombre || "Cliente", agente: "Agente", equipo: "Equipo"};
   return `<h1 style="padding-right:40px">${esc(c.nombre || "Sin nombre")}</h1>
   <p class="sub">${esc(c.tel || c.id)} · <span class="badge ${ec}">${et}</span>${c.vendedorNombre ? " · vendedor: " + esc(c.vendedorNombre) : ""}</p>
+  ${c.consultaProduccion ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Consulta a producción:</b> ${esc(c.consultaProduccion)}
+    <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="chatConsultaOk">Marcar como resuelta</button></div></div>` : ""}
   <div class="chatbox" id="chatbox">${S.chatMsgs.map(m => `<div class="bub ${m.de === "cliente" ? "in" : m.de === "equipo" ? "eq" : "out"}"><small>${esc(quien[m.de] || m.de)} · ${horaTxt(m.ts)}</small><div>${esc(m.texto || "").replace(/\n/g, "<br>")}</div></div>`).join("") || '<p class="empty">Cargando…</p>'}</div>
   <div class="actions">
     <a class="btn pri" href="https://wa.me/${esc(tel)}" target="_blank" rel="noopener">Abrir en WhatsApp</a>
@@ -1337,6 +1339,7 @@ const A = {
     }, e => console.warn(e));
     const c = S.convs.find(x => x.id === v); if (c && c.noLeidos) updateDoc(doc(db, "conversaciones", v), {noLeidos: 0}).catch(() => {});
   },
+  async chatConsultaOk(){ await upd(doc(db, "conversaciones", S.m.id), {consultaProduccion: ""}, "Consulta marcada como resuelta"); },
   async chatPausar(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "persona", pausadoHasta: Date.now() + 12 * 3600e3}, "El agente se pausa 12 horas en este chat"); },
   async chatAgente(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "agente", pausadoHasta: 0}, "El agente vuelve a responder este chat"); },
   agModo(v){ S.f.ag_modo = v; draw(); },
