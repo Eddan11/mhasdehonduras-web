@@ -226,6 +226,7 @@ const LU = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractio
 const SEEDMAP = Object.fromEntries(SEED.map(p => [p.id, p]));
 const uni = p => Math.max(1, Number(p.unidades) || Number((SEEDMAP[p.id] || {}).unidades) || 1);
 const unidadDe = p => p.unidad || (SEEDMAP[p.id] || {}).unidad || "unidad";
+const soloPres = p => p.soloPresentacion != null ? !!p.soloPresentacion : unidadDe(p) === "etiqueta";
 const codDe = p => p.codigo || (SEEDMAP[p.id] || {}).codigo || "";
 const PREF = {"Rollos": "ROL", "Etiquetas": "ETQ", "Formas continuas": "FOR", "Impresión de etiquetas": "IMP", "Stretch film y cinta": "EMP"};
 function sugerirCodigo(cat){
@@ -870,6 +871,7 @@ function mProd(){
     <div class="field"><label for="pe_unit">Precio unitario sin ISV</label><input id="pe_unit" type="number" min="0" step="any" inputmode="decimal" data-k="pe_unit" value="${esc(unit)}"></div>
   </div>
   <p class="note">Si cambias uno de los dos precios, el otro se calcula solo.</p>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_solo" ${g("solo", p.id ? soloPres(p) : false) ? "checked" : ""}> Solo se vende por presentación completa (el agente de WhatsApp no lo vende suelto)</label>
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
@@ -1421,7 +1423,8 @@ const A = {
     const codigo = clean(g("codigo", p ? codDe(p) : sugerirCodigo(g("cat", "")))).toUpperCase();
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
-      presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true)};
+      presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
+      soloPresentacion: !!g("solo", p ? soloPres(p) : false)};
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
     if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = 999; data.creadoPor = S.me.uid; if (!puede("admin")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
     if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) { clearProd(); S.m = null; draw(); }
