@@ -371,12 +371,13 @@ function vCotizar(){
         ${cliOpts}
       </select></div>
     ${nuevo ? `
-    <div class="field"><label for="cn">Nombre o empresa</label><input id="cn" data-k="cli_nombre" value="${fv("cli_nombre")}" autocomplete="off" autocapitalize="words"></div>
+    <div class="field"><label for="cn">Empresa</label><input id="cn" data-k="cli_nombre" value="${fv("cli_nombre")}" autocomplete="off" autocapitalize="words"></div>
+    <div class="field"><label for="cc">Nombre del cliente (opcional)</label><input id="cc" data-k="cli_contacto" value="${fv("cli_contacto")}" autocomplete="off" autocapitalize="words" placeholder="Persona de contacto o dueño"></div>
+    <div class="field"><label for="ct">Número (WhatsApp)</label><input id="ct" data-k="cli_tel" value="${fv("cli_tel")}" inputmode="tel" placeholder="9999-9999"></div>
     <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" value="${fv("cli_dir")}" placeholder="San Pedro Sula, Cortés"></div>
     <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" value="${fv("cli_rtn")}" inputmode="numeric"></div>
-    <div class="field"><label for="ct">WhatsApp</label><input id="ct" data-k="cli_tel" value="${fv("cli_tel")}" inputmode="tel" placeholder="9999-9999"></div>
     <div class="field"><label for="ce">Correo (opcional)</label><input id="ce" type="email" data-k="cli_email" value="${fv("cli_email")}" inputmode="email" autocapitalize="off"></div>` : ""}
-    ${cliSel ? `<p class="note">${[cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : "", cliSel.tel].filter(Boolean).map(esc).join(" · ") || "Sin datos adicionales"}</p>` : ""}
+    ${cliSel ? `<p class="note">${[cliSel.contacto, cliSel.tel, cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : ""].filter(Boolean).map(esc).join(" · ") || "Sin datos adicionales"}</p>` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago">${FORMAS.map(f => `<option value="${f}" ${(S.f.fpago || "Efectivo") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
   </div>
@@ -684,7 +685,7 @@ function vClientes(){
   const q = clean(S.f.cq).toLowerCase(), fil = S.f.cfil || "todos";
   const rows = S.cli.map(c => ({c, st: statsCliente(c)}));
   const toca = rows.filter(r => r.st.falta != null && r.st.falta <= 7).length;
-  const list = rows.filter(({c}) => !q || [c.nombre, c.rtn, c.tel, c.email, c.direccion].join(" ").toLowerCase().includes(q))
+  const list = rows.filter(({c}) => !q || [c.nombre, c.contacto, c.rtn, c.tel, c.email, c.direccion].join(" ").toLowerCase().includes(q))
     .filter(({st}) => fil === "todos" || (st.falta != null && st.falta <= 7))
     .sort((a, b) => fil === "toca" ? a.st.falta - b.st.falta : (a.c.nombre || "").localeCompare(b.c.nombre || ""));
   return `
@@ -698,7 +699,7 @@ function vClientes(){
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Cliente</th><th>Última cotización</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Vendedor</th></tr></thead><tbody>
     ${list.map(({c, st}) => { const [rt, rc] = recordatorio(st); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
-      <td><b>${esc(c.nombre)}</b><br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
+      <td><b>${esc(c.nombre)}</b>${c.contacto ? `<br><small>${esc(c.contacto)}</small>` : ""}<br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
       <td>${st.cotRec ? `${fdate(st.cotRec.fecha)} <span class="stub">${esc(st.cotRec.numero)}</span><br><span class="badge ${(ESTADO[st.cotRec.estado] || ["", ""])[1]}">${(ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0]}</span> <small class="muted">${L(st.cotRec.total)}</small>` : '<span class="muted">—</span>'}</td>
       <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
       <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
@@ -857,6 +858,7 @@ function mCot(){
   ${estadoNota ? `<p class="note" style="margin-top:8px">${estadoNota}</p>` : ""}
   <dl class="kv">
     <dt>Cliente</dt><dd>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
+    ${c.cliente && c.cliente.contacto ? `<dt>Contacto</dt><dd>${esc(c.cliente.contacto)}</dd>` : ""}
     ${c.cliente && c.cliente.direccion ? `<dt>Dirección</dt><dd>${esc(c.cliente.direccion)}</dd>` : ""}
     ${c.cliente && c.cliente.tel ? `<dt>WhatsApp</dt><dd>${esc(c.cliente.tel)}</dd>` : ""}
     ${c.cliente && c.cliente.email ? `<dt>Correo</dt><dd>${esc(c.cliente.email)}</dd>` : ""}
@@ -942,7 +944,8 @@ function mCli(){
     ${S.usuarios.filter(u => u.id === S.me.uid || u.rol === "vendedor" || u.rol === "facturador").map(u => `<option value="${esc(u.id)}" ${(g("asignado", c.asignado || S.me.uid)) === u.id ? "selected" : ""}>${esc(u.nombre || u.email)}${u.id === S.me.uid ? " (tú)" : ""}</option>`).join("")}
   </select></div>
   ${c.id && duplicadoDe(c) ? `<p class="note" style="color:var(--bad);font-weight:600">Posible duplicado: ${esc(nomUsuario(duplicadoDe(c).asignado) || "otro vendedor")} también tiene a “${esc(duplicadoDe(c).nombre)}”${duplicadoDe(c).rtn ? " (RTN " + esc(duplicadoDe(c).rtn) + ")" : ""}.</p>` : ""}` : ""}
-  <div class="field"><label for="ce_nombre">Nombre o empresa</label><input id="ce_nombre" data-k="ce_nombre" value="${esc(g("nombre", c.nombre || ""))}" autocapitalize="words"></div>
+  <div class="field"><label for="ce_nombre">Empresa</label><input id="ce_nombre" data-k="ce_nombre" value="${esc(g("nombre", c.nombre || ""))}" autocapitalize="words"></div>
+  <div class="field"><label for="ce_contacto">Nombre del dueño o contacto</label><input id="ce_contacto" data-k="ce_contacto" value="${esc(g("contacto", c.contacto || ""))}" autocapitalize="words"></div>
   <div class="field"><label for="ce_dir">Dirección</label><input id="ce_dir" data-k="ce_dir" value="${esc(g("dir", c.direccion || ""))}"></div>
   <div class="field"><label for="ce_rtn">RTN</label><input id="ce_rtn" data-k="ce_rtn" value="${esc(g("rtn", c.rtn || ""))}" inputmode="numeric"></div>
   <div class="field"><label for="ce_tel">WhatsApp</label><input id="ce_tel" data-k="ce_tel" value="${esc(g("tel", c.tel || ""))}" inputmode="tel"></div>
@@ -1229,15 +1232,15 @@ const A = {
     let cliente;
     if (sel === "__nuevo") {
       const nom = clean(S.f.cli_nombre);
-      if (!nom) return toast("Escribe el nombre del cliente.");
-      cliente = {nombre: nom, direccion: clean(S.f.cli_dir), rtn: clean(S.f.cli_rtn), tel: clean(S.f.cli_tel), email: clean(S.f.cli_email)};
+      if (!nom) return toast("Escribe el nombre de la empresa.");
+      cliente = {nombre: nom, contacto: clean(S.f.cli_contacto), direccion: clean(S.f.cli_dir), rtn: clean(S.f.cli_rtn), tel: clean(S.f.cli_tel), email: clean(S.f.cli_email)};
     } else {
       const c = S.cli.find(x => x.id === sel); if (!c) return toast("Ese cliente ya no existe.");
-      cliente = {id: c.id, nombre: c.nombre, direccion: c.direccion || "", rtn: c.rtn || "", tel: c.tel || "", email: c.email || ""};
+      cliente = {id: c.id, nombre: c.nombre, contacto: c.contacto || "", direccion: c.direccion || "", rtn: c.rtn || "", tel: c.tel || "", email: c.email || ""};
     }
     S.busy = true; draw();
     try {
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
+      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
       const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
@@ -1386,7 +1389,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant", "pmodo", "cot_fecha", "cot_num"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant", "pmodo", "cot_fecha", "cot_num"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -1394,7 +1397,7 @@ const A = {
     A.nuevaBlanco(true);
     const cl = c.cliente || {};
     if (cl.id && S.cli.some(x => x.id === cl.id)) S.f.cli_sel = cl.id;
-    else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
+    else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
     S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.cot_fecha = c.fecha || today();
     S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
@@ -1457,7 +1460,7 @@ const A = {
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
   async cliSave(){
     const c = S.m.id ? S.cli.find(x => x.id === S.m.id) : null, g = (k, d) => S.f["ce_" + k] ?? d;
-    const data = {nombre: clean(g("nombre", c ? c.nombre : "")), direccion: clean(g("dir", c ? c.direccion : "")), rtn: clean(g("rtn", c ? c.rtn : "")),
+    const data = {nombre: clean(g("nombre", c ? c.nombre : "")), contacto: clean(g("contacto", c ? c.contacto : "")), direccion: clean(g("dir", c ? c.direccion : "")), rtn: clean(g("rtn", c ? c.rtn : "")),
       tel: clean(g("tel", c ? c.tel : "")), email: clean(g("email", c ? c.email : "")), cicloDias: Math.max(0, Math.round(Number(g("ciclo", c ? c.cicloDias : 0)) || 0))};
     if (!data.nombre) return toast("Escribe el nombre del cliente.");
     if (S.admin && S.f.ce_desde) data.creado = new Date(S.f.ce_desde + "T12:00:00").getTime();
@@ -1472,9 +1475,9 @@ const A = {
   async cliDel(){ if (!confirm("¿Borrar este cliente? Sus cotizaciones no se borran.")) return; try { await deleteDoc(doc(db, "clientes", S.m.id)); S.m = null; toast("Cliente borrado"); } catch (e) { fallo(e, "borrar el cliente"); } draw(); },
   cliCsv(){
     const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-    const rows = [["Nombre", "RTN", "Dirección", "WhatsApp", "Correo", "Creado por", "Fecha de creación", "Pedidos", "Última cotización (fecha)", "Última cotización (número)", "Última cotización (estado)", "Último pedido (fecha)", "Último pedido (productos)", "Pide cada (días)", "Próximo pedido", "Facturado (L.)", "Saldo pendiente (L.)"]]
+    const rows = [["Empresa", "Contacto", "RTN", "Dirección", "WhatsApp", "Correo", "Creado por", "Fecha de creación", "Pedidos", "Última cotización (fecha)", "Última cotización (número)", "Última cotización (estado)", "Último pedido (fecha)", "Último pedido (productos)", "Pide cada (días)", "Próximo pedido", "Facturado (L.)", "Saldo pendiente (L.)"]]
       .concat(S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")).map(c => { const st = statsCliente(c);
-        return [c.nombre, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, st.cotRec ? fdate(st.cotRec.fecha) : "", st.cotRec ? st.cotRec.numero : "", st.cotRec ? (ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0] : "", fdate(st.ultFecha), st.ultItems,
+        return [c.nombre, c.contacto, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, st.cotRec ? fdate(st.cotRec.fecha) : "", st.cotRec ? st.cotRec.numero : "", st.cotRec ? (ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0] : "", fdate(st.ultFecha), st.ultItems,
           st.ultFecha ? st.ciclo : "", fdate(st.prox), st.facturado.toFixed(2), st.saldo.toFixed(2)]; }));
     const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "clientes-mhas-" + today() + ".csv";
