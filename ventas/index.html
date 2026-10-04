@@ -581,6 +581,7 @@ function vAgente(){
     <div class="chips" role="group" aria-label="Modo">${[["apagado", "Apagado"], ["prueba", "Prueba"], ["activo", "Activo"]].map(([v, t]) => `<button data-a="agModo" data-v="${v}" aria-pressed="${modo === v}">${t}</button>`).join("")}</div>
     <p class="note">${modo === "apagado" ? "El agente no responde a nadie. Los chats llegan solo a la app del celular." : modo === "prueba" ? "Solo responde a los números de prueba de abajo. Los clientes reales no lo ven." : "Responde a todos los clientes. Recuerda apagar el agente de Meta en la app del celular."}</p>
     <div class="field"><label for="ag_nums">Números de prueba (uno por línea)</label><textarea id="ag_nums" data-k="ag_nums" placeholder="9999-8888">${esc(g("nums", (a.numerosPrueba || []).join("\n")))}</textarea></div>
+    <div class="field"><label for="ag_eq">Números del equipo: el agente nunca les responde (uno por línea)</label><textarea id="ag_eq" data-k="ag_eq" placeholder="9468-9500">${esc(g("eq", (a.numerosEquipo || []).join("\n")))}</textarea></div>
   </div>
   <div class="panel">
     <h2>Mensaje de bienvenida</h2>
@@ -1398,7 +1399,7 @@ const A = {
   async chatReiniciar(){ if (!confirm("¿Reiniciar? El agente olvida lo conversado antes en este chat y vuelve a responder.")) return; await upd(doc(db, "conversaciones", S.m.id), {contextoDesde: Date.now(), estado: "agente", pausadoHasta: 0}, "Conversación reiniciada para el agente"); },
   async chatConsultaOk(){ await upd(doc(db, "conversaciones", S.m.id), {consultaProduccion: ""}, "Consulta marcada como resuelta"); },
   async chatPausar(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "persona", pausadoHasta: Date.now() + 12 * 3600e3}, "El agente se pausa 12 horas en este chat"); },
-  async chatAgente(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "agente", pausadoHasta: 0}, "El agente vuelve a responder este chat"); },
+  async chatAgente(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "agente", pausadoHasta: 0, devueltoEn: Date.now()}, "El agente vuelve a responder este chat"); },
   agModo(v){ S.f.ag_modo = v; draw(); },
   agModelo(v){ S.f.ag_modelo = v; draw(); },
   agRestaurar(){ if (!confirm("¿Reemplazar las reglas por las originales? Pierdes los cambios que no hayas guardado.")) return; S.f.ag_reglas = REGLAS_DEF; draw(); },
@@ -1409,6 +1410,7 @@ const A = {
       pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
       reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"),
       bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
+    data.numerosEquipo = String(g("eq", (a.numerosEquipo || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     if (data.modo === "prueba" && !nums.length) return toast("Agrega al menos un número de prueba.");
     if (await upd(doc(db, "config", "agente"), data, "Configuración del agente guardada", true)) Object.keys(S.f).filter(k => k.startsWith("ag_")).forEach(k => delete S.f[k]);
     draw();
