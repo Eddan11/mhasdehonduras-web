@@ -640,6 +640,7 @@ function statsCliente(c){
   const primera = cs.slice().sort((a, b) => (a.creado || 0) - (b.creado || 0))[0];
   return {n: cs.length, pedidos: pedidos.length, facturado: r2(fac.reduce((a, x) => a + (Number(x.total) || 0), 0)), saldo: r2(fac.reduce((a, x) => a + Math.max(0, saldo(x)), 0)),
     ultFecha: ult ? ult.f : "", ultItems: ult ? (ult.x.items || []).map(i => i.cant + " " + i.nombre).join(" · ") : "", ultCot: ult ? ult.x : null,
+    cotRec: cs.slice().sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0))[0] || null,
     ciclo, auto, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
 }
 let migrando = false;
@@ -695,9 +696,10 @@ function vClientes(){
     <button data-a="cfil" data-v="toca" aria-pressed="${fil === "toca"}">Toca pedir${toca ? ` <span class="cnt hot">${toca}</span>` : ""}</button></div>
   <div class="field" style="max-width:360px"><label for="cq">Buscar por nombre, RTN, teléfono o correo</label><input id="cq" data-k="cq" value="${fv("cq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Cliente</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Vendedor</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>Cliente</th><th>Última cotización</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Vendedor</th></tr></thead><tbody>
     ${list.map(({c, st}) => { const [rt, rc] = recordatorio(st); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
       <td><b>${esc(c.nombre)}</b><br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
+      <td>${st.cotRec ? `${fdate(st.cotRec.fecha)} <span class="stub">${esc(st.cotRec.numero)}</span><br><span class="badge ${(ESTADO[st.cotRec.estado] || ["", ""])[1]}">${(ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0]}</span> <small class="muted">${L(st.cotRec.total)}</small>` : '<span class="muted">—</span>'}</td>
       <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
       <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
       <td class="num">${st.pedidos}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td>
@@ -819,6 +821,16 @@ function mCot(){
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado ?? (fp !== "Contra entrega")) ? "checked" : ""}> Ya pagó el total (queda finalizada)</label>
     <div class="actions"><button class="btn pri" data-a="saveFac" ${S.busy ? "disabled" : ""}>Guardar factura</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
   } else if (mode === "pago") extra = pagoForm(c, "savePag");
+  else if (mode === "fechas") {
+    extra = `<hr class="sep"><h2>Cambiar fechas</h2>
+    <div class="row">
+      <div class="field"><label for="fx_cot">Fecha de la cotización</label><input id="fx_cot" type="date" data-k="fx_cot" value="${esc(S.f.fx_cot || c.fecha || today())}"></div>
+      ${c.factura ? `<div class="field"><label for="fx_fac">Fecha de la factura</label><input id="fx_fac" type="date" data-k="fx_fac" value="${esc(S.f.fx_fac || c.factura.fecha || today())}"></div>` : ""}
+    </div>
+    ${(c.pagos || []).length ? `<h2 style="font-size:15px;margin-top:6px">Fechas de pago</h2>${(c.pagos || []).map((p, n) => `<div class="row"><div class="field"><label for="fx_p${n}">Pago ${n + 1} · ${L(p.monto)} · ${esc(p.metodo || "")}</label><input id="fx_p${n}" type="date" data-k="fx_p${n}" value="${esc(S.f["fx_p" + n] || p.fecha || today())}"></div></div>`).join("")}` : ""}
+    <p class="note">La fecha de la factura es la que usa el recordatorio de recompra del cliente; las de pago, el reporte de cobrado del mes.</p>
+    <div class="actions"><button class="btn pri" data-a="saveFechas" ${S.busy ? "disabled" : ""}>Guardar fechas</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
+  }
   else if (mode === "perdida") {
     const mot = S.f.per_mot || "Precio";
     extra = `<hr class="sep"><h2>No se concretó</h2>
@@ -836,7 +848,7 @@ function mCot(){
   else if (c.estado === "perdida" && !c.eliminada && (fact || mio)) abajo = [`<button class="btn" data-a="reabrir">Reabrir cotización</button>`];
   else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Registrar factura</button>`, `<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "facturada" && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
-  if (S.admin && !c.eliminada) abajo.push(S.m.mas ? `<button class="btn danger" data-a="eliminar">Eliminar</button>` : `<button class="btn" data-a="mas">Más…</button>`);
+  if (S.admin && !c.eliminada) abajo.push(S.m.mas ? `<button class="btn" data-a="modeFechas">Cambiar fechas</button><button class="btn danger" data-a="eliminar">Eliminar</button>` : `<button class="btn" data-a="mas">Más…</button>`);
   return `
   <div class="bigstub">${esc(c.numero)}</div>
   ${c.eliminada ? `<p class="note" style="color:var(--bad);font-weight:600">Eliminada el ${fdate(ymd(new Date(c.eliminadaEn || Date.now())))}. No aparece en listas ni reportes.</p>
@@ -935,6 +947,7 @@ function mCli(){
   <div class="field"><label for="ce_rtn">RTN</label><input id="ce_rtn" data-k="ce_rtn" value="${esc(g("rtn", c.rtn || ""))}" inputmode="numeric"></div>
   <div class="field"><label for="ce_tel">WhatsApp</label><input id="ce_tel" data-k="ce_tel" value="${esc(g("tel", c.tel || ""))}" inputmode="tel"></div>
   <div class="field"><label for="ce_email">Correo</label><input id="ce_email" type="email" data-k="ce_email" value="${esc(g("email", c.email || ""))}" inputmode="email" autocapitalize="off"></div>
+  ${S.admin ? `<div class="field"><label for="ce_desde">Cliente desde</label><input id="ce_desde" type="date" data-k="ce_desde" value="${esc(g("desde", c.creado ? ymd(new Date(c.creado)) : today()))}"></div>` : ""}
   <div class="field"><label for="ce_ciclo">Pide cada (días)</label><input id="ce_ciclo" type="number" min="0" step="1" inputmode="numeric" data-k="ce_ciclo" value="${esc(g("ciclo", c.cicloDias || ""))}" placeholder="Automático${st && st.auto && st.ultFecha ? " (" + st.ciclo + " días)" : ""}"></div>
   <p class="note">Los cambios aplican a cotizaciones nuevas; las ya hechas conservan los datos con que se crearon.</p>
   <div class="actions"><button class="btn pri big" data-a="cliSave" ${S.busy ? "disabled" : ""}>Guardar cliente</button></div>
@@ -1224,7 +1237,7 @@ const A = {
     }
     S.busy = true; draw();
     try {
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
+      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
       const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
@@ -1240,7 +1253,8 @@ const A = {
       } else {
         const ant = S.admin ? clean(S.f.cot_num).toUpperCase().replace(/[^A-Z0-9-]/g, "") : "";
         if (ant) {
-          numero = "COT-" + ant.replace(/^COT-/, "");
+          numero = "COT-" + ant.replace(/^COT-?/, "").replace(/^-+|-+$/g, "");
+          if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
         } else numero = await siguienteNumero(iniciales());
         cot = {numero, cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
@@ -1266,6 +1280,14 @@ const A = {
   modeVer(){ S.m.mode = "ver"; clearForm(); draw(); },
   modeFac(){ S.m.mode = "factura"; clearForm(); draw(); },
   modePag(){ S.m.mode = "pago"; clearForm(); draw(); },
+  modeFechas(){ S.m.mode = "fechas"; Object.keys(S.f).filter(k => k.startsWith("fx_")).forEach(k => delete S.f[k]); draw(); },
+  async saveFechas(){
+    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
+    const ch = {fecha: S.f.fx_cot || c.fecha};
+    if (c.factura) { const ff = S.f.fx_fac || c.factura.fecha; ch.factura = Object.assign({}, c.factura, {fecha: ff}); ch.vence = ff; }
+    if ((c.pagos || []).length) ch.pagos = c.pagos.map((p, n) => Object.assign({}, p, {fecha: S.f["fx_p" + n] || p.fecha}));
+    if (await upd(doc(db, "cotizaciones", c.id), ch, "Fechas actualizadas")) { S.m.mode = "ver"; draw(); }
+  },
   modePerdida(){ S.m.mode = "perdida"; delete S.f.per_mot; delete S.f.per_nota; draw(); },
   async savePerdida(){
     const ok = await upd(doc(db, "cotizaciones", S.m.id), {estado: "perdida", perdida: Date.now(), motivoPerdida: S.f.per_mot || "Precio", notaPerdida: clean(S.f.per_nota)}, "Marcada como no concretada");
@@ -1438,10 +1460,11 @@ const A = {
     const data = {nombre: clean(g("nombre", c ? c.nombre : "")), direccion: clean(g("dir", c ? c.direccion : "")), rtn: clean(g("rtn", c ? c.rtn : "")),
       tel: clean(g("tel", c ? c.tel : "")), email: clean(g("email", c ? c.email : "")), cicloDias: Math.max(0, Math.round(Number(g("ciclo", c ? c.cicloDias : 0)) || 0))};
     if (!data.nombre) return toast("Escribe el nombre del cliente.");
+    if (S.admin && S.f.ce_desde) data.creado = new Date(S.f.ce_desde + "T12:00:00").getTime();
     S.busy = true; draw();
     try {
       if (c) { if (S.admin && S.f.ce_asignado != null && S.f.ce_asignado !== c.asignado) data.asignado = S.f.ce_asignado; await updateDoc(doc(db, "clientes", c.id), data); }
-      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.f.ce_asignado || S.me.uid}));
+      else await addDoc(collection(db, "clientes"), Object.assign(data, {creado: data.creado || Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.f.ce_asignado || S.me.uid}));
       Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = null; toast("Cliente guardado");
     } catch (e) { fallo(e, "guardar el cliente"); }
     S.busy = false; draw();
@@ -1449,9 +1472,9 @@ const A = {
   async cliDel(){ if (!confirm("¿Borrar este cliente? Sus cotizaciones no se borran.")) return; try { await deleteDoc(doc(db, "clientes", S.m.id)); S.m = null; toast("Cliente borrado"); } catch (e) { fallo(e, "borrar el cliente"); } draw(); },
   cliCsv(){
     const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-    const rows = [["Nombre", "RTN", "Dirección", "WhatsApp", "Correo", "Creado por", "Fecha de creación", "Pedidos", "Último pedido (fecha)", "Último pedido (productos)", "Pide cada (días)", "Próximo pedido", "Facturado (L.)", "Saldo pendiente (L.)"]]
+    const rows = [["Nombre", "RTN", "Dirección", "WhatsApp", "Correo", "Creado por", "Fecha de creación", "Pedidos", "Última cotización (fecha)", "Última cotización (número)", "Última cotización (estado)", "Último pedido (fecha)", "Último pedido (productos)", "Pide cada (días)", "Próximo pedido", "Facturado (L.)", "Saldo pendiente (L.)"]]
       .concat(S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")).map(c => { const st = statsCliente(c);
-        return [c.nombre, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, fdate(st.ultFecha), st.ultItems,
+        return [c.nombre, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, st.cotRec ? fdate(st.cotRec.fecha) : "", st.cotRec ? st.cotRec.numero : "", st.cotRec ? (ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0] : "", fdate(st.ultFecha), st.ultItems,
           st.ultFecha ? st.ciclo : "", fdate(st.prox), st.facturado.toFixed(2), st.saldo.toFixed(2)]; }));
     const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "clientes-mhas-" + today() + ".csv";
