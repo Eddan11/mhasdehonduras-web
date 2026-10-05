@@ -712,7 +712,7 @@ function vClientes(){
   return `
   <h1>Clientes</h1>
   <p class="sub">${S.cli.length} ${S.cli.length === 1 ? "cliente" : "clientes"}. El próximo pedido se calcula con el promedio de días entre sus pedidos (30 días si solo tiene uno); puedes fijarlo en cada cliente.</p>
-  <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="cliNuevo">+ Nuevo cliente</button><button class="btn" data-a="cliCsv">Descargar base (Excel)</button><button class="btn" data-a="cliMeta">Descargar para Meta</button></div>
+  <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="cliNuevo">+ Nuevo cliente</button><button class="btn" data-a="cliCsv">Descargar base (Excel)</button><button class="btn" data-a="cliMeta">Público para Meta</button><button class="btn pri" data-a="ventasMeta">Eventos para Meta (semanal)</button></div>
   <div class="chips" role="group" aria-label="Filtrar clientes">
     <button data-a="cfil" data-v="todos" aria-pressed="${fil === "todos"}">Todos</button>
     <button data-a="cfil" data-v="toca" aria-pressed="${fil === "toca"}">Toca pedir${toca ? ` <span class="cnt hot">${toca}</span>` : ""}</button></div>
@@ -1501,6 +1501,31 @@ const A = {
     S.busy = false; draw();
   },
   async cliDel(){ if (!confirm("¿Borrar este cliente? Sus cotizaciones no se borran.")) return; try { await deleteDoc(doc(db, "clientes", S.m.id)); S.m = null; toast("Cliente borrado"); } catch (e) { fallo(e, "borrar el cliente"); } draw(); },
+  ventasMeta(){
+    // Una fila por venta (cotización facturada) para subir como eventos de compra offline en Meta
+    const lim = addDays(today(), -60), filas = [];
+    const telDe = t => { let x = String(t || "").replace(/\D/g, ""); if (x.length === 8) x = "504" + x; return x.length === 11 && x.startsWith("504") ? x : ""; };
+    let nL = 0, nP = 0;
+    S.cot.filter(c => !c.eliminada && c.estado !== "anulada").forEach(c => {
+      const cli = (c.cliente && c.cliente.id && S.cli.find(x => x.id === c.cliente.id)) || {};
+      const tel = telDe((c.cliente && c.cliente.tel) || cli.tel);
+      const email = String((c.cliente && c.cliente.email) || cli.email || "").trim().toLowerCase();
+      const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email : "";
+      if (!tel && !emailOk) return;
+      // Lead: toda cotización creada (el cliente pidió precio)
+      if (c.fecha && c.fecha >= lim) { filas.push([tel, emailOk, "Lead", c.fecha, (Number(c.total) || 0).toFixed(2), "HNL", "hn", c.numero + "-L"]); nL++; }
+      // Purchase: solo las facturadas (compra real)
+      const ff = (c.factura && c.factura.fecha) || c.fecha;
+      if (c.estado === "facturada" && ff && ff >= lim) { filas.push([tel, emailOk, "Purchase", ff, (Number(c.total) || 0).toFixed(2), "HNL", "hn", c.numero]); nP++; }
+    });
+    if (!filas.length) return toast("No hay cotizaciones de los últimos 60 días con teléfono o correo.");
+    filas.sort((a, b) => a[3].localeCompare(b[3]));
+    const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+    const csv = [["phone", "email", "event_name", "event_time", "value", "currency", "country", "order_id"]].concat(filas).map(r => r.map(q).join(",")).join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"})); a.download = "ventas-meta-" + today() + ".csv";
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast(nP + " compras y " + nL + " cotizaciones listas para Meta");
+  },
   cliMeta(){
     const vistos = new Set(), filas = [];
     const sinAcento = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -1516,11 +1541,11 @@ const A = {
       const partes = sinAcento(c.contacto).split(/\s+/).filter(Boolean);
       const dir = sinAcento(c.direccion).toLowerCase();
       const ct = /san pedro|sps|s\.p\.s/.test(dir) ? "San Pedro Sula" : /tegucigalpa|tgu/.test(dir) ? "Tegucigalpa" : /choloma/.test(dir) ? "Choloma" : /la lima/.test(dir) ? "La Lima" : /villanueva/.test(dir) ? "Villanueva" : /la ceiba/.test(dir) ? "La Ceiba" : /tela/.test(dir) ? "Tela" : "";
-      filas.push([tel, emailOk, partes[0] || "", partes.slice(1).join(" "), ct, "HN"]);
+      filas.push([tel, emailOk, partes[0] || "", partes.slice(1).join(" "), ct, "HN", statsCliente(c).facturado.toFixed(2)]);
     });
     if (!filas.length) return toast("No hay clientes con teléfono o correo válidos.");
     const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
-    const csv = [["phone", "email", "fn", "ln", "ct", "country"]].concat(filas).map(r => r.map(q).join(",")).join("\r\n");
+    const csv = [["phone", "email", "fn", "ln", "ct", "country", "value"]].concat(filas).map(r => r.map(q).join(",")).join("\r\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"})); a.download = "clientes-meta-" + today() + ".csv";
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     toast(filas.length + " clientes listos para Meta");
