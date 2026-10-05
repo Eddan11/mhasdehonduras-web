@@ -141,6 +141,7 @@ a.btn{color:inherit}
 .bub.in{align-self:flex-start;background:var(--card);border:1px solid var(--line)}
 .bub.out{align-self:flex-end;background:var(--ok-bg)}
 .bub.eq{align-self:flex-end;background:var(--warn-bg)}
+.tfoot td{border-top:2px solid var(--line);background:var(--chip);padding-top:12px;padding-bottom:12px}
 </style>
 </head>
 <body>
@@ -448,13 +449,31 @@ function vCotizaciones(){
       default: return c.estado === S.filtro;
     }
   });
-  if (q) list = list.filter(c => [c.numero, c.cliente && c.cliente.nombre, c.factura && c.factura.numero].join(" ").toLowerCase().includes(q));
+  if (q) list = list.filter(c => [c.numero, c.cliente && c.cliente.nombre, c.cliente && c.cliente.contacto, c.cliente && c.cliente.tel, c.factura && c.factura.numero].join(" ").toLowerCase().includes(q));
+  const desde = S.f.fl_desde || "", hasta = S.f.fl_hasta || "", vend = S.f.fl_vend || "";
+  if (desde) list = list.filter(c => (c.fecha || "") >= desde);
+  if (hasta) list = list.filter(c => (c.fecha || "") <= hasta);
+  if (vend) list = list.filter(c => c.vendedor === vend);
   const esVend = rol() === "vendedor";
+  const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => [c.vendedor, c.vendedorNombre || "Sin nombre"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const tot = list.reduce((a, c) => { const cc = calc(c.items); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
+  const hoyS = today(), mes = hoyS.slice(0, 7);
+  const mesAnt = (() => { const d = new Date(hoyS + "T12:00:00"); d.setDate(1); d.setMonth(d.getMonth() - 1); return ymd(d).slice(0, 7); })();
+  const finMes = m => { const d = new Date(m + "-01T12:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
+  const presets = [["hoy", "Hoy", hoyS, hoyS], ["mes", "Este mes", mes + "-01", finMes(mes)], ["mesant", "Mes pasado", mesAnt + "-01", finMes(mesAnt)], ["todo", "Todo", "", ""]];
   return `
   <h1>Cotizaciones</h1>
   <p class="sub">${esVend ? "Tus cotizaciones y en qué quedó cada una." : "Aprueba, factura y registra pagos desde aquí."}</p>
   <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}${cuenta[k] ? ` <span class="cnt${k === "aprobada" && puede("admin", "facturador") ? " hot" : ""}">${cuenta[k]}</span>` : ""}</button>`).join("")}</div>
-  <div class="field" style="max-width:360px"><label for="bq">Buscar por número, cliente o factura</label><input id="bq" data-k="bq" value="${fv("bq")}" autocomplete="off"></div>
+  <div class="panel" style="padding:12px 14px">
+    <div class="row">
+      <div class="field" style="flex:2 1 220px"><label for="bq">Buscar por número, cliente, teléfono o factura</label><input id="bq" data-k="bq" value="${fv("bq")}" autocomplete="off"></div>
+      <div class="field"><label for="fl_desde">Desde</label><input id="fl_desde" type="date" data-k="fl_desde" data-redraw="1" value="${esc(desde)}"></div>
+      <div class="field"><label for="fl_hasta">Hasta</label><input id="fl_hasta" type="date" data-k="fl_hasta" data-redraw="1" value="${esc(hasta)}"></div>
+      ${esVend ? "" : `<div class="field"><label for="fl_vend">Vendedor</label><select id="fl_vend" data-k="fl_vend" data-redraw="1"><option value="">Todos</option>${vendedores.map(([id, n]) => `<option value="${esc(id)}" ${vend === id ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>`}
+    </div>
+    <div class="chips" style="margin:0">${presets.map(([k, t, d, h]) => `<button data-a="flPreset" data-v="${k}" aria-pressed="${desde === d && hasta === h}">${t}</button>`).join("")}</div>
+  </div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th>${esVend ? "" : "<th>Vendedor</th>"}<th class="num">Total</th><th>Estado</th></tr></thead><tbody>
   ${list.map(c => { const [et, ec] = ESTADO[c.estado] || [c.estado, ""]; const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
@@ -462,7 +481,9 @@ function vCotizaciones(){
       <td><span class="stub">${esc(c.numero)}</span></td><td>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.tel ? `<br><small class="muted">${esc(c.cliente.tel)}</small>` : ""}${c.estado === "perdida" && c.motivoPerdida ? `<br><small class="muted">Motivo: ${esc(c.motivoPerdida)}</small>` : ""}</td><td>${fdate(c.fecha)}</td>
       ${esVend ? "" : `<td>${esc(c.vendedorNombre || "")}</td>`}<td class="num">${L(c.total)}</td>
       <td><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${!esVend && descTxt(c) ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ' <span class="badge">Enviada</span>' : ""}</td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">No hay cotizaciones en esta vista.</p>`}
+  </tbody>
+  <tfoot><tr class="tfoot"><td colspan="${esVend ? 3 : 4}"><b>${list.length} ${list.length === 1 ? "cotización" : "cotizaciones"}</b><br><small class="muted">Subtotal ${L(tot.sub)} · ISV ${L(tot.isv)}${!esVend && tot.desc > 0 ? " · descuentos " + L(tot.desc) : ""}${tot.pag > 0 || tot.sal > 0 ? " · cobrado " + L(tot.pag) + " · por cobrar " + L(tot.sal) : ""}</small></td><td class="num"><b>${L(tot.total)}</b></td><td></td></tr></tfoot>
+  </table>` : `<p class="empty">No hay cotizaciones con estos filtros.</p>`}
   </div></div>`;
 }
 
@@ -1274,6 +1295,13 @@ const A = {
       else toast(numero + (editando ? " actualizada" : " guardada") + " como cotización abierta");
     } catch (e) { if (e && e.code === "cerrada") toast("Esa cotización ya no está abierta; no se puede editar."); else if (e && e.code === "existe") toast("Ya existe una cotización con ese número."); else fallo(e, "guardar la cotización"); }
     S.busy = false; draw();
+  },
+  flPreset(v){
+    const hoyS = today(), mes = hoyS.slice(0, 7);
+    const d0 = new Date(hoyS + "T12:00:00"); d0.setDate(1); d0.setMonth(d0.getMonth() - 1); const mesAnt = ymd(d0).slice(0, 7);
+    const finMes = m => { const d = new Date(m + "-01T12:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
+    const P = {hoy: [hoyS, hoyS], mes: [mes + "-01", finMes(mes)], mesant: [mesAnt + "-01", finMes(mesAnt)], todo: ["", ""]}[v] || ["", ""];
+    S.f.fl_desde = P[0]; S.f.fl_hasta = P[1]; draw();
   },
   filtro(v){ S.filtro = v; draw(); },
   open(v){ S.m = {type: "cot", id: v, mode: "ver"}; clearForm(); draw(); },
