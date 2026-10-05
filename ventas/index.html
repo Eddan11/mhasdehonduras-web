@@ -387,24 +387,29 @@ function vCotizar(){
     ${S.prod.length ? `
     <div class="field"><label for="psel">Producto</label>
       <select id="psel" data-k="psel" data-redraw="1"><option value="">Elige un producto…</option>
+      <option value="__gen" ${S.f.psel === "__gen" ? "selected" : ""}>GEN-001 · Producto genérico (escribir descripción y precio)</option>
       ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${codDe(p) ? esc(codDe(p)) + " · " : ""}${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(unidadDe(p))}</option>`).join("")}</optgroup>`).join("")}
       </select></div>
+    ${S.f.psel === "__gen" ? `
+    <div class="field"><label for="gen_desc">Descripción del producto</label><input id="gen_desc" data-k="gen_desc" value="${fv("gen_desc")}" placeholder="Ej. Rollo térmico 110 mm x 60 m" autocomplete="off"></div>
+    <div class="field" style="max-width:220px"><label for="gen_precio">Precio unitario sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
+    <p class="note" style="margin:-4px 0 12px">Solo queda en esta cotización; no se agrega al catálogo.</p>` : ""}
     ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     ${uni(psel) > 1 ? `<div class="chips" role="group" aria-label="Cantidad en">
-      <button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(plural(2, unidadDe(psel)))}</button>
-      <button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc((presDe(psel) || "paquete").toLowerCase())}</button></div>` : ""}` : ""}
+      <button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En unidades</button>
+      <button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc(((presDe(psel) || "paquete").split(/\s+/)[0] || "paquete").toLowerCase())}</button></div>` : ""}` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
-      <button class="btn pri grow" data-a="addSel" ${psel ? "" : "disabled"}>Agregar</button>
+      <button class="btn pri grow" data-a="addSel" ${psel || S.f.psel === "__gen" ? "" : "disabled"}>Agregar</button>
     </div>` : `<p class="empty">Todavía no hay productos cargados.${S.admin ? " Cárgalos en Ajustes." : ""}</p>`}
   </div>
   <div class="panel">
     <h2>Productos de la cotización</h2>
     ${S.cart.length ? S.cart.map((i, n) => { const l = cc.lines[n]; return `<div class="item">
-      <div class="ihead"><b>${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
+      <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
         <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${i.cant}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div>
-        <div class="num">${edPrecio ? `<label class="mini">Precio unit. sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * 10000) / 10000}">` : `<span class="muted">${LU(l.u)} c/${esc(i.unidad || "u")}</span>`}</div>
+        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio unit. sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * 10000) / 10000}">` : `<span class="muted">${LU(l.u)} c/${esc(i.unidad || "u")}</span>`}</div>
       </div>
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Descuento L.</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.desc || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
@@ -1230,6 +1235,15 @@ const A = {
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
   addSel(){
+    if (S.f.psel === "__gen") {
+      const desc = clean(S.f.gen_desc), pr = Number(S.f.gen_precio);
+      if (!desc) return toast("Escribe la descripción del producto.");
+      if (!(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
+      const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
+      const n = S.cart.filter(x => x.generico).length + 1;
+      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad: "unidad", cant, generico: true});
+      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio"].forEach(k => delete S.f[k]); draw(); return;
+    }
     const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
     let cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
     if (S.f.pmodo === "p" && uni(p) > 1) cant *= uni(p);
@@ -1263,7 +1277,7 @@ const A = {
     S.busy = true; draw();
     try {
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
-      const items = S.cart.map(i => ({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}));
+      const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
       const total = calc(items).total;
       const e = emp();
@@ -1428,7 +1442,7 @@ const A = {
     if (cl.id && S.cli.some(x => x.id === cl.id)) S.f.cli_sel = cl.id;
     else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
     S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.cot_fecha = c.fecha || today();
-    S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0}));
+    S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0, generico: !!i.generico}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
   mas(){ S.m.mas = true; draw(); },
