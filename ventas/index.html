@@ -631,6 +631,11 @@ function vAgente(){
     <h2>Clientes y límites</h2>
     <div class="field"><label for="ag_asig">Clientes nuevos de WhatsApp se asignan a</label><select id="ag_asig" data-k="ag_asignar">${opciones.map(([v, t]) => `<option value="${esc(v)}" ${asignar === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
     <p class="note">Si el cliente ya existe en el sistema, se respeta su vendedor asignado.</p>
+    <div class="field"><label for="ag_recompra">Clientes que ya compraron</label><select id="ag_recompra" data-k="ag_recompra">
+      <option value="agente" ${g("recompra", a.recompra || "agente") === "agente" ? "selected" : ""}>Los atiende el agente, igual que a los demás</option>
+      <option value="equipo" ${g("recompra", a.recompra || "agente") === "equipo" ? "selected" : ""}>No responder: los atiende el equipo</option>
+    </select></div>
+    <p class="note">"Ya compró" = tiene al menos una cotización enviada a facturar o facturada. Con "No responder", el agente no les escribe nada y el chat sale en rojo en Chats WhatsApp como "Cliente que ya compró".</p>
     <div class="row">
       <div class="field"><label for="ag_pausa">Pausa al responder tú (horas)</label><input id="ag_pausa" type="number" min="1" data-k="ag_pausa" value="${esc(g("pausa", a.pausaHoras || 12))}"></div>
       <div class="field"><label for="ag_max">Máx. respuestas por chat al día</label><input id="ag_max" type="number" min="1" data-k="ag_max" value="${esc(g("max", a.maxRespuestasDia || 40))}"></div>
@@ -1492,7 +1497,7 @@ const A = {
     const data = {modo: g("modo", a.modo || "prueba"), numerosPrueba: nums, asignarA: g("asignar", a.asignarA || "comercial@mhasdehonduras.com"),
       pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
       reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"),
-      bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
+      bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
     data.numerosEquipo = String(g("eq", (a.numerosEquipo || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     if (data.modo === "prueba" && !nums.length) return toast("Agrega al menos un número de prueba.");
     if (await upd(doc(db, "config", "agente"), data, "Configuración del agente guardada", true)) Object.keys(S.f).filter(k => k.startsWith("ag_")).forEach(k => delete S.f[k]);
