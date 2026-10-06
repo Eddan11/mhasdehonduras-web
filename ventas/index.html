@@ -142,6 +142,13 @@ a.btn{color:inherit}
 .bub.out{align-self:flex-end;background:var(--ok-bg)}
 .bub.eq{align-self:flex-end;background:var(--warn-bg)}
 .tfoot td{border-top:2px solid var(--line);background:var(--chip);padding-top:12px;padding-bottom:12px}
+.cli-lista{max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.cli-op{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:11px 12px;cursor:pointer;min-height:48px}
+.cli-op:last-child{border-bottom:0}
+.cli-op small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.cli-op.nuevo{color:var(--accent);font-weight:700}
+.cli-op:active,.cli-op:hover{background:var(--chip)}
+.cli-elegido{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:var(--chip)}
 </style>
 </head>
 <body>
@@ -341,8 +348,6 @@ function vVerificar(){
 /* ---------- vista: nueva cotización ---------- */
 function vCotizar(){
   const sel = S.f.cli_sel || "";
-  const cliOpts = S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""))
-    .map(c => `<option value="${esc(c.id)}" ${sel === c.id ? "selected" : ""}>${esc(c.nombre)}${c.rtn ? " · " + esc(c.rtn) : ""}</option>`).join("");
   const nuevo = sel === "__nuevo";
   const cliSel = S.cli.find(c => c.id === sel);
   const cc = calc(S.cart);
@@ -365,12 +370,9 @@ function vCotizar(){
   </div>` : ""}
   <div class="panel">
     <h2>Cliente</h2>
-    <div class="field"><label for="cli_sel">Cliente</label>
-      <select id="cli_sel" data-k="cli_sel" data-redraw="1">
-        <option value="">Elige un cliente…</option>
-        <option value="__nuevo" ${nuevo ? "selected" : ""}>+ Cliente nuevo</option>
-        ${cliOpts}
-      </select></div>
+    ${sel ? `<div class="cli-elegido"><div><b>${nuevo ? "Cliente nuevo" : esc((cliSel || {}).nombre || "")}</b>${cliSel && cliSel.tel ? `<br><small class="muted">${esc(cliSel.tel)}</small>` : ""}</div><button class="btn sm" data-a="cliCambiar">Cambiar</button></div>`
+    : `<div class="field"><label for="cli_q">Buscar cliente (nombre, contacto, teléfono o RTN)</label><input id="cli_q" data-k="cli_q" value="${fv("cli_q")}" placeholder="Escriba para buscar…" autocomplete="off"></div>
+    <div class="cli-lista" id="cli_list">${cliListHtml()}</div>`}
     ${nuevo ? `
     <div class="field"><label for="cn">Empresa</label><input id="cn" data-k="cli_nombre" value="${fv("cli_nombre")}" autocomplete="off" autocapitalize="words"></div>
     <div class="field"><label for="cc">Nombre del cliente (opcional)</label><input id="cc" data-k="cli_contacto" value="${fv("cli_contacto")}" autocomplete="off" autocapitalize="words" placeholder="Persona de contacto o dueño"></div>
@@ -422,6 +424,14 @@ function vCotizar(){
   <div class="cta ctarow"><button class="btn big sec" data-a="saveCot" data-v="g" ${S.busy || !S.cart.length ? "disabled" : ""}>Guardar</button><button class="btn pri big" id="ctabtn" data-a="saveCot" data-v="c" ${S.busy || !S.cart.length ? "disabled" : ""}>${S.busy ? "Guardando…" : "Cotizar" + (S.cart.length ? " · " + L(cc.total) : "")}</button></div>
   <p class="note" style="text-align:center">Guardar la deja como cotización abierta para seguir editándola; Cotizar además genera el PDF.</p>
   </div>`;
+}
+function cliListHtml(){
+  const q = clean(S.f.cli_q).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const lista = S.cli.filter(c => !q || [c.nombre, c.contacto, c.tel, c.rtn].join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q))
+    .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
+  return `<button class="cli-op nuevo" data-a="cliPick" data-v="__nuevo">+ Cliente nuevo</button>` +
+    lista.map(c => `<button class="cli-op" data-a="cliPick" data-v="${esc(c.id)}"><b>${esc(c.nombre)}</b>${c.contacto || c.tel ? `<small>${esc([c.contacto, c.tel].filter(Boolean).join(" · "))}</small>` : ""}</button>`).join("") +
+    (lista.length ? "" : `<p class="empty" style="padding:10px">Ningún cliente coincide.</p>`);
 }
 function totalsHtml(cc, simple){
   if (simple) return `<div><span class="muted">Subtotal</span><span>${L(cc.base)}</span></div>
@@ -1239,6 +1249,8 @@ const A = {
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; },
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
+  cliPick(v){ S.f.cli_sel = v; delete S.f.cli_q; draw(); },
+  cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
     if (S.f.psel === "__gen") {
       const desc = clean(S.f.gen_desc), pr = Number(S.f.gen_precio);
@@ -1675,6 +1687,7 @@ document.addEventListener("input", e => {
       else { const pr = Number(($("#pe_precio") || {}).value); const v = Math.round(pr / 1.15 / un * 10000) / 10000; S.f.pe_unit = isFinite(v) && pr ? v : ""; const o = $("#pe_unit"); if (o) o.value = S.f.pe_unit; }
     }
     if (k === "bq") draw();
+    if (k === "cli_q") { const el = $("#cli_list"); if (el) el.innerHTML = cliListHtml(); }
   }
 });
 document.addEventListener("change", e => {
