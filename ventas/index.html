@@ -627,6 +627,16 @@ function vAgente(){
     <p class="note">Escribe <b>{nombre}</b> donde quieras el nombre del cliente: sale como "¡Hola Juan!" si su WhatsApp tiene nombre, o "¡Hola!" si no. Si el cliente solo dice "hola", se le envía solo la bienvenida (sin costo de IA).</p>
   </div>
   <div class="panel">
+    <h2>Botones y recordatorio</h2>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-bottom:10px"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_botones" ${g("botones", a.botones !== false) ? "checked" : ""}> Bienvenida con botones: Rollos térmicos · Etiquetas · Empaque y cinta</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_rec" ${g("rec", a.recordatorio !== false) ? "checked" : ""}> Enviar un recordatorio si el cliente no responde</label>
+    <div class="row" style="margin-top:10px">
+      <div class="field" style="max-width:220px"><label for="ag_rech">Después de (horas)</label><input id="ag_rech" type="number" min="1" max="20" data-k="ag_rech" value="${esc(g("rech", a.recordatorioHoras || 2))}"></div>
+    </div>
+    <div class="field"><label for="ag_rect">Texto del recordatorio</label><textarea id="ag_rect" data-k="ag_rect" style="min-height:80px">${esc(g("rect", a.recordatorioTexto || "Hola{nombre}, ¿pudo revisar la información? Si me dice qué producto y cantidad necesita, con gusto le preparo la cotización. 😊"))}</textarea></div>
+    <p class="note">Se envía una sola vez, de 7 a. m. a 7 p. m., solo si la última respuesta del agente fue una pregunta y el cliente no contestó. No se envía si ya se hizo la cotización o si el chat lo atiende el equipo.</p>
+  </div>
+  <div class="panel">
     <h2>Ritmo de respuesta</h2>
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_pausaNat" ${g("pausaNat", a.pausaNatural !== false) ? "checked" : ""}> Responder con ritmo humano: muestra "escribiendo…" y espera más o menos según lo largo de la respuesta</label>
     <div class="field" style="max-width:320px;margin-top:10px"><label for="ag_espera">Esperar antes de responder (segundos desde el último mensaje del cliente)</label><input id="ag_espera" type="number" min="3" max="120" data-k="ag_espera" value="${esc(g("espera", a.esperaSeg || 30))}"></div>
@@ -806,7 +816,7 @@ function vAjustes(){
   </div>
   <div class="panel">
     <h2>Datos de la empresa en el PDF</h2>
-    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["envio", "Envío"], ["validez", "Validez (días)"]]
+    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["envio", "Envío"], ["validez", "Validez (días)"], ["horario", "Horario de atención (lo usa el agente)"], ["ubicacion", "Ubicación / tienda para clientes (lo usa el agente)"]]
       .map(([k, t]) => `<div class="field"><label for="em_${k}">${t}</label><input id="em_${k}" data-k="em_${k}" ${k === "validez" ? 'type="number" min="1"' : ""} value="${esc(S.f["em_" + k] ?? emp()[k])}"></div>`).join("")}
     <div class="actions"><button class="btn pri" data-a="saveEmpresa" ${S.busy ? "disabled" : ""}>Guardar datos</button></div>
   </div>
@@ -951,6 +961,7 @@ function mProd(){
     <div class="field"><label for="pe_unit">Precio unitario sin ISV</label><input id="pe_unit" type="number" min="0" step="any" inputmode="decimal" data-k="pe_unit" value="${esc(unit)}"></div>
   </div>
   <p class="note">Si cambias uno de los dos precios, el otro se calcula solo.</p>
+  <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_solo" ${g("solo", p.id ? soloPres(p) : false) ? "checked" : ""}> Solo se vende por presentación completa (el agente de WhatsApp no lo vende suelto)</label>
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
@@ -1044,7 +1055,8 @@ function waLink(c){
 }
 const EMP_DEF = {nombre: "MHAS DE HONDURAS S DE RL", rtn: "05019018067606", direccion: "33 calle zona el polvorín, Res. Valle Escondido, S.P.S.",
   pbx: "2540-1090", whatsapp: "3166-6059", correo: "comercial@mhasdehonduras.com",
-  entrega: "1 día en San Pedro Sula", envio: "Fuera de San Pedro Sula, de 2 a 3 días por servicio de paquetería (el envío se paga al recibir)", validez: 15};
+  entrega: "1 día en San Pedro Sula", envio: "Fuera de San Pedro Sula, de 2 a 3 días por servicio de paquetería (el envío se paga al recibir)", validez: 15,
+  horario: "", ubicacion: ""};
 function emp(){
   const e = S.cfg.emp || {}, o = {};
   for (const k in EMP_DEF) o[k] = (e[k] !== undefined && e[k] !== "") ? e[k] : EMP_DEF[k];
@@ -1488,6 +1500,11 @@ const A = {
           "\n==================================================\n";
         q.docs.map(d => d.data()).forEach(m => { out += "[" + hora(m.ts) + "] " + (quien[m.de] || m.de) + ": " + String(m.texto || "").replace(/\n/g, "\n    ") + "\n"; });
       }
+      out += "\n\n==================================================\nLISTA DE PRECIOS VIGENTE (" + fdate(today()) + ")\n==================================================\nCódigo | Producto | Presentación | Con ISV | Unitario con ISV | Activo | Nota para el agente\n";
+      S.prod.slice().sort((x, y) => (x.orden ?? 999) - (y.orden ?? 999)).forEach(p => {
+        const u = Math.max(1, Number(p.unidades) || 1);
+        out += [codDe(p), p.nombre, presDe(p) || "Unidad", L(p.precio), u > 1 ? L(p.precio / u) + " c/" + unidadDe(p) + (soloPres(p) ? " (no se vende suelto)" : "") : "—", p.activo === false ? "No" : "Sí", p.notaAgente || ""].join(" | ") + "\n";
+      });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob(["\ufeff" + out], {type: "text/plain;charset=utf-8"}));
       a.download = "chats-mhas-" + today() + ".txt"; document.body.appendChild(a); a.click();
@@ -1509,7 +1526,8 @@ const A = {
     const data = {modo: g("modo", a.modo || "prueba"), numerosPrueba: nums, asignarA: g("asignar", a.asignarA || "comercial@mhasdehonduras.com"),
       pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
       reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"),
-      bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
+      bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), botones: !!g("botones", a.botones !== false), recordatorio: !!g("rec", a.recordatorio !== false),
+      recordatorioHoras: Math.min(20, Math.max(1, Number(g("rech", a.recordatorioHoras || 2)) || 2)), recordatorioTexto: String(g("rect", a.recordatorioTexto || "")).trim(), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
     data.numerosEquipo = String(g("eq", (a.numerosEquipo || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     if (data.modo === "prueba" && !nums.length) return toast("Agrega al menos un número de prueba.");
     if (await upd(doc(db, "config", "agente"), data, "Configuración del agente guardada", true)) Object.keys(S.f).filter(k => k.startsWith("ag_")).forEach(k => delete S.f[k]);
@@ -1616,7 +1634,7 @@ const A = {
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
-      soloPresentacion: !!g("solo", p ? soloPres(p) : false)};
+      soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : ""))};
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
     if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = 999; data.creadoPor = S.me.uid; if (!puede("admin")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
     if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) { clearProd(); S.m = null; draw(); }
