@@ -247,10 +247,11 @@ const plural = (n, u) => n === 1 ? u : (u === "clisé" ? "clisés" : u + "s");
 function calc(items){
   const lines = (items || []).map(i => {
     const u = (Number(i.precio) || 0) / 1.15, bruto = r2(u * i.cant);
-    const desc = Math.min(bruto, Math.max(0, r2(i.desc)));
-    const imp = r2(bruto - desc);
-    return {u, bruto, desc, pct: bruto ? Math.round(desc / bruto * 1000) / 10 : 0, imp, un: i.cant ? imp / i.cant : 0,
-      conIsv: r2(i.cant * (Number(i.precio) || 0) - desc * 1.15)};
+    const descX = Math.min(bruto, Math.max(0, Math.round((Number(i.desc) || 0) * 1e4) / 1e4)); // descuento sin ISV (4 decimales)
+    const desc = r2(descX);
+    const imp = r2(bruto - descX);
+    return {u, bruto, desc, descX, descIsv: r2(descX * 1.15), pct: bruto ? Math.round(descX / bruto * 1000) / 10 : 0, imp, un: i.cant ? imp / i.cant : 0,
+      conIsv: r2(i.cant * (Number(i.precio) || 0) - descX * 1.15)};
   });
   const sub = r2(lines.reduce((a, l) => a + l.bruto, 0));
   const desc = r2(lines.reduce((a, l) => a + l.desc, 0));
@@ -414,9 +415,11 @@ function vCotizar(){
         <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio unit. sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * 10000) / 10000}">` : `<span class="muted">${LU(l.u)} c/${esc(i.unidad || "u")}</span>`}</div>
       </div>
       <div class="irow">
-        <div class="dsc"><label class="mini" for="d${n}">Descuento L.</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.desc || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
-        <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b></div>
-      </div></div>`; }).join("") + `<p class="note">Precios sin ISV.</p><div class="totals" id="ctot">${totalsHtml(cc)}</div>`
+        <div class="dsc"><label class="mini" for="d${n}">Descuento L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
+        <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
+      </div></div>`; }).join("") + `<p class="note">Precios sin ISV. El descuento se escribe sobre el total con ISV.</p>
+    <div class="row" style="align-items:flex-end;margin:6px 0 4px"><div class="field" style="max-width:220px;margin:0"><label for="aj_total">Dejar total con ISV en (L.)</label><input id="aj_total" type="number" min="0" step="0.01" inputmode="decimal" data-k="aj_total" value="${fv("aj_total")}" placeholder="${r2(cc.total)}"></div><button class="btn" data-a="ajustarTotal">Aplicar</button></div>
+    <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
     : `<p class="empty">Todavía no agregas productos.</p>`}
     <div class="field" style="margin-top:12px"><label for="nt">Notas (opcional)</label><textarea id="nt" data-k="notas">${fv("notas")}</textarea></div>
     ${S.cart.length ? `<button class="btn" data-a="vaciar">Vaciar</button>` : ""}
@@ -464,11 +467,13 @@ function vCotizaciones(){
       default: return c.estado === S.filtro;
     }
   });
+  S._listaCot = null;
   if (q) list = list.filter(c => [c.numero, c.cliente && c.cliente.nombre, c.cliente && c.cliente.contacto, c.cliente && c.cliente.tel, c.factura && c.factura.numero].join(" ").toLowerCase().includes(q));
   const desde = S.f.fl_desde || "", hasta = S.f.fl_hasta || "", vend = S.f.fl_vend || "";
   if (desde) list = list.filter(c => (c.fecha || "") >= desde);
   if (hasta) list = list.filter(c => (c.fecha || "") <= hasta);
   if (vend) list = list.filter(c => c.vendedor === vend);
+  S._listaCot = list;
   const esVend = rol() === "vendedor";
   const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => [c.vendedor, c.vendedorNombre || "Sin nombre"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const tot = list.reduce((a, c) => { const cc = calc(c.items); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
@@ -478,6 +483,7 @@ function vCotizaciones(){
   const presets = [["hoy", "Hoy", hoyS, hoyS], ["mes", "Este mes", mes + "-01", finMes(mes)], ["mesant", "Mes pasado", mesAnt + "-01", finMes(mesAnt)], ["todo", "Todo", "", ""]];
   return `
   <h1>Cotizaciones</h1>
+  <div class="actions" style="margin:0 0 10px"><button class="btn" data-a="cotCsv">Descargar (Excel)</button></div>
   <p class="sub">${esVend ? "Tus cotizaciones y en qué quedó cada una." : "Aprueba, factura y registra pagos desde aquí."}</p>
   <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}${cuenta[k] ? ` <span class="cnt${k === "aprobada" && puede("admin", "facturador") ? " hot" : ""}">${cuenta[k]}</span>` : ""}</button>`).join("")}</div>
   <div class="panel" style="padding:12px 14px">
@@ -1261,6 +1267,17 @@ const A = {
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; },
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
+  ajustarTotal(){
+    const T = r2(Number(S.f.aj_total));
+    if (!S.cart.length) return;
+    const brutos = S.cart.map(i => r2(i.cant * (Number(i.precio) || 0))), G = r2(brutos.reduce((a, b) => a + b, 0));
+    if (!(T > 0) || T > G) return toast("Escribe un total menor o igual a " + L(G) + ".");
+    const D = r2(G - T); let usado = 0;
+    S.cart.forEach((i, n) => { const d = n === S.cart.length - 1 ? r2(D - usado) : r2(D * brutos[n] / G); usado = r2(usado + d); i.desc = d / 1.15; });
+    let dif = r2(calc(S.cart).total - T), k = 0; // corrige centavos de redondeo
+    while (Math.abs(dif) >= 0.005 && k++ < 5) { const u = S.cart[S.cart.length - 1]; u.desc = Math.max(0, (u.desc * 1.15 + dif) / 1.15); dif = r2(calc(S.cart).total - T); }
+    delete S.f.aj_total; draw(); toast("Total ajustado a " + L(calc(S.cart).total));
+  },
   cliPick(v){ S.f.cli_sel = v; delete S.f.cli_q; draw(); },
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
@@ -1307,7 +1324,7 @@ const A = {
     try {
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
       const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}));
-      const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].desc);
+      const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
       const total = calc(items).total;
       const e = emp();
       let numero, cot;
@@ -1346,6 +1363,18 @@ const A = {
     const finMes = m => { const d = new Date(m + "-01T12:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
     const P = {hoy: [hoyS, hoyS], mes: [mes + "-01", finMes(mes)], mesant: [mesAnt + "-01", finMes(mesAnt)], todo: ["", ""]}[v] || ["", ""];
     S.f.fl_desde = P[0]; S.f.fl_hasta = P[1]; draw();
+  },
+  cotCsv(){
+    const lista = S._listaCot || [];
+    if (!lista.length) return toast("No hay cotizaciones en esta vista.");
+    const rows = [["Número", "Fecha", "Estado", "Cliente", "Teléfono", "Vendedor", "Forma de pago", "Factura", "Código", "Producto", "Cantidad", "Precio unit. con ISV", "Precio unit. sin ISV", "Descuento con ISV", "Descuento %", "Total línea con ISV", "Total cotización"]];
+    lista.forEach(c => { const cc = calc(c.items); (c.items || []).forEach((i, n) => { const l = cc.lines[n];
+      rows.push([c.numero, fdate(c.fecha), (ESTADO[c.estado] || [c.estado])[0], c.cliente && c.cliente.nombre, c.cliente && c.cliente.tel, c.vendedorNombre || "", c.formaPago || "", c.factura ? c.factura.numero : "",
+        i.generico ? i.id : ((S.prod.find(p => p.id === i.id) || {}).codigo || i.id || ""), i.nombre, i.cant, (Number(i.precio) || 0).toFixed(4), l.u.toFixed(4), l.descIsv.toFixed(2), l.descX ? pctTxt(l.pct) : "", l.conIsv.toFixed(2), (Number(c.total) || 0).toFixed(2)]); }); });
+    const q = v => { v = v == null ? "" : String(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}));
+    a.download = "cotizaciones-mhas-" + today() + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast(lista.length + " cotizaciones descargadas");
   },
   filtro(v){ S.filtro = v; draw(); },
   open(v){ S.m = {type: "cot", id: v, mode: "ver"}; clearForm(); draw(); },
@@ -1500,6 +1529,10 @@ const A = {
           "\n==================================================\n";
         q.docs.map(d => d.data()).forEach(m => { out += "[" + hora(m.ts) + "] " + (quien[m.de] || m.de) + ": " + String(m.texto || "").replace(/\n/g, "\n    ") + "\n"; });
       }
+      out += "\n\n==================================================\nCOTIZACIONES ÚLTIMOS 30 DÍAS (precio unitario con ISV y descuento con ISV)\n==================================================\n";
+      S.cot.filter(c => !c.eliminada && (c.fecha || "") >= addDays(today(), -30)).forEach(c => { const cc = calc(c.items);
+        out += [c.numero, fdate(c.fecha), (ESTADO[c.estado] || [c.estado])[0], (c.cliente && c.cliente.nombre) || "", c.vendedorNombre || "", "total " + L(c.total)].join(" | ") + "\n";
+        (c.items || []).forEach((i, n) => { const l = cc.lines[n]; out += "    " + i.cant + " × " + i.nombre + " @ " + L(i.precio) + (l.descX ? " · desc. " + L(l.descIsv) + " (" + pctTxt(l.pct) + ")" : "") + " = " + L(l.conIsv) + "\n"; }); });
       out += "\n\n==================================================\nLISTA DE PRECIOS VIGENTE (" + fdate(today()) + ")\n==================================================\nCódigo | Producto | Presentación | Con ISV | Unitario con ISV | Activo | Nota para el agente\n";
       S.prod.slice().sort((x, y) => (x.orden ?? 999) - (y.orden ?? 999)).forEach(p => {
         const u = Math.max(1, Number(p.unidades) || 1);
@@ -1666,7 +1699,8 @@ function refrescarCarrito(){
   const cc = calc(S.cart);
   cc.lines.forEach((l, n) => {
     const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
-    const p = document.getElementById("pct" + n); if (p) p.textContent = l.desc ? pctTxt(l.pct) : "0%";
+    const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? pctTxt(l.pct) : "0%";
+    const ci = document.getElementById("cisv" + n); if (ci) ci.textContent = L(l.conIsv) + " con ISV";
   });
   const t = document.getElementById("ctot"); if (t) t.innerHTML = totalsHtml(cc);
   const b = document.getElementById("ctabtn"); if (b && !S.busy) b.textContent = "Cotizar · " + L(cc.total);
@@ -1675,7 +1709,7 @@ function leerCarrito(t){
   const n = Number(t.dataset.cq ?? t.dataset.cd ?? t.dataset.cpr), i = S.cart[n]; if (!i) return null;
   const v = Number(t.value);
   if (t.dataset.cq != null) { if (v >= 1) i.cant = Math.round(v); }
-  else if (t.dataset.cd != null) i.desc = Math.max(0, r2(t.value));
+  else if (t.dataset.cd != null) i.desc = Math.max(0, Number(t.value) || 0) / 1.15; // se escribe con ISV, se guarda sin ISV
   else if (t.value !== "" && v >= 0) i.precio = v * 1.15;
   return i;
 }
@@ -1714,7 +1748,7 @@ document.addEventListener("change", e => {
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) {
     const i = leerCarrito(t);
     if (i && t.dataset.cq != null) t.value = i.cant;
-    if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; if (l.desc !== i.desc) i.desc = l.desc; t.value = i.desc || ""; }
+    if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; i.desc = l.descX; t.value = l.descIsv || ""; }
     refrescarCarrito(); return;
   }
   if (t.dataset.k === "fac_fp") delete S.f.fac_pagado;
