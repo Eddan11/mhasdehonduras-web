@@ -1587,7 +1587,7 @@ const A = {
   },
   async cliDel(){ if (!confirm("¿Borrar este cliente? Sus cotizaciones no se borran.")) return; try { await deleteDoc(doc(db, "clientes", S.m.id)); S.m = null; toast("Cliente borrado"); } catch (e) { fallo(e, "borrar el cliente"); } draw(); },
   async metaSemanal(){
-    // Un solo archivo para Meta: Purchase (ventas), Lead (potenciales), Contact (solo preguntaron). Los que no contestaron no se suben.
+    // Un solo archivo para Meta: Purchase (ventas) y Lead (potenciales). Los que solo preguntaron o no contestaron no se suben.
     const dias = Number(prompt("¿De cuántos días hacia atrás? (7 = la última semana)", "7"));
     if (!(dias > 0)) return;
     const lim = addDays(today(), -Math.round(dias)), limMs = new Date(lim + "T00:00:00").getTime();
@@ -1596,12 +1596,14 @@ const A = {
     const sinAc = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     const nom = t => { const p = sinAc(t).split(/\s+/).filter(Boolean); return [p[0] || "", p.slice(1).join(" ")]; };
     const ciudad = t => { const d = sinAc(t).toLowerCase(); return /san pedro|sps|s\.p\.s/.test(d) ? "San Pedro Sula" : /tegucigalpa|tgu/.test(d) ? "Tegucigalpa" : /choloma/.test(d) ? "Choloma" : /la lima/.test(d) ? "La Lima" : /villanueva/.test(d) ? "Villanueva" : /la ceiba/.test(d) ? "La Ceiba" : /tela/.test(d) ? "Tela" : ""; };
-    const filas = [], vistos = new Set(), n = {venta: 0, potencial: 0, pregunto: 0, nocontesto: 0, valorVentas: 0};
+    const filas = [], vistos = new Set(), n = {venta: 0, potencial: 0, pregunto: 0, nocontesto: 0, valorVentas: 0, otros: 0};
     const ahora = Math.floor(Date.now() / 1000);
     const unix = f => typeof f === "number" ? Math.floor(f / 1000) : Math.floor(new Date(String(f).slice(0, 10) + "T12:00:00-06:00").getTime() / 1000);
     // Meta pide hora exacta (no futura) y valor mayor que 0: a contactos y leads sin monto se les pone L. 1.00
     const fila = (tel, email, nombre, dir, ev, fecha, valor, id) => { const [fn, ln] = nombre; const v = Number(valor) > 0 ? Number(valor) : 1; filas.push([tel, email, fn, ln, ciudad(dir), "hn", ev, String(Math.min(ahora, unix(fecha))), v.toFixed(2), "HNL", id]); };
     // Números del equipo y de prueba no se suben
+    // Solo se suben clientes que escribieron al WhatsApp de MHAS (vienen de los anuncios o del agente)
+    const deWhats = new Set(S.convs.map(x => telDe(x.tel || x.id)).filter(Boolean));
     const internos = new Set([...((S.ag && S.ag.numerosEquipo) || []), ...((S.ag && S.ag.numerosPrueba) || [])].map(telDe).filter(Boolean));
     S.busy = true; draw();
     try {
@@ -1610,6 +1612,7 @@ const A = {
         const cli = (c.cliente && c.cliente.id && S.cli.find(x => x.id === c.cliente.id)) || {};
         const tel = telDe((c.cliente && c.cliente.tel) || cli.tel), email = mailDe((c.cliente && c.cliente.email) || cli.email);
         if ((!tel && !email) || internos.has(tel)) return;
+        if (!deWhats.has(tel)) { if ((c.fecha && c.fecha >= lim) || (c.estado === "facturada" && ((c.factura && c.factura.fecha) || c.fecha) >= lim)) n.otros++; return; }
         const nombre = nom(cli.contacto || (c.cliente && c.cliente.contacto) || ""), dir = cli.direccion || (c.cliente && c.cliente.direccion) || "";
         const ff = (c.factura && c.factura.fecha) || c.fecha;
         if (c.estado === "facturada" && ff && ff >= lim) { fila(tel, email, nombre, dir, "Purchase", ff, c.total, c.numero); n.venta++; n.valorVentas += Number(c.total) || 0; vistos.add(tel || email); }
@@ -1625,12 +1628,12 @@ const A = {
         if (cv.estado === "pide_persona" || cv.ultimaCotizacion) { fila(tel, "", nombre, dir, "Lead", cv.actualizado, 0, "W-" + tel + "-" + fecha); n.potencial++; continue; }
         const q = await getDocs(query(collection(db, "conversaciones", cv.id, "mensajes"), orderBy("ts", "asc"), limit(50)));
         const delCliente = q.docs.filter(d => d.data().de === "cliente").length;
-        if (delCliente >= 2) { fila(tel, "", nombre, dir, "Contact", cv.actualizado, 0, "C-" + tel + "-" + fecha); n.pregunto++; }
+        if (delCliente >= 2) n.pregunto++;
         else n.nocontesto++;
       }
     } catch (e) { S.busy = false; draw(); return fallo(e, "preparar el reporte"); }
     S.busy = false; draw();
-    const resumen = "Últimos " + Math.round(dias) + " días:\n• Ventas: " + n.venta + " (L." + n.valorVentas.toLocaleString("es-HN", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ")\n• Potenciales: " + n.potencial + "\n• Solo preguntaron: " + n.pregunto + "\n• No contestaron: " + n.nocontesto + " (no se suben)";
+    const resumen = "Últimos " + Math.round(dias) + " días:\n• Ventas: " + n.venta + " (L." + n.valorVentas.toLocaleString("es-HN", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ")\n• Potenciales: " + n.potencial + "\n• Solo preguntaron: " + n.pregunto + " (no se suben)\n• No contestaron: " + n.nocontesto + " (no se suben)\n• Cotizaciones de clientes que no escribieron por WhatsApp: " + n.otros + " (no se suben)";
     if (!filas.length) return alert(resumen + "\n\nNo hay nada para subir a Meta en este periodo.");
     filas.sort((a, b) => Number(a[7]) - Number(b[7]));
     const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
