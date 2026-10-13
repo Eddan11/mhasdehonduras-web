@@ -1597,14 +1597,19 @@ const A = {
     const nom = t => { const p = sinAc(t).split(/\s+/).filter(Boolean); return [p[0] || "", p.slice(1).join(" ")]; };
     const ciudad = t => { const d = sinAc(t).toLowerCase(); return /san pedro|sps|s\.p\.s/.test(d) ? "San Pedro Sula" : /tegucigalpa|tgu/.test(d) ? "Tegucigalpa" : /choloma/.test(d) ? "Choloma" : /la lima/.test(d) ? "La Lima" : /villanueva/.test(d) ? "Villanueva" : /la ceiba/.test(d) ? "La Ceiba" : /tela/.test(d) ? "Tela" : ""; };
     const filas = [], vistos = new Set(), n = {venta: 0, potencial: 0, pregunto: 0, nocontesto: 0, valorVentas: 0};
-    const fila = (tel, email, nombre, dir, ev, fecha, valor, id) => { const [fn, ln] = nombre; filas.push([tel, email, fn, ln, ciudad(dir), "hn", ev, fecha, ev === "Contact" ? "" : (Number(valor) || 0).toFixed(2), "HNL", id]); };
+    const ahora = Math.floor(Date.now() / 1000);
+    const unix = f => typeof f === "number" ? Math.floor(f / 1000) : Math.floor(new Date(String(f).slice(0, 10) + "T12:00:00-06:00").getTime() / 1000);
+    // Meta pide hora exacta (no futura) y valor mayor que 0: a contactos y leads sin monto se les pone L. 1.00
+    const fila = (tel, email, nombre, dir, ev, fecha, valor, id) => { const [fn, ln] = nombre; const v = Number(valor) > 0 ? Number(valor) : 1; filas.push([tel, email, fn, ln, ciudad(dir), "hn", ev, String(Math.min(ahora, unix(fecha))), v.toFixed(2), "HNL", id]); };
+    // Números del equipo y de prueba no se suben
+    const internos = new Set([...((S.ag && S.ag.numerosEquipo) || []), ...((S.ag && S.ag.numerosPrueba) || [])].map(telDe).filter(Boolean));
     S.busy = true; draw();
     try {
       // 1) Cotizaciones del periodo: facturadas = venta, el resto = potencial
       S.cot.filter(c => !c.eliminada && c.estado !== "anulada").forEach(c => {
         const cli = (c.cliente && c.cliente.id && S.cli.find(x => x.id === c.cliente.id)) || {};
         const tel = telDe((c.cliente && c.cliente.tel) || cli.tel), email = mailDe((c.cliente && c.cliente.email) || cli.email);
-        if (!tel && !email) return;
+        if ((!tel && !email) || internos.has(tel)) return;
         const nombre = nom(cli.contacto || (c.cliente && c.cliente.contacto) || ""), dir = cli.direccion || (c.cliente && c.cliente.direccion) || "";
         const ff = (c.factura && c.factura.fecha) || c.fecha;
         if (c.estado === "facturada" && ff && ff >= lim) { fila(tel, email, nombre, dir, "Purchase", ff, c.total, c.numero); n.venta++; n.valorVentas += Number(c.total) || 0; vistos.add(tel || email); }
@@ -1613,21 +1618,21 @@ const A = {
       // 2) Chats de WhatsApp del periodo sin cotización
       for (const cv of S.convs.filter(x => (x.actualizado || 0) >= limMs)) {
         const tel = telDe(cv.tel || cv.id);
-        if (!tel || vistos.has(tel)) continue;
+        if (!tel || vistos.has(tel) || internos.has(tel)) continue;
         vistos.add(tel);
         const fecha = ymd(new Date(cv.actualizado)), cli = S.cli.find(x => telDe(x.tel) === tel) || {};
         const nombre = nom(cli.contacto || cv.nombre || ""), dir = cli.direccion || "";
-        if (cv.estado === "pide_persona" || cv.ultimaCotizacion) { fila(tel, "", nombre, dir, "Lead", fecha, 0, "W-" + tel + "-" + fecha); n.potencial++; continue; }
+        if (cv.estado === "pide_persona" || cv.ultimaCotizacion) { fila(tel, "", nombre, dir, "Lead", cv.actualizado, 0, "W-" + tel + "-" + fecha); n.potencial++; continue; }
         const q = await getDocs(query(collection(db, "conversaciones", cv.id, "mensajes"), orderBy("ts", "asc"), limit(50)));
         const delCliente = q.docs.filter(d => d.data().de === "cliente").length;
-        if (delCliente >= 2) { fila(tel, "", nombre, dir, "Contact", fecha, 0, "C-" + tel + "-" + fecha); n.pregunto++; }
+        if (delCliente >= 2) { fila(tel, "", nombre, dir, "Contact", cv.actualizado, 0, "C-" + tel + "-" + fecha); n.pregunto++; }
         else n.nocontesto++;
       }
     } catch (e) { S.busy = false; draw(); return fallo(e, "preparar el reporte"); }
     S.busy = false; draw();
     const resumen = "Últimos " + Math.round(dias) + " días:\n• Ventas: " + n.venta + " (L." + n.valorVentas.toLocaleString("es-HN", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ")\n• Potenciales: " + n.potencial + "\n• Solo preguntaron: " + n.pregunto + "\n• No contestaron: " + n.nocontesto + " (no se suben)";
     if (!filas.length) return alert(resumen + "\n\nNo hay nada para subir a Meta en este periodo.");
-    filas.sort((a, b) => a[7].localeCompare(b[7]));
+    filas.sort((a, b) => Number(a[7]) - Number(b[7]));
     const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
     const csv = [["phone", "email", "fn", "ln", "ct", "country", "event_name", "event_time", "value", "currency", "order_id"]].concat(filas).map(r => r.map(q).join(",")).join("\r\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"})); a.download = "meta-semanal-" + today() + ".csv";
