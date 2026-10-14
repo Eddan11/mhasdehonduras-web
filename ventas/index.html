@@ -1332,6 +1332,7 @@ function mChat(){
   const quien = {cliente: c.nombre || "Cliente", agente: "Agente", equipo: "Equipo"};
   return `<h1 style="padding-right:40px">${esc(nombreChat(c))}</h1>
   <p class="sub">${esc(c.tel || c.id)} · <span class="badge ${ec}">${et}</span>${c.vendedorNombre ? " · vendedor: " + esc(c.vendedorNombre) : ""}</p>
+  ${c.anuncio && (c.anuncio.titulo || c.anuncio.texto || c.anuncio.url) ? `<div class="panel" style="padding:10px 12px"><b>📣 Llegó desde un anuncio:</b> ${esc(c.anuncio.titulo || "")}${c.anuncio.texto ? `<br><small class="muted">${esc(String(c.anuncio.texto).slice(0, 160))}</small>` : ""}${c.anuncio.url ? ` · <a href="${esc(c.anuncio.url)}" target="_blank" rel="noopener">Ver anuncio</a>` : ""}</div>` : ""}
   ${c.consultaProduccion ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Consulta a producción:</b> ${esc(c.consultaProduccion)}
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="chatConsultaOk">Marcar como resuelta</button></div></div>` : ""}
   <div class="chatbox" id="chatbox">${S.chatMsgs.map(m => `<div class="bub ${m.de === "cliente" ? "in" : m.de === "equipo" ? "eq" : "out"}"><small>${esc(quien[m.de] || m.de)} · ${horaTxt(m.ts)}</small><div>${esc(m.texto || "").replace(/\n/g, "<br>")}</div></div>`).join("") || '<p class="empty">Cargando…</p>'}</div>
