@@ -109,6 +109,7 @@ tr.click:hover td{background:var(--chip)}
 .sep{border:0;border-top:1px solid var(--line);margin:16px 0}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;display:none;z-index:30;max-width:90vw}
 .muted{color:var(--muted)}
+#asisBtn[hidden],#asisPanel[hidden]{display:none!important}
 #asisBtn{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:25;display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.22);cursor:pointer}
 #asisBtn svg{flex:none}
 #asisPanel{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:26;width:400px;max-width:calc(100vw - 32px);height:min(640px,calc(100vh - 32px));background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
