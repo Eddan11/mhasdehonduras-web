@@ -109,6 +109,29 @@ tr.click:hover td{background:var(--chip)}
 .sep{border:0;border-top:1px solid var(--line);margin:16px 0}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;display:none;z-index:30;max-width:90vw}
 .muted{color:var(--muted)}
+#asisBtn{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:25;display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:12px 18px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.22);cursor:pointer}
+#asisBtn svg{flex:none}
+#asisPanel{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:26;width:400px;max-width:calc(100vw - 32px);height:min(640px,calc(100vh - 32px));background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+#asisPanel .as-head{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--navy);color:#fff;border-bottom:3px solid var(--gold)}
+#asisPanel .as-head b{font-size:16px;margin-right:auto}
+#asisPanel .as-head small{opacity:.8;font-size:12px}
+#asisPanel .as-head button{background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer;padding:4px 6px;line-height:1}
+.as-box{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:12px;display:flex;flex-direction:column;gap:10px}
+.as-box .bub{max-width:92%}
+.as-box .bub.yo{background:var(--chip);color:var(--ink);align-self:flex-end;border:1px solid var(--line)}
+.as-box .bub.in{background:var(--card);align-self:flex-start}
+.as-box .bub ul{margin:4px 0;padding-left:18px}
+.as-box .bub li{margin:2px 0}
+.as-box .bub p{margin:4px 0}
+.as-rap{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;scrollbar-width:none}
+.as-rap button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.as-rap button:disabled{opacity:.5}
+.as-form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px 12px}
+.as-form textarea{flex:1;min-height:44px;max-height:140px;resize:none}
+.as-pie{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 12px 10px;font-size:12px;color:var(--muted)}
+.as-pie button{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0}
+.as-pensando{color:var(--muted);font-style:italic}
+@media (max-width:560px){#asisPanel{inset:0;width:auto;max-width:none;height:auto;border-radius:0;border:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}}
 
 .authbox{max-width:440px;margin:30px auto}
@@ -141,18 +164,6 @@ a.btn{color:inherit}
 .bub small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
 .bub.in{align-self:flex-start;background:var(--card);border:1px solid var(--line)}
 .bub.out{align-self:flex-end;background:var(--ok-bg)}
-.as-wrap{display:flex;flex-direction:column;gap:12px}
-.as-box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:340px;max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.as-box .bub{max-width:92%}
-.as-box .bub.out{background:var(--chip)}
-.as-box .bub.in{background:var(--card)}
-.as-box .bub ul{margin:4px 0;padding-left:18px}
-.as-box .bub li{margin:2px 0}
-.as-box .bub p{margin:4px 0}
-.as-rapidas{display:flex;flex-wrap:wrap;gap:8px}
-.as-form{display:flex;gap:8px;align-items:flex-end}
-.as-form textarea{flex:1;min-height:46px;max-height:160px;resize:vertical}
-.as-pensando{color:var(--muted);font-style:italic}
 .bub.eq{align-self:flex-end;background:var(--warn-bg)}
 .tfoot td{border-top:2px solid var(--line);background:var(--chip);padding-top:12px;padding-bottom:12px}
 .cli-lista{max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:1px solid var(--line);border-radius:10px;background:var(--card)}
@@ -175,6 +186,8 @@ a.btn{color:inherit}
 <main id="view"><div class="msg">Cargando…</div></main>
 <div id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
 <div id="toast" role="status"></div>
+<button id="asisBtn" type="button" data-a="asAbrir" hidden aria-label="Abrir asistente"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>Asistente</button>
+<aside id="asisPanel" hidden aria-label="Asistente"></aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -224,11 +237,11 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
 };
 const TABS = {
-  admin: ["cotizar", "asistente", "cotizaciones", "chats", "agente", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
+  admin: ["cotizar", "cotizaciones", "chats", "agente", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
   facturador: ["cotizar", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "perfil"]
 };
-const TAB_NAME = {asistente: "Asistente", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -326,12 +339,14 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {asistente: vAsistente, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
+  const fn = {chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
 function drawHeader(){
   const r = S.screen === "app" ? rol() : null;
+  const ab = $("#asisBtn"); if (ab) ab.hidden = !r || AS.abierto;
+  if (!r && AS.abierto) { AS.abierto = false; $("#asisPanel").hidden = true; }
   const pf = r && r !== "vendedor" ? S.cot.filter(c => !c.eliminada && c.estado === "aprobada").length : 0;
   const pp = r === "admin" ? S.convs.filter(c => (c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now()) || c.consultaProduccion).length : 0;
   $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}${t === "cotizaciones" && pf ? ` <span class="cnt hot" title="Por facturar">${pf}</span>` : ""}${t === "chats" && pp ? ` <span class="cnt hot" title="Piden persona">${pp}</span>` : ""}</button>`).join("") : "";
@@ -608,10 +623,10 @@ const ESTADO_CHAT = c => {
   return ["Responde el agente", "b-ok"];
 };
 const horaTxt = ms => { if (!ms) return ""; const d = new Date(ms); const h = d.toLocaleTimeString("es-HN", {hour: "2-digit", minute: "2-digit"}); return ymd(d) === today() ? h : fdate(ymd(d)) + " " + h; };
-/* ---------- vista: asistente interno (consultas de Eduardo) ---------- */
-const AS = {msgs: null, cargando: false, pensando: false};
+/* ---------- asistente (ventana flotante, para todo el equipo) ---------- */
+const AS = {abierto: false, msgs: null, cargando: false, pensando: false, quedan: null, completo: false};
 function mdAs(t){
-  const lines = esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split("\n");
+  const lines = esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,:;])/g, "$1<b>$2</b>").split("\n");
   let h = "", ul = false;
   for (const l of lines) {
     const m = l.match(/^\s*[-•*]\s+(.*)/);
@@ -622,29 +637,30 @@ function mdAs(t){
   }
   return h + (ul ? "</ul>" : "");
 }
-function vAsistente(){
-  if (AS.msgs === null && !AS.cargando) A.asCargar();
-  const rapidas = ["¿Qué hago ahora?", "Pendientes de hoy", "¿Quién está esperando respuesta?", "¿Qué cobros tengo pendientes?", "Cotizaciones abiertas para dar seguimiento"];
+function asRender(){
+  const p = $("#asisPanel"); if (!p) return;
+  p.hidden = !AS.abierto; const ab = $("#asisBtn"); if (ab) ab.hidden = AS.abierto || !(S.screen === "app" && rol());
+  if (!AS.abierto) return;
+  const prev = $("#as_txt"), borrador = prev ? prev.value : "";
   const lista = AS.msgs || [];
-  return `
-  <h1>Asistente</h1>
-  <p class="sub">Pregúntale qué sigue, qué le falta a un cliente o pídele que te anote algo. Revisa las cotizaciones, los chats y las consultas a producción en el momento.</p>
-  <div class="as-wrap">
+  const rapidas = [["hoy", "Pendientes de hoy"], ["espera", "Esperando respuesta"], ["cobros", "Por cobrar"], ["abiertas", "Cotizaciones abiertas"]].filter(([k]) => k !== "espera" || rol() === "admin");
+  p.innerHTML = `
+    <div class="as-head"><b>Asistente</b><button type="button" data-a="asCerrar" aria-label="Cerrar asistente">✕</button></div>
     <div class="as-box" id="asbox">
       ${AS.msgs === null ? '<p class="empty">Cargando…</p>' : ""}
-      ${AS.msgs !== null && !lista.length ? '<p class="empty">Escribe "¿Qué hago ahora?" o toca una de las preguntas de abajo.</p>' : ""}
-      ${lista.map(m => `<div class="bub ${m.de === "yo" ? "out" : "in"}"><small>${m.de === "yo" ? "Tú" : "Asistente"} · ${horaTxt(m.ts)}</small><div>${m.de === "yo" ? esc(m.texto).replace(/\n/g, "<br>") : mdAs(m.texto)}</div></div>`).join("")}
+      ${AS.msgs !== null && !lista.length ? `<p class="empty">${AS.completo ? 'Toca un botón de abajo o pregúntame algo: "¿Qué hago ahora?", "¿Qué le falta a Brayan?", "Cotiza a Brayan 50 rollos 80x15".' : "Toca un botón de abajo para ver tus pendientes."}</p>` : ""}
+      ${lista.map(m => `<div class="bub ${m.de === "yo" ? "yo" : "in"}"><small>${m.de === "yo" ? "Tú" : "Asistente"} · ${horaTxt(m.ts)}</small><div>${m.de === "yo" ? esc(m.texto).replace(/\n/g, "<br>") : mdAs(m.texto)}</div>${m.cotizacion ? `<button class="btn sm pri" style="margin-top:6px" type="button" data-a="asVerCot" data-v="${esc(m.cotizacion)}">Abrir ${esc(m.cotizacion)}</button>` : ""}</div>`).join("")}
       ${AS.pensando ? '<div class="bub in as-pensando">Revisando el sistema…</div>' : ""}
     </div>
-    <div class="as-rapidas">${rapidas.map(q => `<button class="btn sm" data-a="asRapida" data-v="${esc(q)}" ${AS.pensando ? "disabled" : ""}>${esc(q)}</button>`).join("")}</div>
-    <div class="as-form">
-      <textarea id="as_txt" data-k="as_txt" rows="2" placeholder="Ej.: ¿Qué le falta a Brayan? · Ya entregué lo de Sofía · Recuérdame cobrar a Credirapid el jueves">${fv("as_txt")}</textarea>
-      <button class="btn pri" data-a="asEnviar" ${AS.pensando ? "disabled" : ""}>Enviar</button>
-    </div>
-    <div class="actions"><button class="btn sm" data-a="asBorrar">Borrar conversación</button></div>
-  </div>`;
+    <div class="as-rap" role="group" aria-label="Listas rápidas">${rapidas.map(([k, t]) => `<button type="button" data-a="asLista" data-v="${k}" ${AS.pensando ? "disabled" : ""}>${t}</button>`).join("")}</div>
+    ${AS.completo ? `<div class="as-form">
+      <textarea id="as_txt" rows="2" placeholder="Pregunta o pide algo… (Enter para enviar)" aria-label="Mensaje para el asistente"></textarea>
+      <button class="btn pri" type="button" data-a="asEnviar" ${AS.pensando ? "disabled" : ""}>Enviar</button>
+    </div>` : '<div style="height:10px"></div>'}
+    <div class="as-pie"><span>${AS.completo && AS.quedan != null ? "Las listas no tienen límite · te quedan " + AS.quedan + " preguntas hoy" : "Las listas no gastan saldo"}</span><button type="button" data-a="asBorrar">Borrar conversación</button></div>`;
+  const t = $("#as_txt"); if (t) t.value = borrador;
+  const b = $("#asbox"); if (b) b.scrollTop = b.scrollHeight;
 }
-function asScroll(){ setTimeout(() => { const b = $("#asbox"); if (b) b.scrollTop = b.scrollHeight; }, 0); }
 
 function vChats(){
   return `
@@ -700,6 +716,15 @@ function vAgente(){
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_pausaNat" ${g("pausaNat", a.pausaNatural !== false) ? "checked" : ""}> Responder con ritmo humano: muestra "escribiendo…" y espera más o menos según lo largo de la respuesta</label>
     <div class="field" style="max-width:320px;margin-top:10px"><label for="ag_espera">Esperar antes de responder (segundos desde el último mensaje del cliente)</label><input id="ag_espera" type="number" min="3" max="120" data-k="ag_espera" value="${esc(g("espera", a.esperaSeg || 30))}"></div>
     <p class="note">Si el cliente manda varios mensajes seguidos, cada mensaje nuevo reinicia la espera y el agente responde una sola vez a todo. Las fotos las analiza para identificar la medida y las notas de voz las transcribe a texto.</p>
+  </div>
+  <div class="panel">
+    <h2>Asistente interno del equipo</h2>
+    <p class="note">El botón "Asistente" del sistema. Las listas rápidas (pendientes, esperando, por cobrar, abiertas) no gastan saldo. Escribir preguntas y cotizar es solo para ti y para quien tenga "Asistente completo" en Ajustes → Personas.</p>
+    <div class="chips" role="group" aria-label="Modelo del asistente">${[["haiku", "Económico (Haiku)"], ["sonnet", "Más preciso (Sonnet)"]].map(([v, t]) => `<button data-a="agModeloAs" data-v="${v}" aria-pressed="${g("modeloAs", a.modeloAsistente || "haiku") === v}">${t}</button>`).join("")}</div>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label for="ag_limAdm">Preguntas por día (administrador)</label><input id="ag_limAdm" type="number" min="1" data-k="ag_limAdm" value="${esc(g("limAdm", a.limiteAsistenteAdmin || 50))}"></div>
+      <div class="field"><label for="ag_limEq">Preguntas por día (límite general para el equipo)</label><input id="ag_limEq" type="number" min="1" data-k="ag_limEq" value="${esc(g("limEq", a.limiteAsistenteEquipo || 20))}"></div>
+    </div>
   </div>
   <div class="panel">
     <h2>Modelo de inteligencia</h2>
@@ -873,6 +898,12 @@ function vAjustes(){
     </tbody></table></div>
     ${otros.length ? "" : `<p class="note">Todavía nadie más ha creado su cuenta.</p>`}
   </div>
+  ${(() => { const v = S.usuarios.find(u => (u.email || "").toLowerCase() === "comercial@mhasdehonduras.com"); const n = S.cot.filter(c => c.vendedor === S.me.uid && !c.eliminada).length;
+    return v && v.id !== S.me.uid && n ? `<div class="panel">
+    <h2>Cotizaciones hechas con la cuenta de administrador</h2>
+    <p class="note">Hay ${n} cotizaci${n === 1 ? "ón" : "ones"} a nombre del administrador. Puedes pasarlas a tu cuenta de vendedor (${esc(v.nombre || v.email)}) para que salgan en sus reportes y filtros. Conservan su número, cliente, estado, factura y PDF.</p>
+    <div class="actions"><button class="btn" data-a="pasarCotAdmin" ${S.busy ? "disabled" : ""}>${S.f.pasar_ok ? "Toca otra vez para confirmar" : "Pasar a mi cuenta de vendedor"}</button></div>
+  </div>` : ""; })()}
   <div class="panel">
     <h2>Datos de la empresa en el PDF</h2>
     ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["envio", "Envío"], ["validez", "Validez (días)"], ["horario", "Horario de atención (lo usa el agente)"], ["ubicacion", "Ubicación / tienda para clientes (lo usa el agente)"]]
@@ -1078,6 +1109,9 @@ function mUser(){
   <div class="field"><label for="ue_nombre">Nombre</label><input id="ue_nombre" data-k="ue_nombre" value="${esc(g("nombre", u.nombre || ""))}" autocapitalize="words"></div>
   <div class="field"><label for="ue_cargo">Cargo</label><input id="ue_cargo" data-k="ue_cargo" value="${esc(g("cargo", u.cargo || "Ventas"))}"></div>
   <div class="field"><label for="ue_tel">Teléfono</label><input id="ue_tel" data-k="ue_tel" value="${esc(g("tel", u.tel || ""))}" inputmode="tel"></div>
+  ${yo ? "" : `<div class="field" style="margin-top:4px"><label style="display:flex;gap:8px;align-items:center;font-weight:600;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ue_asis" ${g("asis", u.asistenteCompleto === true) ? "checked" : ""}> Asistente completo (escribir preguntas y cotizar)</label></div>
+  <div class="field" style="max-width:260px"><label for="ue_lim">Preguntas por día</label><input id="ue_lim" type="number" min="1" data-k="ue_lim" value="${esc(g("lim", u.limiteAsistente || ""))}" placeholder="Usa el límite general"></div>
+  <p class="note">Sin "Asistente completo", la persona solo ve las listas rápidas del botón Asistente (no gastan saldo). Con él puede escribir preguntas y pedir cotizaciones, que sí usan saldo. En ambos casos ve solo lo que ya puede ver en el sistema.</p>`}
   <div class="field"><label for="ue_correo">Correo que sale en el PDF</label><input id="ue_correo" type="email" data-k="ue_correo" value="${esc(g("correo", u.correo || u.email || ""))}" inputmode="email" autocapitalize="off"></div>
   <div class="field"><label for="ue_ini">Iniciales (número de cotización)</label><input id="ue_ini" data-k="ue_ini" value="${esc(g("ini", u.ini || (yo ? iniciales() : "")))}" maxlength="4" autocapitalize="characters" placeholder="Ej. JP"></div>
   <p class="note">Los cambios aplican a las cotizaciones nuevas; las ya hechas conservan los datos con que se crearon. Si cambias las iniciales, su numeración empieza una serie nueva (por ejemplo COT-JP-0001).</p>
@@ -1317,7 +1351,7 @@ const A = {
     else { toast("Aún no aparece verificado. Abre el enlace del correo."); draw(); }
   },
   async reenviar(){ try { await sendEmailVerification(auth.currentUser); toast("Correo reenviado."); } catch (e) { toast(authError(e && e.code)); } },
-  async salir(){ await signOut(auth); S.f = {}; S.cart = []; AS.msgs = null; },
+  async salir(){ await signOut(auth); S.f = {}; S.cart = []; Object.assign(AS, {abierto: false, msgs: null, quedan: null, completo: false}); asRender(); },
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
   ajustarTotal(){
@@ -1568,34 +1602,64 @@ const A = {
     }, e => console.warn(e));
     const c = S.convs.find(x => x.id === v); if (c && c.noLeidos) updateDoc(doc(db, "conversaciones", v), {noLeidos: 0}).catch(() => {});
   },
-  async asCargar(){
-    AS.cargando = true;
-    try { const r = await fnAsistente({accion: "historial"}); AS.msgs = (r.data && r.data.mensajes) || []; }
-    catch (e) { console.error(e); AS.msgs = []; toast("No se pudo cargar el asistente."); }
-    AS.cargando = false; draw(); asScroll();
-  },
-  asRapida(v){ A.asEnviar(v); },
-  async asEnviar(v){
-    const texto = String(v || S.f.as_txt || "").trim();
-    if (!texto || AS.pensando) return;
-    if (!v) { S.f.as_txt = ""; const t = $("#as_txt"); if (t) t.value = ""; }
-    AS.msgs = (AS.msgs || []).concat([{de: "yo", texto, ts: Date.now()}]);
-    AS.pensando = true; draw(); asScroll();
-    try {
-      const r = await fnAsistente({accion: "enviar", texto});
-      AS.msgs.push({de: "asistente", texto: (r.data && r.data.texto) || "", ts: Date.now()});
-    } catch (e) {
-      console.error(e);
-      AS.msgs.push({de: "asistente", texto: "No pude responder: " + ((e && e.message) || "error") + ". Intenta de nuevo.", ts: Date.now()});
+  async asAbrir(){
+    AS.abierto = true; asRender();
+    const t = $("#as_txt"); if (t && window.matchMedia("(min-width:561px)").matches) t.focus();
+    if (AS.msgs === null && !AS.cargando) {
+      AS.cargando = true;
+      try { const r = await fnAsistente({accion: "historial"}); AS.msgs = (r.data && r.data.mensajes) || []; AS.quedan = r.data ? r.data.quedan : null; AS.completo = !!(r.data && r.data.completo); }
+      catch (e) { console.error(e); AS.msgs = []; toast("No se pudo cargar el asistente."); }
+      AS.cargando = false; asRender();
     }
-    AS.pensando = false; draw(); asScroll();
+  },
+  asCerrar(){ AS.abierto = false; asRender(); },
+  async pasarCotAdmin(){
+    const v = S.usuarios.find(u => (u.email || "").toLowerCase() === "comercial@mhasdehonduras.com");
+    const lista = S.cot.filter(c => c.vendedor === S.me.uid && !c.eliminada);
+    if (!v || !lista.length) return;
+    if (!S.f.pasar_ok) { S.f.pasar_ok = true; draw(); setTimeout(() => { if (S.f.pasar_ok) { S.f.pasar_ok = false; draw(); } }, 5000); return; }
+    S.f.pasar_ok = false; S.busy = true; draw();
+    try {
+      for (let i = 0; i < lista.length; i += 400) {
+        const b = writeBatch(db);
+        lista.slice(i, i + 400).forEach(c => b.update(doc(db, "cotizaciones", c.id), {vendedor: v.id, vendedorNombre: v.nombre || v.email}));
+        await b.commit();
+      }
+      toast(lista.length + (lista.length === 1 ? " cotización pasada" : " cotizaciones pasadas") + " a " + (v.nombre || v.email));
+    } catch (e) { fallo(e, "pasar las cotizaciones"); }
+    S.busy = false; draw();
+  },
+  asVerCot(v){
+    if (!S.cot.some(x => x.id === v)) return toast("La cotización todavía se está cargando; intenta en un momento.");
+    AS.abierto = false; asRender(); S.tab = "cotizaciones"; S.m = {type: "cot", id: v, mode: "ver"}; draw();
+  },
+  async asLista(v){
+    if (AS.pensando) return;
+    const nombres = {hoy: "Pendientes de hoy", espera: "Esperando respuesta", cobros: "Por cobrar", abiertas: "Cotizaciones abiertas"};
+    AS.msgs = (AS.msgs || []).concat([{de: "yo", texto: nombres[v] || v, ts: Date.now()}]);
+    AS.pensando = true; asRender();
+    try { const r = await fnAsistente({accion: "lista", tipo: v}); AS.msgs.push({de: "asistente", texto: (r.data && r.data.texto) || "", ts: Date.now()}); }
+    catch (e) { console.error(e); AS.msgs.push({de: "asistente", texto: "No pude armar la lista. Intenta de nuevo.", ts: Date.now()}); }
+    AS.pensando = false; asRender();
+  },
+  async asEnviar(){
+    const t = $("#as_txt"), texto = String(t ? t.value : "").trim();
+    if (!texto || AS.pensando) return;
+    t.value = "";
+    AS.msgs = (AS.msgs || []).concat([{de: "yo", texto, ts: Date.now()}]);
+    AS.pensando = true; asRender();
+    try { const r = await fnAsistente({accion: "enviar", texto}); AS.msgs.push({de: "asistente", texto: (r.data && r.data.texto) || "", ts: Date.now(), cotizacion: (r.data && r.data.cotizacion) || null}); if (r.data && r.data.quedan != null) AS.quedan = r.data.quedan; }
+    catch (e) { console.error(e); AS.msgs.push({de: "asistente", texto: "No pude responder: " + ((e && e.message) || "error") + ". Intenta de nuevo.", ts: Date.now()}); }
+    AS.pensando = false; asRender();
+    const t2 = $("#as_txt"); if (t2 && window.matchMedia("(min-width:561px)").matches) t2.focus();
   },
   async asBorrar(){
-    if (S.f.as_confirmar !== true) { S.f.as_confirmar = true; toast("Toca otra vez “Borrar conversación” para confirmar."); setTimeout(() => { S.f.as_confirmar = false; }, 4000); return; }
-    S.f.as_confirmar = false;
-    try { await fnAsistente({accion: "borrar"}); AS.msgs = []; draw(); toast("Conversación borrada. Las tareas anotadas se mantienen."); }
+    if (!AS.confirmar) { AS.confirmar = true; toast("Toca otra vez “Borrar conversación” para confirmar."); setTimeout(() => { AS.confirmar = false; }, 4000); return; }
+    AS.confirmar = false;
+    try { await fnAsistente({accion: "borrar"}); AS.msgs = []; asRender(); toast("Conversación borrada. Las tareas anotadas se mantienen."); }
     catch (e) { fallo(e, "borrar la conversación"); }
   },
+  agModeloAs(v){ S.f.ag_modeloAs = v; draw(); },
   async chatsDescargar(){
     if (!S.convs.length) return toast("Todavía no hay chats.");
     S.busy = true; draw();
@@ -1640,7 +1704,8 @@ const A = {
     const nums = String(g("nums", (a.numerosPrueba || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     const data = {modo: g("modo", a.modo || "prueba"), numerosPrueba: nums, asignarA: g("asignar", a.asignarA || "comercial@mhasdehonduras.com"),
       pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
-      reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"),
+      reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"), modeloAsistente: g("modeloAs", a.modeloAsistente || "haiku"),
+      limiteAsistenteAdmin: Math.max(1, Number(g("limAdm", a.limiteAsistenteAdmin || 50)) || 50), limiteAsistenteEquipo: Math.max(1, Number(g("limEq", a.limiteAsistenteEquipo || 20)) || 20),
       bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), botones: !!g("botones", a.botones !== false), recordatorio: !!g("rec", a.recordatorio !== false),
       recordatorioHoras: Math.min(20, Math.max(1, Number(g("rech", a.recordatorioHoras || 2)) || 2)), recordatorioTexto: String(g("rect", a.recordatorioTexto || "")).trim(), bienvenida: String(g("bienv", a.bienvenida || BIENVENIDA_DEF)), actualizado: Date.now()};
     data.numerosEquipo = String(g("eq", (a.numerosEquipo || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
@@ -1738,7 +1803,7 @@ const A = {
     const g = (k, d) => S.f["ue_" + k] ?? d, yo = u.id === S.me.uid;
     const data = {nombre: clean(g("nombre", u.nombre)), cargo: clean(g("cargo", u.cargo || "Ventas")), tel: clean(g("tel", u.tel)),
       correo: clean(g("correo", u.correo || u.email)), ini: String(g("ini", u.ini || "")).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4)};
-    if (!yo) data.rol = g("rol", u.rol || "");
+    if (!yo) { data.rol = g("rol", u.rol || ""); data.asistenteCompleto = !!g("asis", u.asistenteCompleto === true); const lim = Math.round(Number(g("lim", u.limiteAsistente || 0)) || 0); data.limiteAsistente = lim > 0 ? lim : null; }
     if (!data.nombre) return toast("Escribe el nombre.");
     if (await upd(doc(db, "usuarios", u.id), data, "Datos guardados", true)) { Object.keys(S.f).filter(k => k.startsWith("ue_")).forEach(k => delete S.f[k]); S.m = null; draw(); }
   },
@@ -1814,6 +1879,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.m) { S.m = null; draw(); }
   if (e.key === "Enter" && e.target.matches("tr.click")) e.target.click();
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "as_txt") { e.preventDefault(); A.asEnviar(); }
+  if (e.key === "Escape" && AS.abierto && !S.m) A.asCerrar();
   if (e.key === "Enter" && S.screen === "auth" && e.target.matches("#view input")) A.authGo();
 });
 document.addEventListener("input", e => {
