@@ -620,6 +620,14 @@ function vPagar(){
 }
 
 /* ---------- vista: chats de WhatsApp ---------- */
+// Nombre del chat: si el número es de un cliente del sistema, manda el nombre del cliente; el de WhatsApp queda entre paréntesis
+const ult8c = t => String(t || "").replace(/\D/g, "").slice(-8);
+function nombreChat(c){
+  const cl = (c.clienteId && S.cli.find(x => x.id === c.clienteId)) || S.cli.find(x => ult8c(x.tel) && ult8c(x.tel) === ult8c(c.tel || c.id));
+  const wa = String(c.nombre || "").trim();
+  if (!cl) return wa || "Sin nombre";
+  return cl.nombre + (wa && wa.toLowerCase() !== String(cl.nombre).toLowerCase() ? " (" + wa + ")" : "");
+}
 const ESTADO_CHAT = c => {
   const vivo = (c.pausadoHasta || 0) > Date.now();
   if (c.estado === "pide_persona" && vivo) return ["Pide una persona", "b-bad"];
@@ -675,7 +683,7 @@ function vChats(){
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${S.convs.length ? `<table><thead><tr><th>Cliente</th><th>Último mensaje</th><th>Estado</th><th>Hora</th></tr></thead><tbody>
     ${S.convs.slice().sort((a, b) => (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0)).map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
-      <td><b>${esc(c.nombre || "Sin nombre")}</b>${c.noLeidos ? ` <span class="cnt">${c.noLeidos}</span>` : ""}<br><small class="muted">${esc(c.tel || c.id)}</small></td>
+      <td><b>${esc(nombreChat(c))}</b>${c.proveedor ? ` <span class="badge">Proveedor</span>` : ""}${c.noLeidos ? ` <span class="cnt">${c.noLeidos}</span>` : ""}<br><small class="muted">${esc(c.tel || c.id)}</small></td>
       <td><small>${esc(c.ultimoTexto || "")}</small>${c.ultimaCotizacion ? `<br><span class="stub">${esc(c.ultimaCotizacion)}</span>` : ""}</td>
       <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}${c.consultaProduccion ? `<br><span class="badge b-warn">Consultar producción</span><br><small class="muted">${esc(c.consultaProduccion)}</small>` : ""}</td>
       <td><small>${horaTxt(c.actualizado)}</small></td></tr>`; }).join("")}
@@ -1066,7 +1074,7 @@ function mChat(){
   const [et, ec] = ESTADO_CHAT(c);
   let tel = String(c.tel || c.id).replace(/\D/g, "");
   const quien = {cliente: c.nombre || "Cliente", agente: "Agente", equipo: "Equipo"};
-  return `<h1 style="padding-right:40px">${esc(c.nombre || "Sin nombre")}</h1>
+  return `<h1 style="padding-right:40px">${esc(nombreChat(c))}</h1>
   <p class="sub">${esc(c.tel || c.id)} · <span class="badge ${ec}">${et}</span>${c.vendedorNombre ? " · vendedor: " + esc(c.vendedorNombre) : ""}</p>
   ${c.consultaProduccion ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Consulta a producción:</b> ${esc(c.consultaProduccion)}
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="chatConsultaOk">Marcar como resuelta</button></div></div>` : ""}
@@ -1075,8 +1083,10 @@ function mChat(){
     <a class="btn pri" href="https://wa.me/${esc(tel)}" target="_blank" rel="noopener">Abrir en WhatsApp</a>
     ${ec === "b-ok" ? `<button class="btn" data-a="chatPausar">Lo atiendo yo (pausar agente)</button>` : `<button class="btn" data-a="chatAgente">Devolver al agente</button>`}
     ${c.ultimaCotizacion ? `<button class="btn" data-a="open" data-v="${esc(c.ultimaCotizacion)}">Ver ${esc(c.ultimaCotizacion)}</button>` : ""}
+    <button class="btn" data-a="chatProveedor" ${S.busy ? "disabled" : ""}>${c.proveedor ? "No es proveedor" : "Es proveedor"}</button>
     <button class="btn" data-a="chatReiniciar">Reiniciar conversación</button>
   </div>
+  ${c.proveedor ? `<p class="note"><b>Proveedor:</b> el agente no responde en este chat y el asistente lo pone aparte de los clientes.</p>` : ""}
   <p class="note">"Reiniciar" hace que el agente olvide lo anterior de este chat y empiece de cero (útil para pruebas). El historial sigue visible aquí.</p>`;
 }
 function mCli(){
@@ -1680,7 +1690,7 @@ const A = {
       let out = "CHATS DE WHATSAPP · MHAS DE HONDURAS\nDescargado: " + hora(Date.now()) + " · " + S.convs.length + " conversaciones\n";
       for (const c of S.convs.slice().sort((a, b) => (b.actualizado || 0) - (a.actualizado || 0))) {
         const q = await getDocs(query(collection(db, "conversaciones", c.id, "mensajes"), orderBy("ts", "asc"), limit(500)));
-        out += "\n==================================================\n" + (c.nombre || "Sin nombre") + " · " + (c.tel || c.id) +
+        out += "\n==================================================\n" + nombreChat(c) + " · " + (c.tel || c.id) +
           (c.ultimaCotizacion ? " · última cotización " + c.ultimaCotizacion : "") + (c.consultaProduccion ? " · consulta producción: " + c.consultaProduccion : "") +
           "\n==================================================\n";
         q.docs.map(d => d.data()).forEach(m => { out += "[" + hora(m.ts) + "] " + (quien[m.de] || m.de) + ": " + String(m.texto || "").replace(/\n/g, "\n    ") + "\n"; });
@@ -1703,6 +1713,13 @@ const A = {
     S.busy = false; draw();
   },
   async chatReiniciar(){ if (!confirm("¿Reiniciar? El agente olvida lo conversado antes en este chat y vuelve a responder.")) return; await upd(doc(db, "conversaciones", S.m.id), {contextoDesde: Date.now(), estado: "agente", pausadoHasta: 0}, "Conversación reiniciada para el agente"); },
+  async chatProveedor(){
+    const c = S.convs.find(x => x.id === S.m.id); if (!c) return;
+    S.busy = true; draw();
+    try { await fnAsistente({accion: "proveedor", id: c.id, valor: !c.proveedor}); toast(c.proveedor ? "Ya no está marcado como proveedor" : "Marcado como proveedor: el agente no le responde"); }
+    catch (e) { console.error(e); toast("No se pudo cambiar. ¿Ya publicaste el asistente?"); }
+    S.busy = false; draw();
+  },
   async chatConsultaOk(){ await upd(doc(db, "conversaciones", S.m.id), {consultaProduccion: ""}, "Consulta marcada como resuelta"); },
   async chatPausar(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "persona", pausadoHasta: Date.now() + 12 * 3600e3}, "El agente se pausa 12 horas en este chat"); },
   async chatAgente(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "agente", pausadoHasta: 0, devueltoEn: Date.now()}, "El agente vuelve a responder este chat"); },
