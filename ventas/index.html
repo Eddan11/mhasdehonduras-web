@@ -964,6 +964,8 @@ function vAgente(){
       <div class="field"><label for="ag_pausa">Pausa al responder tú (horas)</label><input id="ag_pausa" type="number" min="1" data-k="ag_pausa" value="${esc(g("pausa", a.pausaHoras || 12))}"></div>
       <div class="field"><label for="ag_max">Máx. respuestas por chat al día</label><input id="ag_max" type="number" min="1" data-k="ag_max" value="${esc(g("max", a.maxRespuestasDia || 40))}"></div>
     </div>
+    <div class="field"><label for="ag_diasEq">Días que el chat queda contigo después de que escribes</label><input id="ag_diasEq" type="number" min="0" max="30" data-k="ag_diasEq" value="${esc(g("diasEq", a.diasEquipo ?? 3))}"></div>
+    <p class="note">Cuando escribes en un chat desde el celular, el agente no vuelve a responder ahí hasta que pasen estos días sin que escribas, o hasta que le des "Devolver al agente". Con 0 se usa solo la pausa en horas.</p>
   </div>
   <div class="panel">
     <h2>Reglas de venta</h2>
@@ -2050,7 +2052,7 @@ const A = {
     const a = S.ag || {}, g = (k, d) => S.f["ag_" + k] ?? d;
     const nums = String(g("nums", (a.numerosPrueba || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     const data = {modo: g("modo", a.modo || "prueba"), numerosPrueba: nums, asignarA: g("asignar", a.asignarA || "comercial@mhasdehonduras.com"),
-      pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
+      pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), diasEquipo: Math.min(30, Math.max(0, Number(g("diasEq", a.diasEquipo ?? 3)) || 0)), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
       reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"), modeloAsistente: g("modeloAs", a.modeloAsistente || "haiku"),
       limiteAsistenteAdmin: Math.max(1, Number(g("limAdm", a.limiteAsistenteAdmin || 50)) || 50), limiteAsistenteEquipo: Math.max(1, Number(g("limEq", a.limiteAsistenteEquipo || 20)) || 20),
       bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), botones: !!g("botones", a.botones !== false), recordatorio: !!g("rec", a.recordatorio !== false),
