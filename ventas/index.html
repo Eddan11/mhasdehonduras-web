@@ -132,6 +132,13 @@ tr.click:hover td{background:var(--chip)}
 .as-pie{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 12px 10px;font-size:12px;color:var(--muted)}
 .as-pie button{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0}
 .as-pensando{color:var(--muted);font-style:italic}
+.pr-resumen{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+.pr-resumen>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;min-width:140px}
+.pr-resumen small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.pr-resumen b{font-size:20px;font-variant-numeric:tabular-nums}
+.pr-tabla td,.pr-tabla th{white-space:nowrap}
+.pr-tabla td:nth-child(2){white-space:normal;min-width:180px}
+.pc-in{width:110px;text-align:right;padding:6px 8px;min-height:34px}
 .as-ok{margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .as-ok:hover{color:var(--ok);border-color:var(--ok)}
 .as-ok.hecho,.as-ok.hecho:hover{background:var(--ok);border-color:var(--ok);color:var(--card);cursor:default}
@@ -638,6 +645,7 @@ const ESTADO_CHAT = c => {
 };
 const horaTxt = ms => { if (!ms) return ""; const d = new Date(ms); const h = d.toLocaleTimeString("es-HN", {hour: "2-digit", minute: "2-digit"}); return ymd(d) === today() ? h : fdate(ymd(d)) + " " + h; };
 /* ---------- asistente (ventana flotante, para todo el equipo) ---------- */
+S.pcEdit = {}; S.pcEditando = false; S.pcPegar = false;
 const AS = {abierto: false, msgs: null, cargando: false, pensando: false, quedan: null, completo: false};
 function mdAs(t){
   const lines = esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,:;])/g, "$1<b>$2</b>").split("\n");
@@ -873,20 +881,61 @@ function vClientes(){
 function vProductos(){
   const q = clean(S.f.prq).toLowerCase();
   const adm = puede("admin");
-  const list = S.prod.filter(p => adm || p.activo !== false).filter(p => !q || [codDe(p), p.nombre, p.categoria, presDe(p)].join(" ").toLowerCase().includes(q));
-  return `
+  const fam = S.f.pr_fam || "";
+  let list = S.prod.filter(p => adm || p.activo !== false).filter(p => !q || [codDe(p), p.nombre, p.categoria, presDe(p)].join(" ").toLowerCase().includes(q));
+  if (!adm) return `
   <h1>Productos</h1>
-  <p class="sub">${adm ? "Toca un producto para editarlo. El precio con ISV es por presentación; el unitario sin ISV se calcula solo." : "Lista de productos, códigos y precios."}</p>
-  ${adm ? `<div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}</div>` : ""}
+  <p class="sub">Lista de productos, códigos y precios.</p>
   <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th>${adm ? '<th class="num">Compra sin ISV</th><th class="num">Margen</th>' : ""}</tr></thead><tbody>
-    ${list.map(p => `<tr ${adm ? `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"` : ""}${p.activo === false ? ' style="opacity:.5"' : ""}>
-      <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
-      <td>${esc(p.nombre)}${p.activo === false ? ' <span class="badge">Inactivo</span>' : ""}${p.creadoPorNombre ? `<br><small class="muted">Agregado por ${esc(p.creadoPorNombre)}</small>` : ""}</td>
-      <td class="muted">${esc(presDe(p))}</td><td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td>${adm ? `<td class="num">${compraDe(p) ? L(compraDe(p)) : '<span class="muted">—</span>'}</td><td class="num">${margenTxt(r2(p.precio / 1.15), compraDe(p)) || '<span class="muted">—</span>'}</td>` : ""}</tr>`).join("")}
+  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th></tr></thead><tbody>
+    ${list.map(p => `<tr${p.activo === false ? ' style="opacity:.5"' : ""}><td><span class="stub">${esc(codDe(p) || "—")}</span></td><td>${esc(p.nombre)}</td>
+      <td class="muted">${esc(presDe(p))}</td><td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td></tr>`).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>`;
+
+  // ---- administrador: ganancia y margen real (todo sin ISV) ----
+  const fams = [...new Set(S.prod.map(p => famDe(codDe(p))))].filter(Boolean);
+  const nomFam = f => (S.prod.find(p => famDe(codDe(p)) === f && p.categoria) || {}).categoria || f;
+  if (fam) list = list.filter(p => famDe(codDe(p)) === fam);
+  const edit = !!S.pcEditando;
+  const activos = S.prod.filter(p => p.activo !== false);
+  const conCosto = activos.filter(p => compraDe(p) > 0);
+  const prom = conCosto.length ? conCosto.reduce((a, p) => a + datosMargen(p).pct, 0) / conCosto.length : 0;
+  const bajos = conCosto.filter(p => datosMargen(p).pct < MARGEN_MIN).length;
+  return `
+  <h1>Productos</h1>
+  <p class="sub">${edit ? "Escribe el precio de compra sin ISV de cada presentación. Pasa al siguiente con Tab o Enter y al final toca Guardar costos." : "Toca un producto para editarlo. La compra, la ganancia y el margen solo los ves tú; todo va sin ISV."}</p>
+  <div class="actions" style="margin:0 0 12px">
+    ${edit ? `<button class="btn pri" data-a="pcGuardar" ${S.busy ? "disabled" : ""}>Guardar costos</button><button class="btn" data-a="pcPegar">Pegar lista</button><button class="btn" data-a="pcCancelar">Cancelar</button>`
+      : `<button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button><button class="btn" data-a="pcEditar">Editar costos</button><button class="btn" data-a="prodExcel">Descargar Excel</button>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}`}
+  </div>
+  ${edit && S.pcPegar ? `<div class="panel" style="padding:12px 14px"><label for="pc_lista">Pega una lista: código y precio de compra sin ISV, uno por línea (por ejemplo <b>ROL-003 450</b>). Se llenan las casillas para que las revises antes de guardar.</label>
+    <textarea id="pc_lista" rows="5" placeholder="ROL-003 450&#10;ROL-005 975"></textarea><div class="actions" style="margin-top:8px"><button class="btn" data-a="pcAplicar">Llenar casillas</button></div></div>` : ""}
+  <div class="pr-resumen">
+    <div><small>Margen promedio</small><b style="color:${prom && prom < MARGEN_MIN ? "var(--bad)" : "var(--ok)"}">${conCosto.length ? prom.toFixed(1) + "%" : "—"}</b></div>
+    <div><small>Debajo de ${MARGEN_MIN}%</small><b style="color:${bajos ? "var(--bad)" : "var(--ink)"}">${bajos}</b></div>
+    <div><small>Sin precio de compra</small><b style="color:${activos.length - conCosto.length ? "var(--warn)" : "var(--ink)"}">${activos.length - conCosto.length}</b></div>
+  </div>
+  <div class="chips" role="group" aria-label="Familia"><button data-a="prFam" data-v="" aria-pressed="${!fam}">Todos</button>${fams.map(f => `<button data-a="prFam" data-v="${esc(f)}" aria-pressed="${fam === f}">${esc(nomFam(f))}</button>`).join("")}</div>
+  <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
+  <div class="panel" style="padding:6px 10px"><div class="scroll">
+  ${list.length ? `<table class="pr-tabla"><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Venta con ISV</th><th class="num">Venta sin ISV</th><th class="num">Compra sin ISV</th><th class="num">Ganancia</th><th class="num">Margen</th><th class="num" title="Precio más bajo (con ISV) que deja ${MARGEN_MIN}% de margen">Precio mínimo</th><th class="num" title="Cuánto puedes rebajar (con ISV) sin bajar de ${MARGEN_MIN}%">Desc. máximo</th><th>Costo al</th></tr></thead><tbody>
+    ${list.map(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {}, viejo = c.actualizado && Date.now() - c.actualizado > 60 * 864e5;
+      return `<tr ${edit ? "" : `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"`}${p.activo === false ? ' style="opacity:.5"' : ""}>
+      <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
+      <td>${esc(p.nombre)}${p.activo === false ? ' <span class="badge">Inactivo</span>' : ""}</td>
+      <td class="muted">${esc(presDe(p))}</td>
+      <td class="num">${L(p.precio)}</td><td class="num">${L(d.venta)}</td>
+      <td class="num">${edit ? `<input class="pc-in" type="number" min="0" step="0.01" inputmode="decimal" data-pc="${esc(p.id)}" data-cod="${esc(codDe(p))}" value="${esc(S.pcEdit[p.id] ?? (compraDe(p) || ""))}" aria-label="Compra sin ISV de ${esc(p.nombre)}">` : (d.compra ? L(d.compra) : '<span class="muted">—</span>')}</td>
+      <td class="num">${d.compra ? `<b style="color:${d.pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"}">${L(d.ganancia)}</b>` : '<span class="muted">—</span>'}</td>
+      <td class="num">${d.compra ? `<span class="badge" style="color:${d.pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"}">${d.pct.toFixed(1)}%</span>` : '<span class="muted">—</span>'}</td>
+      <td class="num">${d.compra ? L(d.minimoIsv) : '<span class="muted">—</span>'}</td>
+      <td class="num">${d.compra ? (d.descMax > 0 ? L(d.descMax) : '<span style="color:var(--bad)">Ya está abajo</span>') : '<span class="muted">—</span>'}</td>
+      <td>${c.actualizado ? `<small style="${viejo ? "color:var(--warn);font-weight:700" : ""}" title="${viejo ? "Más de 60 días: revisa si el proveedor cambió el precio" : ""}">${fdate(ymd(new Date(c.actualizado)))}</small>` : '<span class="muted">—</span>'}</td></tr>`; }).join("")}
+  </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
+  </div></div>
+  <p class="note">Margen = ganancia ÷ venta sin ISV. Precio mínimo y descuento máximo van con ISV (como se los dices al cliente) y respetan el margen mínimo de ${MARGEN_MIN}%.</p>`;
 }
 
 /* ---------- vista: mi perfil ---------- */
@@ -1856,6 +1905,47 @@ const A = {
     if (!data.nombre) return toast("Escribe el nombre.");
     if (await upd(doc(db, "usuarios", u.id), data, "Datos guardados", true)) { Object.keys(S.f).filter(k => k.startsWith("ue_")).forEach(k => delete S.f[k]); S.m = null; draw(); }
   },
+  prFam(v){ S.f.pr_fam = v || ""; draw(); },
+  pcEditar(){ S.pcEdit = {}; S.pcEditando = true; S.pcPegar = false; draw(); setTimeout(() => { const i = document.querySelector(".pc-in"); if (i) i.focus(); }, 0); },
+  pcCancelar(){ S.pcEdit = {}; S.pcEditando = false; S.pcPegar = false; draw(); },
+  pcPegar(){ S.pcPegar = !S.pcPegar; draw(); },
+  pcAplicar(){
+    const t = $("#pc_lista"); if (!t) return;
+    let n = 0, malos = [];
+    t.value.split(/\n+/).map(l => l.trim()).filter(Boolean).forEach(l => {
+      const m = l.match(/^([A-Za-z]+-?\d+)[\s,;:\t]+L?\.?\s*([\d.,]+)/); if (!m) { malos.push(l); return; }
+      const cod = m[1].toUpperCase(), val = Number(m[2].replace(/,/g, ""));
+      const p = S.prod.find(x => String(codDe(x)).toUpperCase() === cod); if (!p || !isFinite(val)) { malos.push(l); return; }
+      S.pcEdit[p.id] = String(val); n++;
+    });
+    S.pcPegar = false; draw();
+    toast(n + (n === 1 ? " casilla llenada" : " casillas llenadas") + (malos.length ? " · no reconocí: " + malos.slice(0, 3).join(" | ") : "") + ". Revisa y toca Guardar costos.");
+  },
+  async pcGuardar(){
+    const cambios = Object.entries(S.pcEdit).map(([id, v]) => [id, v === "" ? 0 : r2(v)]).filter(([id, v]) => isFinite(v) && v >= 0 && Math.abs(v - compraDe({id})) > 0.004);
+    if (!cambios.length) { S.pcEditando = false; S.pcEdit = {}; draw(); return toast("No hubo cambios."); }
+    S.busy = true; draw();
+    try {
+      const b = writeBatch(db), ahora = Date.now();
+      cambios.forEach(([id, v]) => { const ant = (S.costos || {})[id] || {};
+        const hist = (ant.historial || []).concat(Number(ant.compra) > 0 ? [{compra: Number(ant.compra), hasta: ahora}] : []).slice(-12);
+        b.set(doc(db, "costos", id), {compra: v, actualizado: ahora, historial: hist}, {merge: true}); });
+      await b.commit();
+      S.pcEditando = false; S.pcEdit = {};
+      toast(cambios.length + (cambios.length === 1 ? " costo guardado" : " costos guardados"));
+    } catch (e) { fallo(e, "guardar los costos (revisa las reglas de Firebase)"); }
+    S.busy = false; draw();
+  },
+  prodExcel(){
+    const rows = [["Código", "Producto", "Familia", "Presentación", "Unidades", "Venta con ISV", "Venta sin ISV", "Compra sin ISV", "Ganancia", "Margen %", "Precio mínimo con ISV (" + MARGEN_MIN + "%)", "Descuento máximo con ISV", "Costo actualizado", "Activo"]];
+    S.prod.forEach(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {};
+      rows.push([codDe(p), p.nombre, p.categoria || "", presDe(p), uni(p), (Number(p.precio) || 0).toFixed(2), d.venta.toFixed(2), d.compra ? d.compra.toFixed(2) : "", d.compra ? d.ganancia.toFixed(2) : "", d.compra ? d.pct.toFixed(1) : "",
+        d.compra ? d.minimoIsv.toFixed(2) : "", d.compra ? Math.max(0, d.descMax).toFixed(2) : "", c.actualizado ? fdate(ymd(new Date(c.actualizado))) : "", p.activo === false ? "No" : "Sí"]); });
+    const q = v => { v = v == null ? "" : String(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}));
+    a.download = "productos-margenes-mhas-" + today() + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast("Excel descargado");
+  },
   async prodOrdenar(){
     // Familias en el orden en que ya aparecen; dentro de cada familia, por número de código
     const base = S.prod.filter(p => Number(p.orden ?? 999) < 999).sort((a, b) => Number(a.orden) - Number(b.orden));
@@ -1892,11 +1982,17 @@ const A = {
   }
 };
 // Margen real (todo sin ISV, por presentación). El costo se guarda aparte en "costos" (solo admin), nunca en productos (que es público)
+const MARGEN_MIN = 25;
+function datosMargen(p){
+  const venta = r2((Number(p.precio) || 0) / 1.15), compra = compraDe(p), ganancia = r2(venta - compra);
+  const minimoIsv = compra ? r2(compra / (1 - MARGEN_MIN / 100) * 1.15) : 0;
+  return {venta, compra, ganancia, pct: venta && compra ? ganancia / venta * 100 : 0, minimoIsv, descMax: compra ? r2((Number(p.precio) || 0) - minimoIsv) : 0};
+}
 const compraDe = p => { const c = (S.costos || {})[p.id]; return c && Number(c.compra) > 0 ? Number(c.compra) : 0; };
 function margenTxt(venta, compra){
   if (!(venta > 0) || !(compra > 0)) return "";
   const m = venta - compra, pct = m / venta * 100;
-  return `<span style="color:${pct < 20 ? "var(--bad)" : "var(--ok)"};font-weight:700">${L(m)} · ${pct.toFixed(1)}%</span>`;
+  return `<span style="color:${pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"};font-weight:700">Ganancia ${L(m)} · margen ${pct.toFixed(1)}%</span>`;
 }
 function prodMargen(){
   const o = $("#pe_margen"); if (!o) return;
@@ -1965,10 +2061,12 @@ document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.matches("tr.click")) e.target.click();
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "as_txt") { e.preventDefault(); A.asEnviar(); }
   if (e.key === "Escape" && AS.abierto && !S.m) A.asCerrar();
+  if (e.key === "Enter" && e.target.classList && e.target.classList.contains("pc-in")) { e.preventDefault(); const ins = [...document.querySelectorAll(".pc-in")], i = ins.indexOf(e.target); if (ins[i + 1]) { ins[i + 1].focus(); ins[i + 1].select(); } }
   if (e.key === "Enter" && S.screen === "auth" && e.target.matches("#view input")) A.authGo();
 });
 document.addEventListener("input", e => {
   const t = e.target, k = t.dataset.k;
+  if (t.dataset.pc != null) { S.pcEdit[t.dataset.pc] = t.value; return; }
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
   if (k) {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
