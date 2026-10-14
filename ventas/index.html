@@ -141,6 +141,18 @@ a.btn{color:inherit}
 .bub small{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
 .bub.in{align-self:flex-start;background:var(--card);border:1px solid var(--line)}
 .bub.out{align-self:flex-end;background:var(--ok-bg)}
+.as-wrap{display:flex;flex-direction:column;gap:12px}
+.as-box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:340px;max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.as-box .bub{max-width:92%}
+.as-box .bub.out{background:var(--chip)}
+.as-box .bub.in{background:var(--card)}
+.as-box .bub ul{margin:4px 0;padding-left:18px}
+.as-box .bub li{margin:2px 0}
+.as-box .bub p{margin:4px 0}
+.as-rapidas{display:flex;flex-wrap:wrap;gap:8px}
+.as-form{display:flex;gap:8px;align-items:flex-end}
+.as-form textarea{flex:1;min-height:46px;max-height:160px;resize:vertical}
+.as-pensando{color:var(--muted);font-style:italic}
 .bub.eq{align-self:flex-end;background:var(--warn-bg)}
 .tfoot td{border-top:2px solid var(--line);background:var(--chip);padding-top:12px;padding-bottom:12px}
 .cli-lista{max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:1px solid var(--line);border-radius:10px;background:var(--card)}
@@ -170,6 +182,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBbmsIVGmC8sZ3D9rmDPBmkZkq6H5zzgqw",
@@ -189,6 +202,7 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 auth.languageCode = "es";
 const db = getFirestore(fbApp);
+const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
 
 /* ---------- utilidades ---------- */
 const $ = s => document.querySelector(s);
@@ -210,11 +224,11 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
 };
 const TABS = {
-  admin: ["cotizar", "cotizaciones", "chats", "agente", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
+  admin: ["cotizar", "asistente", "cotizaciones", "chats", "agente", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
   facturador: ["cotizar", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "perfil"]
 };
-const TAB_NAME = {chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {asistente: "Asistente", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -312,7 +326,7 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
+  const fn = {asistente: vAsistente, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -594,6 +608,44 @@ const ESTADO_CHAT = c => {
   return ["Responde el agente", "b-ok"];
 };
 const horaTxt = ms => { if (!ms) return ""; const d = new Date(ms); const h = d.toLocaleTimeString("es-HN", {hour: "2-digit", minute: "2-digit"}); return ymd(d) === today() ? h : fdate(ymd(d)) + " " + h; };
+/* ---------- vista: asistente interno (consultas de Eduardo) ---------- */
+const AS = {msgs: null, cargando: false, pensando: false};
+function mdAs(t){
+  const lines = esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split("\n");
+  let h = "", ul = false;
+  for (const l of lines) {
+    const m = l.match(/^\s*[-•*]\s+(.*)/);
+    if (m) { if (!ul) { h += "<ul>"; ul = true; } h += "<li>" + m[1] + "</li>"; continue; }
+    if (ul) { h += "</ul>"; ul = false; }
+    if (/^#{1,4}\s/.test(l)) h += "<p><b>" + l.replace(/^#+\s*/, "") + "</b></p>";
+    else if (l.trim()) h += "<p>" + l + "</p>";
+  }
+  return h + (ul ? "</ul>" : "");
+}
+function vAsistente(){
+  if (AS.msgs === null && !AS.cargando) A.asCargar();
+  const rapidas = ["¿Qué hago ahora?", "Pendientes de hoy", "¿Quién está esperando respuesta?", "¿Qué cobros tengo pendientes?", "Cotizaciones abiertas para dar seguimiento"];
+  const lista = AS.msgs || [];
+  return `
+  <h1>Asistente</h1>
+  <p class="sub">Pregúntale qué sigue, qué le falta a un cliente o pídele que te anote algo. Revisa las cotizaciones, los chats y las consultas a producción en el momento.</p>
+  <div class="as-wrap">
+    <div class="as-box" id="asbox">
+      ${AS.msgs === null ? '<p class="empty">Cargando…</p>' : ""}
+      ${AS.msgs !== null && !lista.length ? '<p class="empty">Escribe "¿Qué hago ahora?" o toca una de las preguntas de abajo.</p>' : ""}
+      ${lista.map(m => `<div class="bub ${m.de === "yo" ? "out" : "in"}"><small>${m.de === "yo" ? "Tú" : "Asistente"} · ${horaTxt(m.ts)}</small><div>${m.de === "yo" ? esc(m.texto).replace(/\n/g, "<br>") : mdAs(m.texto)}</div></div>`).join("")}
+      ${AS.pensando ? '<div class="bub in as-pensando">Revisando el sistema…</div>' : ""}
+    </div>
+    <div class="as-rapidas">${rapidas.map(q => `<button class="btn sm" data-a="asRapida" data-v="${esc(q)}" ${AS.pensando ? "disabled" : ""}>${esc(q)}</button>`).join("")}</div>
+    <div class="as-form">
+      <textarea id="as_txt" data-k="as_txt" rows="2" placeholder="Ej.: ¿Qué le falta a Brayan? · Ya entregué lo de Sofía · Recuérdame cobrar a Credirapid el jueves">${fv("as_txt")}</textarea>
+      <button class="btn pri" data-a="asEnviar" ${AS.pensando ? "disabled" : ""}>Enviar</button>
+    </div>
+    <div class="actions"><button class="btn sm" data-a="asBorrar">Borrar conversación</button></div>
+  </div>`;
+}
+function asScroll(){ setTimeout(() => { const b = $("#asbox"); if (b) b.scrollTop = b.scrollHeight; }, 0); }
+
 function vChats(){
   return `
   <h1>Chats de WhatsApp</h1>
@@ -1265,7 +1317,7 @@ const A = {
     else { toast("Aún no aparece verificado. Abre el enlace del correo."); draw(); }
   },
   async reenviar(){ try { await sendEmailVerification(auth.currentUser); toast("Correo reenviado."); } catch (e) { toast(authError(e && e.code)); } },
-  async salir(){ await signOut(auth); S.f = {}; S.cart = []; },
+  async salir(){ await signOut(auth); S.f = {}; S.cart = []; AS.msgs = null; },
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
   ajustarTotal(){
@@ -1516,6 +1568,34 @@ const A = {
     }, e => console.warn(e));
     const c = S.convs.find(x => x.id === v); if (c && c.noLeidos) updateDoc(doc(db, "conversaciones", v), {noLeidos: 0}).catch(() => {});
   },
+  async asCargar(){
+    AS.cargando = true;
+    try { const r = await fnAsistente({accion: "historial"}); AS.msgs = (r.data && r.data.mensajes) || []; }
+    catch (e) { console.error(e); AS.msgs = []; toast("No se pudo cargar el asistente."); }
+    AS.cargando = false; draw(); asScroll();
+  },
+  asRapida(v){ A.asEnviar(v); },
+  async asEnviar(v){
+    const texto = String(v || S.f.as_txt || "").trim();
+    if (!texto || AS.pensando) return;
+    if (!v) { S.f.as_txt = ""; const t = $("#as_txt"); if (t) t.value = ""; }
+    AS.msgs = (AS.msgs || []).concat([{de: "yo", texto, ts: Date.now()}]);
+    AS.pensando = true; draw(); asScroll();
+    try {
+      const r = await fnAsistente({accion: "enviar", texto});
+      AS.msgs.push({de: "asistente", texto: (r.data && r.data.texto) || "", ts: Date.now()});
+    } catch (e) {
+      console.error(e);
+      AS.msgs.push({de: "asistente", texto: "No pude responder: " + ((e && e.message) || "error") + ". Intenta de nuevo.", ts: Date.now()});
+    }
+    AS.pensando = false; draw(); asScroll();
+  },
+  async asBorrar(){
+    if (S.f.as_confirmar !== true) { S.f.as_confirmar = true; toast("Toca otra vez “Borrar conversación” para confirmar."); setTimeout(() => { S.f.as_confirmar = false; }, 4000); return; }
+    S.f.as_confirmar = false;
+    try { await fnAsistente({accion: "borrar"}); AS.msgs = []; draw(); toast("Conversación borrada. Las tareas anotadas se mantienen."); }
+    catch (e) { fallo(e, "borrar la conversación"); }
+  },
   async chatsDescargar(){
     if (!S.convs.length) return toast("Todavía no hay chats.");
     S.busy = true; draw();
@@ -1733,6 +1813,7 @@ document.addEventListener("focusin", e => { const t = e.target; if (t.matches &&
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.m) { S.m = null; draw(); }
   if (e.key === "Enter" && e.target.matches("tr.click")) e.target.click();
+  if (e.key === "Enter" && !e.shiftKey && e.target.id === "as_txt") { e.preventDefault(); A.asEnviar(); }
   if (e.key === "Enter" && S.screen === "auth" && e.target.matches("#view input")) A.authGo();
 });
 document.addEventListener("input", e => {
