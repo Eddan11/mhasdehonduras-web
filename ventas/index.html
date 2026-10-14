@@ -877,14 +877,14 @@ function vProductos(){
   return `
   <h1>Productos</h1>
   <p class="sub">${adm ? "Toca un producto para editarlo. El precio con ISV es por presentación; el unitario sin ISV se calcula solo." : "Lista de productos, códigos y precios."}</p>
-  ${adm ? `<div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button></div>` : ""}
+  ${adm ? `<div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}</div>` : ""}
   <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th>${adm ? '<th class="num">Compra sin ISV</th><th class="num">Margen</th>' : ""}</tr></thead><tbody>
     ${list.map(p => `<tr ${adm ? `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"` : ""}${p.activo === false ? ' style="opacity:.5"' : ""}>
       <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
       <td>${esc(p.nombre)}${p.activo === false ? ' <span class="badge">Inactivo</span>' : ""}${p.creadoPorNombre ? `<br><small class="muted">Agregado por ${esc(p.creadoPorNombre)}</small>` : ""}</td>
-      <td class="muted">${esc(presDe(p))}</td><td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td></tr>`).join("")}
+      <td class="muted">${esc(presDe(p))}</td><td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td>${adm ? `<td class="num">${compraDe(p) ? L(compraDe(p)) : '<span class="muted">—</span>'}</td><td class="num">${margenTxt(r2(p.precio / 1.15), compraDe(p)) || '<span class="muted">—</span>'}</td>` : ""}</tr>`).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>`;
 }
@@ -1057,6 +1057,8 @@ function mProd(){
   const g = (k, d) => S.f["pe_" + k] ?? d;
   const unidades = g("unidades", p.id ? uni(p) : 1), precio = g("precio", p.precio ?? "");
   const unit = g("unit", precio !== "" ? Math.round(Number(precio) / 1.15 / (Number(unidades) || 1) * 10000) / 10000 : "");
+  const venta = g("venta", precio !== "" ? r2(Number(precio) / 1.15) : "");
+  const costo = g("costo", p.id && compraDe(p) ? compraDe(p) : "");
   const adm = puede("admin");
   if (!adm) return "";
   return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
@@ -1074,7 +1076,12 @@ function mProd(){
     <div class="field"><label for="pe_precio">Precio con ISV (presentación)</label><input id="pe_precio" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_precio" value="${esc(precio)}"></div>
     <div class="field"><label for="pe_unit">Precio unitario sin ISV</label><input id="pe_unit" type="number" min="0" step="any" inputmode="decimal" data-k="pe_unit" value="${esc(unit)}"></div>
   </div>
-  <p class="note">Si cambias uno de los dos precios, el otro se calcula solo.</p>
+  <div class="row">
+    <div class="field"><label for="pe_venta">Precio de venta sin ISV (presentación)</label><input id="pe_venta" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_venta" value="${esc(venta)}"></div>
+    <div class="field"><label for="pe_costo">Precio de compra sin ISV (presentación)</label><input id="pe_costo" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_costo" value="${esc(costo)}"></div>
+  </div>
+  <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Margen por presentación: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
+  <p class="note">Si cambias cualquiera de los precios de venta, los otros se calculan solos. El precio de compra solo lo ves tú.</p>
   <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_solo" ${g("solo", p.id ? soloPres(p) : false) ? "checked" : ""}> Solo se vende por presentación completa (el agente de WhatsApp no lo vende suelto)</label>
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
@@ -1311,6 +1318,8 @@ function startData(){
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
   if (fact) dataSubs.push(onSnapshot(collection(db, "cxp"), q => { S.cxp = mapDocs(q); render(); }, onErr));
+  S.costos = {};
+  if (r === "admin") dataSubs.push(onSnapshot(collection(db, "costos"), q => { S.costos = {}; q.docs.forEach(d => { S.costos[d.id] = d.data(); }); render(); }, e => console.warn("costos", e)));
   if (r === "admin") dataSubs.push(onSnapshot(doc(db, "config", "agente"), s => { S.ag = s.exists() ? s.data() : {}; render(); }, e => console.warn(e)));
   if (r === "admin") dataSubs.push(onSnapshot(query(collection(db, "conversaciones"), orderBy("actualizado", "desc"), limit(200)), q => { S.convs = mapDocs(q); render(); }, e => console.warn(e)));
   if (r === "admin") dataSubs.push(onSnapshot(collection(db, "usuarios"), q => { S.usuarios = mapDocs(q); render(); }, onErr));
@@ -1847,6 +1856,17 @@ const A = {
     if (!data.nombre) return toast("Escribe el nombre.");
     if (await upd(doc(db, "usuarios", u.id), data, "Datos guardados", true)) { Object.keys(S.f).filter(k => k.startsWith("ue_")).forEach(k => delete S.f[k]); S.m = null; draw(); }
   },
+  async prodOrdenar(){
+    // Familias en el orden en que ya aparecen; dentro de cada familia, por número de código
+    const base = S.prod.filter(p => Number(p.orden ?? 999) < 999).sort((a, b) => Number(a.orden) - Number(b.orden));
+    const fams = [...new Set(base.map(p => famDe(codDe(p))).concat(S.prod.map(p => famDe(codDe(p)))))];
+    const num = p => Number(String(codDe(p)).split("-")[1]) || 0;
+    const lista = [...S.prod].sort((a, b) => fams.indexOf(famDe(codDe(a))) - fams.indexOf(famDe(codDe(b))) || num(a) - num(b));
+    S.busy = true; draw();
+    try { const b = writeBatch(db); lista.forEach((p, i) => b.update(doc(db, "productos", p.id), {orden: i})); await b.commit(); toast("Productos ordenados por familia"); }
+    catch (e) { fallo(e, "ordenar los productos"); }
+    S.busy = false; draw();
+  },
   prodNuevo(){ clearProd(); S.m = {type: "prod", id: null}; draw(); },
   prodEdit(v){ clearProd(); S.m = {type: "prod", id: v}; draw(); },
   async prodSave(){
@@ -1863,10 +1883,35 @@ const A = {
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : ""))};
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-    if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = 999; data.creadoPor = S.me.uid; if (!puede("admin")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
-    if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) { clearProd(); S.m = null; draw(); }
+    if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
+    const costoNuevo = S.f.pe_costo;
+    if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) {
+      if (puede("admin") && costoNuevo != null) { try { await setDoc(doc(db, "costos", id), {compra: Math.max(0, r2(costoNuevo)), actualizado: Date.now()}, {merge: true}); } catch (e) { fallo(e, "guardar el precio de compra (revisa las reglas de Firebase)"); } }
+      clearProd(); S.m = null; draw();
+    }
   }
 };
+// Margen real (todo sin ISV, por presentación). El costo se guarda aparte en "costos" (solo admin), nunca en productos (que es público)
+const compraDe = p => { const c = (S.costos || {})[p.id]; return c && Number(c.compra) > 0 ? Number(c.compra) : 0; };
+function margenTxt(venta, compra){
+  if (!(venta > 0) || !(compra > 0)) return "";
+  const m = venta - compra, pct = m / venta * 100;
+  return `<span style="color:${pct < 20 ? "var(--bad)" : "var(--ok)"};font-weight:700">${L(m)} · ${pct.toFixed(1)}%</span>`;
+}
+function prodMargen(){
+  const o = $("#pe_margen"); if (!o) return;
+  const venta = Number(($("#pe_venta") || {}).value) || 0, compra = Number(($("#pe_costo") || {}).value) || 0;
+  o.innerHTML = venta > 0 && compra > 0 ? "Margen por presentación: " + margenTxt(venta, compra) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>';
+}
+// Orden por familia: el producto nuevo queda después del último de su familia (prefijo del código: ROL, ETQ, EMP…)
+const famDe = codigo => String(codigo || "").split("-")[0].toUpperCase();
+function ordenParaNuevo(codigo){
+  const fam = famDe(codigo), ords = S.prod.map(p => Number(p.orden ?? 999));
+  const deFam = S.prod.filter(p => famDe(codDe(p)) === fam && Number(p.orden ?? 999) < 999).map(p => Number(p.orden));
+  if (!deFam.length) return 999;
+  const ult = Math.max(...deFam), sig = ords.filter(o => o > ult).reduce((a, b) => Math.min(a, b), Infinity);
+  return isFinite(sig) && sig < 999 ? (ult + sig) / 2 : ult + 1;
+}
 function clearProd(){ Object.keys(S.f).filter(k => k.startsWith("pe_")).forEach(k => delete S.f[k]); }
 async function marcarEnviada(){
   const c = S.m && S.cot.find(x => x.id === S.m.id);
@@ -1929,11 +1974,16 @@ document.addEventListener("input", e => {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
     if (k === "cq" || k === "prq") draw();
-    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades") {
+    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta") {
       const un = Math.max(1, Number(($("#pe_unidades") || {}).value) || 1);
-      if (k === "pe_unit") { const v = r2(Number(t.value) * 1.15 * un); S.f.pe_precio = t.value === "" ? "" : v; const o = $("#pe_precio"); if (o) o.value = S.f.pe_precio; }
-      else { const pr = Number(($("#pe_precio") || {}).value); const v = Math.round(pr / 1.15 / un * 10000) / 10000; S.f.pe_unit = isFinite(v) && pr ? v : ""; const o = $("#pe_unit"); if (o) o.value = S.f.pe_unit; }
+      const pon = (id, v) => { S.f[id] = v; const o = $("#" + id); if (o) o.value = v; };
+      if (k === "pe_unit") pon("pe_precio", t.value === "" ? "" : r2(Number(t.value) * 1.15 * un));
+      if (k === "pe_venta") pon("pe_precio", t.value === "" ? "" : r2(Number(t.value) * 1.15));
+      const pr = Number(($("#pe_precio") || {}).value);
+      if (k !== "pe_unit") { const v = Math.round(pr / 1.15 / un * 10000) / 10000; pon("pe_unit", isFinite(v) && pr ? v : ""); }
+      if (k !== "pe_venta") pon("pe_venta", pr ? r2(pr / 1.15) : "");
     }
+    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta" || k === "pe_costo") prodMargen();
     if (k === "bq") draw();
     if (k === "cli_q") { const el = $("#cli_list"); if (el) el.innerHTML = cliListHtml(); }
   }
