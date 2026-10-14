@@ -2184,15 +2184,19 @@ const A = {
     } catch (e) { fallo(e, "guardar los costos (revisa las reglas de Firebase)"); }
     S.busy = false; draw();
   },
-  prodExcel(){
-    const rows = [["Código", "Producto", "Familia", "Presentación", "Unidades", "Venta con ISV", "Venta sin ISV", "Compra sin ISV", "Ganancia", "Margen %", "Precio mínimo con ISV (" + MARGEN_MIN + "%)", "Descuento máximo con ISV", "Costo actualizado", "Activo"]];
-    S.prod.forEach(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {};
-      rows.push([codDe(p), p.nombre, p.categoria || "", presDe(p), uni(p), (Number(p.precio) || 0).toFixed(2), d.venta.toFixed(2), d.compra ? d.compra.toFixed(2) : "", d.compra ? d.ganancia.toFixed(2) : "", d.compra ? d.pct.toFixed(1) : "",
-        d.compra ? d.minimoIsv.toFixed(2) : "", d.compra ? Math.max(0, d.descMax).toFixed(2) : "", c.actualizado ? fdate(ymd(new Date(c.actualizado))) : "", p.activo === false ? "No" : "Sí"]); });
-    const q = v => { v = v == null ? "" : String(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}));
-    a.download = "productos-margenes-mhas-" + today() + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    toast("Excel descargado");
+  async prodExcel(){
+    S.busy = true; draw();
+    try {
+      const ExcelJS = await cargarExcelJS();
+      const filas = S.prod.map(p => { const c = (S.costos || {})[p.id] || {};
+        return {codigo: codDe(p), nombre: p.nombre, familia: p.categoria || "", presentacion: presDe(p), unidades: uni(p), precio: Number(p.precio) || 0, compra: compraDe(p),
+          actualizado: c.actualizado ? fdate(ymd(new Date(c.actualizado))) : "", activo: p.activo !== false}; });
+      const buf = await armarExcelProductos(ExcelJS, filas, fdate(today()), MARGEN_MIN);
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+      a.download = "Productos y margenes MHAS " + today() + ".xlsx"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast("Excel descargado");
+    } catch (e) { console.error(e); toast("No se pudo armar el Excel. Revisa tu conexión e intenta de nuevo."); }
+    S.busy = false; draw();
   },
   async prodOrdenar(){
     // Familias en el orden en que ya aparecen; dentro de cada familia, por número de código
@@ -2256,6 +2260,68 @@ function ordenParaNuevo(codigo){
   const ult = Math.max(...deFam), sig = ords.filter(o => o > ult).reduce((a, b) => Math.min(a, b), Infinity);
   return isFinite(sig) && sig < 999 ? (ult + sig) / 2 : ult + 1;
 }
+// Excel real (.xlsx) con formato: se carga la librería solo cuando se descarga
+function cargarExcelJS(){
+  if (window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  const urls = ["https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js", "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"];
+  const una = u => new Promise((ok, mal) => { const sc = document.createElement("script"); sc.src = u; sc.onload = () => window.ExcelJS ? ok(window.ExcelJS) : mal(new Error("sin ExcelJS")); sc.onerror = mal; document.head.appendChild(sc); });
+  return una(urls[0]).catch(() => una(urls[1]));
+}
+// filas: [{codigo,nombre,familia,presentacion,unidades,precio,compra,actualizado(dd/mm/aaaa|""),activo}]
+async function armarExcelProductos(ExcelJS, filas, fechaTxt, minPct){
+  const wb = new ExcelJS.Workbook(); wb.creator = "MHAS Ventas";
+  const ws = wb.addWorksheet("Productos", {views: [{state: "frozen", ySplit: 4, xSplit: 2}], properties: {defaultRowHeight: 18}});
+  const navy = "FF14264B", gold = "FFE0A526", gris = "FFEEF1F5";
+  const cols = [["Código", 11], ["Producto", 40], ["Familia", 22], ["Presentación", 20], ["Unidades", 10], ["Venta con ISV", 14], ["Venta sin ISV", 14], ["Compra sin ISV", 15],
+    ["Ganancia", 13], ["Margen", 10], ["Precio mínimo con ISV (" + minPct + "%)", 17], ["Descuento máximo con ISV", 17], ["Costo actualizado", 14], ["Activo", 8]];
+  ws.columns = cols.map(([h, w]) => ({width: w}));
+  ws.mergeCells(1, 1, 1, cols.length);
+  const t = ws.getCell(1, 1); t.value = "MHAS de Honduras · Productos, costos y márgenes"; t.font = {bold: true, size: 14, color: {argb: "FFFFFFFF"}}; t.fill = {type: "pattern", pattern: "solid", fgColor: {argb: navy}}; t.alignment = {vertical: "middle"};
+  ws.getRow(1).height = 26;
+  ws.mergeCells(2, 1, 2, cols.length);
+  const s = ws.getCell(2, 1); s.value = "Descargado el " + fechaTxt + " · Montos en lempiras · Margen = ganancia ÷ venta sin ISV · Precio mínimo y descuento máximo respetan el margen mínimo de " + minPct + "%. Si cambias la compra (columna H), todo se recalcula.";
+  s.font = {italic: true, size: 10, color: {argb: "FF5B6474"}};
+  const hr = ws.getRow(4); hr.values = cols.map(c => c[0]); hr.height = 30;
+  hr.eachCell(c => { c.font = {bold: true, color: {argb: "FF172033"}}; c.fill = {type: "pattern", pattern: "solid", fgColor: {argb: gold}}; c.alignment = {vertical: "middle", horizontal: "center", wrapText: true}; c.border = {bottom: {style: "thin", color: {argb: navy}}}; });
+  const L = '"L." #,##0.00';
+  let r = 5, famAnt = null;
+  filas.forEach(f => {
+    const row = ws.getRow(r);
+    row.getCell(1).value = f.codigo; row.getCell(2).value = f.nombre; row.getCell(3).value = f.familia; row.getCell(4).value = f.presentacion; row.getCell(5).value = f.unidades;
+    row.getCell(6).value = f.precio;
+    row.getCell(7).value = {formula: `F${r}/1.15`};
+    row.getCell(8).value = f.compra > 0 ? f.compra : null;
+    row.getCell(9).value = {formula: `IF(H${r}>0,G${r}-H${r},"")`};
+    row.getCell(10).value = {formula: `IF(H${r}>0,(G${r}-H${r})/G${r},"")`};
+    row.getCell(11).value = {formula: `IF(H${r}>0,H${r}/(1-${minPct}/100)*1.15,"")`};
+    row.getCell(12).value = {formula: `IF(H${r}>0,MAX(0,F${r}-K${r}),"")`};
+    row.getCell(13).value = f.actualizado || null; row.getCell(14).value = f.activo ? "Sí" : "No";
+    [6, 7, 8, 9, 11, 12].forEach(c => row.getCell(c).numFmt = L);
+    row.getCell(10).numFmt = "0.0%"; row.getCell(5).numFmt = "#,##0";
+    row.getCell(8).fill = {type: "pattern", pattern: "solid", fgColor: {argb: "FFFFF8E1"}}; // casilla para escribir
+    if (famAnt !== null && famAnt !== f.familia) row.eachCell({includeEmpty: true}, c => { c.border = Object.assign({}, c.border, {top: {style: "medium", color: {argb: navy}}}); });
+    if (!f.activo) row.font = {color: {argb: "FF9AA4B5"}};
+    row.getCell(1).font = {bold: true};
+    famAnt = f.familia; r++;
+  });
+  const ult = r - 1;
+  if (ult >= 5) {
+    ws.autoFilter = {from: {row: 4, column: 1}, to: {row: ult, column: cols.length}};
+    ws.addConditionalFormatting({ref: `J5:J${ult}`, rules: [
+      {type: "expression", formulae: [`AND(ISNUMBER(J5),J5<${minPct}/100)`], style: {font: {color: {argb: "FFB42318"}, bold: true}, fill: {type: "pattern", pattern: "solid", bgColor: {argb: "FFFBE7E5"}}}},
+      {type: "expression", formulae: [`AND(ISNUMBER(J5),J5>=${minPct}/100)`], style: {font: {color: {argb: "FF1E7A4B"}, bold: true}, fill: {type: "pattern", pattern: "solid", bgColor: {argb: "FFE4F3EA"}}}}]});
+    ws.addConditionalFormatting({ref: `I5:I${ult}`, rules: [{type: "expression", formulae: [`AND(ISNUMBER(J5),J5<${minPct}/100)`], style: {font: {color: {argb: "FFB42318"}, bold: true}}}]});
+  }
+  // Resumen
+  const rs = ult + 2;
+  ws.getCell(rs, 2).value = "Resumen"; ws.getCell(rs, 2).font = {bold: true, size: 12};
+  const resumen = [["Productos", {formula: `COUNTA(A5:A${ult})`}, "#,##0"], ["Sin precio de compra", {formula: `COUNTBLANK(H5:H${ult})`}, "#,##0"],
+    ["Margen promedio (con costo)", {formula: `IFERROR(AVERAGE(J5:J${ult}),"")`}, "0.0%"], ["Debajo de " + minPct + "%", {formula: `COUNTIFS(J5:J${ult},"<"&${minPct}/100)`}, "#,##0"]];
+  resumen.forEach(([k, v, fmt], i) => { const c1 = ws.getCell(rs + 1 + i, 2), c2 = ws.getCell(rs + 1 + i, 3); c1.value = k; c2.value = v; c2.numFmt = fmt; c2.font = {bold: true}; c2.alignment = {horizontal: "right"}; });
+  ws.pageSetup = {orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "4:4"};
+  return wb.xlsx.writeBuffer();
+}
+
 function clearProd(){ Object.keys(S.f).filter(k => k.startsWith("pe_")).forEach(k => delete S.f[k]); }
 async function marcarEnviada(){
   const c = S.m && S.cot.find(x => x.id === S.m.id);
