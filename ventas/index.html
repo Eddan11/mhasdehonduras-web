@@ -134,7 +134,9 @@ tr.click:hover td{background:var(--chip)}
 .as-pensando{color:var(--muted);font-style:italic}
 .as-ok{margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .as-ok:hover{color:var(--ok);border-color:var(--ok)}
-li.as-hecho{opacity:.45;text-decoration:line-through}
+.as-ok.hecho,.as-ok.hecho:hover{background:var(--ok);border-color:var(--ok);color:var(--card);cursor:default}
+.as-link{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;cursor:pointer;text-align:left}
+.as-link:hover{text-decoration-color:currentColor}
 @media (max-width:560px){#asisPanel{inset:0;width:auto;max-width:none;height:auto;border-radius:0;border:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}}
 
@@ -648,7 +650,16 @@ function mdAs(t){
     else if (l.trim()) h += "<p>" + l + "</p>";
   }
   h += ul ? "</ul>" : "";
-  return h.replace(/\[\[listo:(\d{8})\]\]/g, '<button type="button" class="as-ok" data-a="asRevisado" data-v="$1" title="Ya lo revisé: quitar de la lista hasta que vuelva a escribir">✓ Listo</button>');
+  return h.replace(/\[\[listo:(\d{8})\]\]/g, '<button type="button" class="as-ok" data-a="asRevisado" data-v="$1" title="Ya lo revisé: quitar de la lista hasta que vuelva a escribir">✓ Listo</button>')
+    .replace(/\[\[prod:(\d{8})\]\]/g, '<button type="button" class="as-ok" data-a="asProdOk" data-v="$1" title="Ya se respondió la consulta a producción">✓ Listo</button>')
+    .replace(/\[\[chat:(\d{8})\|([^\]]*)\]\]/g, '<button type="button" class="as-link" data-a="asVerChat" data-v="$1" title="Abrir la conversación">$2</button>')
+    .replace(/\[\[cot:([A-Za-z0-9-]+)\|([^\]]*)\]\]/g, '<button type="button" class="as-link" data-a="asVerCot" data-v="$1" title="Abrir la cotización $1">$2</button>');
+}
+async function asMarcar(sel, datos){
+  const bs = [...document.querySelectorAll(sel)];
+  bs.forEach(b => { b.classList.add("hecho"); b.disabled = true; });
+  try { await fnAsistente(datos); }
+  catch (e) { console.error(e); bs.forEach(b => { b.classList.remove("hecho"); b.disabled = false; }); toast("No se pudo marcar. Intenta de nuevo."); }
 }
 function asRender(){
   const p = $("#asisPanel"); if (!p) return;
@@ -1628,11 +1639,12 @@ const A = {
     }
   },
   asCerrar(){ AS.abierto = false; asRender(); },
-  async asRevisado(v){
-    const b = document.querySelector(`.as-ok[data-v="${v}"]`), li = b && b.closest("li");
-    if (li) li.classList.add("as-hecho"); if (b) b.disabled = true;
-    try { await fnAsistente({accion: "revisado", tel: v}); }
-    catch (e) { console.error(e); if (li) li.classList.remove("as-hecho"); if (b) b.disabled = false; toast("No se pudo marcar. Intenta de nuevo."); }
+  async asRevisado(v){ await asMarcar(`.as-ok[data-a="asRevisado"][data-v="${v}"]`, {accion: "revisado", tel: v}); },
+  async asProdOk(v){ await asMarcar(`.as-ok[data-a="asProdOk"][data-v="${v}"]`, {accion: "consultaOk", tel: v}); },
+  asVerChat(v){
+    const c = S.convs.find(x => String(x.tel || x.id).replace(/\D/g, "").slice(-8) === v);
+    if (!c) return toast("No encontré ese chat.");
+    AS.abierto = false; asRender(); S.tab = "chats"; A.chatOpen(c.id);
   },
   async pasarCotAdmin(){
     const v = S.usuarios.find(u => (u.email || "").toLowerCase() === "comercial@mhasdehonduras.com");
