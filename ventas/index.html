@@ -321,7 +321,7 @@ function sugerirCodigo(cat){
 }
 const presDe = p => p.presentacion || (SEEDMAP[p.id] || {}).presentacion || "";
 const plural = (n, u) => n === 1 ? u : (u === "clisé" ? "clisés" : u + "s");
-function calc(items){
+function calc(items, flete){
   const lines = (items || []).map(i => {
     const u = (Number(i.precio) || 0) / 1.15, bruto = r2(u * i.cant);
     const descX = Math.min(bruto, Math.max(0, Math.round((Number(i.desc) || 0) * 1e4) / 1e4)); // descuento sin ISV (4 decimales)
@@ -332,10 +332,11 @@ function calc(items){
   });
   const sub = r2(lines.reduce((a, l) => a + l.bruto, 0));
   const desc = r2(lines.reduce((a, l) => a + l.desc, 0));
-  const total = r2(lines.reduce((a, l) => a + l.conIsv, 0));
+  const fleteIsv = Math.max(0, r2(Number(flete) || 0)), fleteB = r2(fleteIsv / 1.15); // flete con ISV, aparte de los productos
+  const total = r2(lines.reduce((a, l) => a + l.conIsv, 0) + fleteIsv);
   const base = r2(sub - desc);
   const unidades = (items || []).reduce((a, i) => a + (Number(i.cant) || 0), 0);
-  return {lines, sub, desc, base, isv: r2(total - base), total, unidades, n: lines.length};
+  return {lines, sub, desc, base, isv: r2(total - base - fleteB), total, flete: fleteB, fleteIsv, unidades, n: lines.length};
 }
 const pctTxt = p => (Number.isInteger(p) ? p : p.toFixed(1)) + "%";
 const pagado = c => r2((c.pagos || []).reduce((a, p) => a + (Number(p.monto) || 0), 0));
@@ -430,7 +431,7 @@ function vCotizar(){
   const sel = S.f.cli_sel || "";
   const nuevo = sel === "__nuevo";
   const cliSel = S.cli.find(c => c.id === sel);
-  const cc = calc(S.cart);
+  const cc = calc(S.cart, S.f.flete);
   const edPrecio = puede("admin");
   const cats = [];
   S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
@@ -497,7 +498,8 @@ function vCotizar(){
         <div class="dsc"><label class="mini" for="d${n}">Descuento L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
       </div></div>`; }).join("") + `<p class="note">Precios sin ISV. El descuento se escribe sobre el total con ISV.</p>
-    <div class="row" style="align-items:flex-end;margin:6px 0 4px"><div class="field" style="max-width:220px;margin:0"><label for="aj_total">Dejar total con ISV en (L.)</label><input id="aj_total" type="number" min="0" step="0.01" inputmode="decimal" data-k="aj_total" value="${fv("aj_total")}" placeholder="${r2(cc.total)}"></div><button class="btn" data-a="ajustarTotal">Aplicar</button></div>
+    <div class="row" style="align-items:flex-end;margin:6px 0 4px"><div class="field" style="max-width:220px;margin:0"><label for="aj_total">Dejar total con ISV en (L.)</label><input id="aj_total" type="number" min="0" step="0.01" inputmode="decimal" data-k="aj_total" value="${fv("aj_total")}" placeholder="${r2(cc.total - cc.fleteIsv)}"></div><button class="btn" data-a="ajustarTotal">Aplicar</button></div>
+    <div class="field" style="max-width:220px;margin:6px 0 4px"><label for="flete">Flete L. con ISV (opcional)</label><input id="flete" type="number" min="0" step="0.01" inputmode="decimal" data-k="flete" value="${fv("flete")}" placeholder="0.00"></div>
     <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
     : `<p class="empty">Todavía no agregas productos.</p>`}
     <div class="field" style="margin-top:12px"><label for="nt">Notas (opcional)</label><textarea id="nt" data-k="notas">${fv("notas")}</textarea></div>
@@ -517,12 +519,14 @@ function cliListHtml(){
 }
 function totalsHtml(cc, simple){
   if (simple) return `<div><span class="muted">Subtotal</span><span>${L(cc.base)}</span></div>
+    ${cc.flete ? `<div><span class="muted">Flete</span><span>${L(cc.flete)}</span></div>` : ""}
     <div><span class="muted">ISV 15%</span><span>${L(cc.isv)}</span></div>
     <div class="t"><span>Total</span><span>${L(cc.total)}</span></div>`;
   return `<div><span class="muted">${cc.n} ${cc.n === 1 ? "producto" : "productos"} · ${cc.unidades} ${cc.unidades === 1 ? "unidad" : "unidades"}</span><span></span></div>
     <div><span class="muted">Subtotal</span><span>${L(cc.sub)}</span></div>
     ${cc.desc > 0 ? `<div><span class="muted">Descuento (${pctTxt(cc.sub ? Math.round(cc.desc / cc.sub * 1000) / 10 : 0)})</span><span>− ${L(cc.desc)}</span></div>
     <div><span class="muted">Subtotal con descuento</span><span>${L(cc.base)}</span></div>` : ""}
+    ${cc.flete ? `<div><span class="muted">Flete</span><span>${L(cc.flete)}</span></div>` : ""}
     <div><span class="muted">ISV 15%</span><span>${L(cc.isv)}</span></div>
     <div class="t"><span>Total</span><span>${L(cc.total)}</span></div>`;
 }
@@ -555,7 +559,7 @@ function vCotizaciones(){
   S._listaCot = list;
   const esVend = rol() === "vendedor";
   const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => [c.vendedor, c.vendedorNombre || "Sin nombre"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  const tot = list.reduce((a, c) => { const cc = calc(c.items); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
+  const tot = list.reduce((a, c) => { const cc = calc(c.items, c.flete); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
   const hoyS = today(), mes = hoyS.slice(0, 7);
   const mesAnt = (() => { const d = new Date(hoyS + "T12:00:00"); d.setDate(1); d.setMonth(d.getMonth() - 1); return ymd(d).slice(0, 7); })();
   const finMes = m => { const d = new Date(m + "-01T12:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
@@ -966,6 +970,12 @@ function vAgente(){
     </div>
     <div class="field"><label for="ag_diasEq">Días que el chat queda contigo después de que escribes</label><input id="ag_diasEq" type="number" min="0" max="30" data-k="ag_diasEq" value="${esc(g("diasEq", a.diasEquipo ?? 3))}"></div>
     <p class="note">Cuando escribes en un chat desde el celular, el agente no vuelve a responder ahí hasta que pasen estos días sin que escribas, o hasta que le des "Devolver al agente". Con 0 se usa solo la pausa en horas.</p>
+    <div class="row">
+      <div class="field"><label for="ag_flete">Flete en SPS (L. con ISV)</label><input id="ag_flete" type="number" min="0" step="0.01" data-k="ag_flete" value="${esc(g("flete", a.fleteSPS ?? 80))}"></div>
+      <div class="field"><label for="ag_fleteHasta">Cobrar flete si el pedido es menor a (L.)</label><input id="ag_fleteHasta" type="number" min="0" step="1" data-k="ag_fleteHasta" value="${esc(g("fleteHasta", a.fleteHasta ?? 500))}"></div>
+      <div class="field"><label for="ag_minFuera">Pedido mínimo fuera de SPS (L.)</label><input id="ag_minFuera" type="number" min="0" step="1" data-k="ag_minFuera" value="${esc(g("minFuera", a.minimoFuera ?? 700))}"></div>
+    </div>
+    <p class="note">El agente agrega el flete solo a los pedidos de SPS menores al monto indicado, y no cotiza envíos fuera de SPS por debajo del mínimo. Con 0 se desactiva cada regla.</p>
   </div>
   <div class="panel">
     <h2>Reglas de venta</h2>
@@ -1213,7 +1223,7 @@ function mCot(){
   const [et, ec] = ESTADO[c.estado] || [c.estado, ""];
   const r = rol(), mio = c.vendedor === S.me.uid, fact = puede("admin", "facturador");
   const abierta = c.estado === "cotizada" && !c.eliminada && (fact || mio);
-  const mode = S.m.mode, cc = calc(c.items), full = fact;
+  const mode = S.m.mode, cc = calc(c.items, c.flete), full = fact;
   let extra = "";
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
@@ -1412,9 +1422,9 @@ function mCxp(){
 /* ---------- WhatsApp y PDF ---------- */
 function waLink(c){
   const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
-  const cc = calc(c.items);
+  const cc = calc(c.items, c.flete);
   (c.items || []).forEach((i, n) => lines.push(`${i.cant} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
-  lines.push("", `Subtotal: ${L(cc.base)}`, `ISV 15%: ${L(cc.isv)}`, `*Total: ${L(cc.total)}*`);
+  lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), `ISV 15%: ${L(cc.isv)}`, `*Total: ${L(cc.total)}*`);
   lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
   let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
   if (tel.length === 8) tel = "504" + tel;
@@ -1436,7 +1446,7 @@ function armarPdf(c, interno){
   const W = 215.9, M = 18, cx = W / 2, IW = W - 2 * M;
   const NAVY = [31, 56, 100], INK = [30, 30, 30], GRAY = [105, 110, 120], LINE = [205, 210, 220], YEL = [255, 248, 222], LAB = [232, 235, 242];
   const tc = a => d.setTextColor(a[0], a[1], a[2]), fc = a => d.setFillColor(a[0], a[1], a[2]), dc = a => d.setDrawColor(a[0], a[1], a[2]);
-  const cc = calc(c.items), hasD = !!interno && cc.desc > 0;
+  const cc = calc(c.items, c.flete), hasD = !!interno && cc.desc > 0;
   const v = c.vendedorInfo || {nombre: c.vendedorNombre || ""};
   try { d.addImage(LOGO, "JPEG", M, 20, 30, 14.8); } catch (_) {}
   if (interno) { d.setFont("helvetica", "bold"); d.setFontSize(8.5); d.setTextColor(180, 35, 24); d.text("COPIA INTERNA", W - M, 14, {align: "right"}); }
@@ -1490,7 +1500,7 @@ function armarPdf(c, interno){
     }
     y += h;
   }
-  const tot = [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
+  const tot = [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat(cc.flete ? [["Flete", L(cc.flete)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
   if (y + tot.length * 6 + 70 > 270) { d.addPage(); y = 20; }
   tot.forEach(([k, val]) => {
     dc(LINE); d.rect(M, y, IW - wT, 6); d.rect(M + IW - wT, y, wT, 6);
@@ -1688,14 +1698,15 @@ const A = {
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
       const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
-      const total = calc(items).total;
+      const flete = Math.max(0, r2(Number(S.f.flete) || 0));
+      const total = calc(items, flete).total;
       const e = emp();
       let numero, cot;
       if (S.editId) {
         const prev = S.cot.find(x => x.id === S.editId);
         if (!prev || prev.estado !== "cotizada") throw {code: "cerrada"};
         numero = prev.id;
-        const ch = {cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
+        const ch = {cliente, items, total, flete, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
         await updateDoc(doc(db, "cotizaciones", numero), ch);
         cot = Object.assign({}, prev, ch);
       } else {
@@ -1705,7 +1716,7 @@ const A = {
           if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
         } else numero = await siguienteNumero(iniciales());
-        cot = {numero, cliente, items, total, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
+        cot = {numero, cliente, items, total, flete, notas: clean(S.f.notas), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
           vendedor: S.me.uid, vendedorNombre: S.me.nombre || S.me.email,
           vendedorInfo: {nombre: S.me.nombre || S.me.email, cargo: S.me.cargo || "Ventas", tel: S.me.tel || e.whatsapp, correo: S.me.correo || S.me.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
@@ -1853,7 +1864,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "psel", "pcant", "pmodo", "cot_fecha", "cot_num"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -1862,7 +1873,7 @@ const A = {
     const cl = c.cliente || {};
     if (cl.id && S.cli.some(x => x.id === cl.id)) S.f.cli_sel = cl.id;
     else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
-    S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.cot_fecha = c.fecha || today();
+    S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.flete = Number(c.flete) ? String(c.flete) : ""; S.f.cot_fecha = c.fecha || today();
     S.cart = (c.items || []).map(i => ({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0, generico: !!i.generico}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
@@ -2052,7 +2063,7 @@ const A = {
     const a = S.ag || {}, g = (k, d) => S.f["ag_" + k] ?? d;
     const nums = String(g("nums", (a.numerosPrueba || []).join("\n"))).split(/[\n,;]+/).map(x => x.replace(/\D/g, "")).filter(Boolean).map(n => n.length === 8 ? "504" + n : n);
     const data = {modo: g("modo", a.modo || "prueba"), numerosPrueba: nums, asignarA: g("asignar", a.asignarA || "comercial@mhasdehonduras.com"),
-      pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), diasEquipo: Math.min(30, Math.max(0, Number(g("diasEq", a.diasEquipo ?? 3)) || 0)), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
+      pausaHoras: Math.max(1, Number(g("pausa", a.pausaHoras || 12)) || 12), diasEquipo: Math.min(30, Math.max(0, Number(g("diasEq", a.diasEquipo ?? 3)) || 0)), fleteSPS: Math.max(0, Number(g("flete", a.fleteSPS ?? 80)) || 0), fleteHasta: Math.max(0, Number(g("fleteHasta", a.fleteHasta ?? 500)) || 0), minimoFuera: Math.max(0, Number(g("minFuera", a.minimoFuera ?? 700)) || 0), maxRespuestasDia: Math.max(1, Number(g("max", a.maxRespuestasDia || 40)) || 40),
       reglas: String(g("reglas", a.reglas || REGLAS_DEF)), modelo: g("modelo", a.modelo || "economico"), modeloAsistente: g("modeloAs", a.modeloAsistente || "haiku"),
       limiteAsistenteAdmin: Math.max(1, Number(g("limAdm", a.limiteAsistenteAdmin || 50)) || 50), limiteAsistenteEquipo: Math.max(1, Number(g("limEq", a.limiteAsistenteEquipo || 20)) || 20),
       bienvenidaActiva: !!g("bienvActiva", a.bienvenidaActiva !== false), pausaNatural: !!g("pausaNat", a.pausaNatural !== false), esperaSeg: Math.min(120, Math.max(3, Number(g("espera", a.esperaSeg || 30)) || 30)), recompra: g("recompra", a.recompra || "agente"), botones: !!g("botones", a.botones !== false), recordatorio: !!g("rec", a.recordatorio !== false),
@@ -2348,7 +2359,7 @@ async function upd(ref, data, msg, merge){
 }
 
 function refrescarCarrito(){
-  const cc = calc(S.cart);
+  const cc = calc(S.cart, S.f.flete);
   cc.lines.forEach((l, n) => {
     const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
     const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? pctTxt(l.pct) : "0%";
@@ -2389,6 +2400,7 @@ document.addEventListener("input", e => {
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
   if (k) {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
+    if (k === "flete") refrescarCarrito();
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
     if (k === "cq" || k === "prq") draw();
     if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta") {
