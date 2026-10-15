@@ -1049,7 +1049,7 @@ function vClientes(){
   return `
   <h1>Clientes</h1>
   <p class="sub">${S.cli.length} ${S.cli.length === 1 ? "cliente" : "clientes"}. El próximo pedido se calcula con el promedio de días entre sus pedidos (30 días si solo tiene uno); puedes fijarlo en cada cliente.</p>
-  <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="cliNuevo">+ Nuevo cliente</button><button class="btn" data-a="cliCsv">Descargar base (Excel)</button>${S.admin ? `<button class="btn pri" data-a="metaSemanal" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Reporte semanal para Meta"}</button>` : ""}</div>
+  <div class="actions" style="margin:0 0 12px"><button class="btn pri" data-a="cliNuevo">+ Nuevo cliente</button><button class="btn" data-a="cliCsv">Descargar base (Excel)</button></div>
   <div class="chips" role="group" aria-label="Filtrar clientes">
     <button data-a="cfil" data-v="todos" aria-pressed="${fil === "todos"}">Todos</button>
     <button data-a="cfil" data-v="toca" aria-pressed="${fil === "toca"}">Toca pedir${toca ? ` <span class="cnt hot">${toca}</span>` : ""}</button></div>
