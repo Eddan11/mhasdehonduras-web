@@ -1261,39 +1261,52 @@ function utilDe(c, g){
   return {venta, costo, gastos, neta: r2(venta - costo - gastos), u, sinCosto};
 }
 const repTxt = rep => (rep || []).length ? rep.map(x => `${esc(x.ini)} ${Number(x.pct) % 1 ? Number(x.pct).toFixed(1) : Number(x.pct)}%`).join(" · ") : "";
+// Dueño de la venta: lo del agente (EMW), lo importado y lo de la cuenta comercial es de Eduardo (EM)
+function duenoDe(c){
+  const U = S.usuarios || [], adm = U.find(u => String(u.email || "").toLowerCase() === ADMIN), com = U.find(u => String(u.email || "").toLowerCase() === "comercial@mhasdehonduras.com");
+  const em = adm ? iniDe(adm) : "EM";
+  if (c.origen === "whatsapp") return {grupo: em, tag: em + "W"};
+  const u = U.find(x => x.id === c.vendedor);
+  if (!u || (adm && u.id === adm.id) || (com && u.id === com.id) || !["vendedor", "facturador"].includes(u.rol)) return {grupo: em, tag: em};
+  const ini = iniDe(u); return {grupo: ini, tag: ini};
+}
 function vUtilidad(){
-  const per = S.f.ut_per || "", fil = S.f.ut_fil || "pend", q = clean(S.f.utq).toLowerCase();
-  let list = S.cot.filter(pagadaCot);
-  if (q) list = list.filter(c => [c.numero, c.factura && c.factura.numero, c.cliente && c.cliente.nombre].join(" ").toLowerCase().includes(q));
-  list = list.map(c => ({c, d: utilDe(c)}));
-  if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado);
-  if (per) list = list.filter(x => (x.d.u.reparto || []).some(r => r.uid === per));
+  const fil = S.f.ut_fil || "pend", ven = S.f.ut_ven || "", q = clean(S.f.utq).toLowerCase(), yo = S.me.uid;
+  const todas = S.cot.filter(pagadaCot).map(c => ({c, d: utilDe(c), o: duenoDe(c)}));
+  const miParte = x => { const r = (x.d.u.reparto || []).find(r => r.uid === yo); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
+  // Resumen personal: solo lo de quien entró
+  const R = todas.reduce((a, x) => { const m = miParte(x); if (m) { a.t += m.monto; if (x.d.u.pagado) a.p += m.monto; } return a; }, {t: 0, p: 0});
+  const grupos = [...new Set(todas.map(x => x.o.grupo))].sort();
+  let list = todas;
+  if (ven) list = list.filter(x => x.o.grupo === ven);
+  if (q) list = list.filter(x => [x.c.numero, x.c.factura && x.c.factura.numero, x.c.cliente && x.c.cliente.nombre].join(" ").toLowerCase().includes(q));
+  if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado); else if (fil === "sin") list = list.filter(x => !(x.d.u.reparto || []).length);
   list.sort((a, b) => String((b.c.factura || {}).fecha || b.c.fecha || "").localeCompare(String((a.c.factura || {}).fecha || a.c.fecha || "")));
-  const parte = x => { const r = (x.d.u.reparto || []).find(r => r.uid === per); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
-  const T = list.reduce((a, x) => { a.venta += x.d.venta; a.costo += x.d.costo; a.gastos += x.d.gastos; a.neta += x.d.neta; if (per) { const pp = parte(x); if (pp) { a.mia += pp.monto; if (x.d.u.pagado) a.miaPag += pp.monto; } } return a; }, {venta: 0, costo: 0, gastos: 0, neta: 0, mia: 0, miaPag: 0});
-  const P = personas(), pn = P.find(x => x.uid === per);
+  const T = list.reduce((a, x) => { a.venta += x.d.venta; a.costo += x.d.costo; a.gastos += x.d.gastos; a.neta += x.d.neta; const m = miParte(x); if (m) a.mia += m.monto; return a; }, {venta: 0, costo: 0, gastos: 0, neta: 0, mia: 0});
+  const vacio = fil === "sin" ? "Todas las facturas pagadas ya tienen reparto." : `No hay facturas pagadas${fil === "pend" ? " pendientes" : fil === "pag" ? " ya cerradas" : ""}${ven ? " de " + esc(ven) : ""}.`;
   return `
   <h1>Utilidad</h1>
   <p class="sub">Facturas ya pagadas. Utilidad neta = total sin ISV − costo sin ISV − gastos. Al marcar "Pagado" la fila queda cerrada y ya no cambia aunque se actualicen precios o costos.</p>
-  <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
-  <div class="chips" role="group" aria-label="Persona"><button data-a="utPer" data-v="" aria-pressed="${!per}">Todas las personas</button>${P.map(x => `<button data-a="utPer" data-v="${esc(x.uid)}" aria-pressed="${per === x.uid}" title="${esc(x.nombre)}">${esc(x.ini)}</button>`).join("")}</div>
+  <div class="pr-resumen"><div><small>Mi utilidad · total</small><b>${L(R.t)}</b></div><div><small>Ya me pagaron</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>Me falta recibir</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
+  <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
-  ${pn ? `<div class="pr-resumen"><div><small>${esc(pn.nombre)} · total</small><b>${L(T.mia)}</b></div><div><small>Ya pagado</small><b style="color:var(--ok)">${L(T.miaPag)}</b></div><div><small>Pendiente</small><b style="color:var(--warn)">${L(r2(T.mia - T.miaPag))}</b></div></div>` : ""}
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Factura</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos</th><th class="num">Utilidad neta</th><th>Reparto</th>${pn ? `<th class="num">${esc(pn.ini)} %</th><th class="num">${esc(pn.ini)} monto</th>` : ""}<th>Pagado</th></tr></thead><tbody>
-    ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, pp = pn ? parte(x) : null, suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
+  ${list.length ? `<table><thead><tr><th>Factura</th><th>Venta de</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
+    ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, m = miParte(x), suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
       return `<tr${cer ? ' style="opacity:.75"' : ""}>
       <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b><br><small class="muted">${esc(c.numero)} · ${esc((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
+      <td><span class="badge" title="${x.o.tag.endsWith("W") ? "Venta del agente de WhatsApp" : ""}">${esc(x.o.tag)}</span></td>
       <td class="num">${L(d.venta)}</td>
       <td class="num">${L(d.costo)}${d.sinCosto ? `<br><small style="color:var(--warn)">${d.sinCosto} sin costo</small>` : ""}</td>
       <td class="num">${cer ? L(d.gastos) : `<input class="pin" style="max-width:110px" type="number" min="0" step="0.01" inputmode="decimal" data-gasto="${esc(c.id)}" value="${d.gastos || ""}" placeholder="0.00" aria-label="Gastos de ${esc(c.numero)}">`}</td>
       <td class="num"><b style="color:${d.neta < 0 ? "var(--bad)" : "var(--ok)"}">${L(d.neta)}</b></td>
       <td>${cer ? `<small>${repTxt(d.u.reparto) || "—"}</small>` : `<button class="btn sm" data-a="repAbrir" data-v="${esc(c.id)}">${repTxt(d.u.reparto) || "Asignar"}</button>${(d.u.reparto || []).length && Math.abs(suma - 100) > 0.05 ? `<br><small style="color:var(--bad)">Suma ${r2(suma)}%</small>` : ""}`}</td>
-      ${pn ? `<td class="num">${pp ? r2(pp.pct) + "%" : "—"}</td><td class="num">${pp ? L(pp.monto) : "—"}</td>` : ""}
+      <td class="num">${m ? `${L(m.monto)}<br><small class="muted">${r2(m.pct)}%</small>` : '<span class="muted">—</span>'}</td>
       <td>${cer ? `<span class="badge b-ok">☑ Pagado</span><br><small class="muted">${d.u.pagadoEn ? fdate(ymd(new Date(d.u.pagadoEn))) : ""}</small>` : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:20px;min-height:20px" data-a="utPagar" data-v="${esc(c.id)}"> Pagado</label>`}</td></tr>`; }).join("")}
-  </tbody><tfoot><tr class="tfoot"><td><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td>${pn ? `<td></td><td class="num"><b>${L(T.mia)}</b></td>` : ""}<td></td></tr></tfoot></table>` : `<p class="empty">No hay facturas pagadas ${fil === "pag" ? "cerradas" : "pendientes"}${pn ? " para " + esc(pn.ini) : ""}.</p>`}
+  </tbody><tfoot><tr class="tfoot"><td colspan="2"><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td><td class="num"><b>${L(T.mia)}</b></td><td></td></tr></tfoot></table>` : `<p class="empty">${vacio}</p>`}
   </div></div>
-  <p class="note">El costo se toma del precio de compra guardado al facturar (las facturas anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
+  <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen de arriba y "Mi parte" son solo tuyos. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
 }
 function mRep(){
   const c = S.cot.find(x => x.id === S.m.id); if (!c) return "";
@@ -2462,7 +2475,7 @@ const A = {
   async invReorden(){ const v = Number(S.f.inv_ro); if (S.f.inv_ro == null || S.f.inv_ro === "" || !(v >= 0)) return toast("Escribe un número válido."); if (await upd(doc(db, "inventario", S.m.id), {reorden: Math.round(v), actualizado: Date.now(), por: S.me.uid}, "Reorden guardado", true)) { delete S.f.inv_ro; draw(); } },
   async invReordenSug(){ if (await upd(doc(db, "inventario", S.m.id), {reorden: null, actualizado: Date.now(), por: S.me.uid}, "Se usará el reorden sugerido", true)) { delete S.f.inv_ro; draw(); } },
   utFil(v){ S.f.ut_fil = v; draw(); },
-  utPer(v){ S.f.ut_per = v; draw(); },
+  utVen(v){ S.f.ut_ven = v; draw(); },
   repAbrir(v){ S.m = {type: "rep", id: v}; draw(); },
   repToggle(v){ const R = S.m.rep || []; const i = R.findIndex(r => r.uid === v); if (i >= 0) R.splice(i, 1); else { const x = personas().find(p => p.uid === v); if (x) R.push({uid: x.uid, ini: x.ini, nombre: x.nombre, pct: 0}); } igualar(R); S.m.rep = R; draw(); },
   repIgual(){ igualar(S.m.rep || []); draw(); },
