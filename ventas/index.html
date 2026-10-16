@@ -286,11 +286,11 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "chats", "agente", "clientes", "productos", "cobros", "pagar", "perfil", "ajustes"],
-  facturador: ["cotizar", "cotizaciones", "clientes", "productos", "cobros", "pagar", "perfil"],
-  vendedor: ["cotizar", "cotizaciones", "perfil"]
+  admin: ["cotizar", "pizarra", "cotizaciones", "chats", "agente", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil", "ajustes"],
+  facturador: ["cotizar", "pizarra", "cotizaciones", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil"],
+  vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
-const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -389,7 +389,7 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes}[S.tab];
+  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -432,7 +432,7 @@ function vCotizar(){
   const nuevo = sel === "__nuevo";
   const cliSel = S.cli.find(c => c.id === sel);
   const cc = calc(S.cart, S.f.flete);
-  const edPrecio = puede("admin");
+  const edPrecio = puede("admin", "facturador");
   const cats = [];
   S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const psel = S.prod.find(p => p.id === S.f.psel);
@@ -1080,7 +1080,7 @@ function vClientes(){
 /* ---------- vista: productos ---------- */
 function vProductos(){
   const q = clean(S.f.prq).toLowerCase();
-  const adm = puede("admin");
+  const adm = puede("admin", "facturador");
   const fam = S.f.pr_fam || "";
   let list = S.prod.filter(p => adm || p.activo !== false).filter(p => !q || [codDe(p), p.nombre, p.categoria, presDe(p)].join(" ").toLowerCase().includes(q));
   if (!adm) return `
@@ -1105,7 +1105,7 @@ function vProductos(){
   const bajos = conCosto.filter(p => datosMargen(p).pct < MARGEN_MIN).length;
   return `
   <h1>Productos</h1>
-  <p class="sub">${edit ? "Escribe el precio de compra sin ISV de cada presentación. Pasa al siguiente con Tab o Enter y al final toca Guardar costos." : "Toca un producto para editarlo. La compra, la ganancia y el margen solo los ves tú; todo va sin ISV."}</p>
+  <p class="sub">${edit ? "Escribe el precio de compra sin ISV de cada presentación. Pasa al siguiente con Tab o Enter y al final toca Guardar costos." : "Toca un producto para editarlo. La compra, la ganancia y el margen solo los ven administración y facturación; todo va sin ISV. Con el botón Activo/Inactivo lo quitas de cotizaciones, inventario y del agente sin borrarlo."}</p>
   <div class="actions" style="margin:0 0 12px">
     ${edit ? `<button class="btn pri" data-a="pcGuardar" ${S.busy ? "disabled" : ""}>Guardar costos</button><button class="btn" data-a="pcPegar">Pegar lista</button><button class="btn" data-a="pcCancelar">Cancelar</button>`
       : `<button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button><button class="btn" data-a="pcEditar">Editar costos</button><button class="btn" data-a="prodExcel">Descargar Excel</button>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}`}
@@ -1122,9 +1122,9 @@ function vProductos(){
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table class="pr-tabla"><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Venta con ISV</th><th class="num">Venta sin ISV</th><th class="num">Compra sin ISV</th><th class="num">Ganancia</th><th class="num">Margen</th><th class="num" title="Precio más bajo (con ISV) que deja ${MARGEN_MIN}% de margen">Precio mínimo</th><th class="num" title="Cuánto puedes rebajar (con ISV) sin bajar de ${MARGEN_MIN}%">Desc. máximo</th><th>Costo al</th></tr></thead><tbody>
     ${list.map(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {}, viejo = c.actualizado && Date.now() - c.actualizado > 60 * 864e5;
-      return `<tr ${edit ? "" : `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"`}${p.activo === false ? ' style="opacity:.5"' : ""}>
+      return `<tr ${edit ? "" : `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"`}${p.activo === false ? ' style="opacity:.45;filter:grayscale(1)"' : ""}>
       <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
-      <td>${esc(p.nombre)}${p.activo === false ? ' <span class="badge">Inactivo</span>' : ""}</td>
+      <td>${esc(p.nombre)} ${edit ? "" : `<button class="btn sm" data-a="prodActivo" data-v="${esc(p.id)}" title="${p.activo === false ? "Activar: vuelve a salir al cotizar, en inventario y para el agente" : "Desactivar: deja de salir al cotizar, en inventario y para el agente"}">${p.activo === false ? "Inactivo" : "Activo"}</button>`}</td>
       <td class="muted">${esc(presDe(p))}</td>
       <td class="num">${L(p.precio)}</td><td class="num">${L(d.venta)}</td>
       <td class="num">${edit ? `<input class="pc-in" type="number" min="0" step="0.01" inputmode="decimal" data-pc="${esc(p.id)}" data-cod="${esc(codDe(p))}" value="${esc(S.pcEdit[p.id] ?? (compraDe(p) || ""))}" aria-label="Compra sin ISV de ${esc(p.nombre)}">` : (d.compra ? L(d.compra) : '<span class="muted">—</span>')}</td>
@@ -1136,6 +1136,211 @@ function vProductos(){
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>
   <p class="note">Margen = ganancia ÷ venta sin ISV. Precio mínimo y descuento máximo van con ISV (como se los dices al cliente) y respetan el margen mínimo de ${MARGEN_MIN}%.</p>`;
+}
+
+function igualar(R){ const n = R.length; if (!n) return; const b = Math.floor(10000 / n) / 100; R.forEach((r, i) => { r.pct = i === n - 1 ? r2(100 - b * (n - 1)) : b; }); }
+/* ---------- inventario ---------- */
+// Existencia = último conteo + entradas/ajustes posteriores − lo facturado después del conteo (se calcula solo con las facturas)
+const invTs = c => Number(c.facturadaEn) || (c.factura && c.factura.fecha ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : 0);
+const presPal = p => ((presDe(p) || "presentación").split(/\s+/)[0] || "presentación").toLowerCase();
+const plu = (n, w) => n === 1 ? w : (/[aeiou]$/.test(w) ? w + "s" : w + "es");
+function cantTxt(p, n){
+  if (n == null) return "—";
+  const u = uni(p), un = Number(n) || 0, base = un.toLocaleString("en-US") + " " + plu(Math.abs(un), unidadDe(p));
+  if (u <= 1) return base;
+  const pr = Math.round(un / u * 10) / 10;
+  return `${pr.toLocaleString("en-US")} ${plu(pr, presPal(p))} <small class="muted">(${base})</small>`;
+}
+function invDatos(){
+  const ahora = Date.now(), X = {};
+  S.prod.filter(p => p.activo !== false).forEach(p => { X[p.id] = {p, base: 0, t0: null, mov: 0, sal: 0, comp: 0, v30: 0, v90: 0}; });
+  (S.invMov || []).slice().sort((a, b) => (a.ts || 0) - (b.ts || 0)).forEach(m => {
+    const x = X[m.prod]; if (!x) return;
+    if (m.tipo === "conteo") { x.base = Number(m.cant) || 0; x.t0 = m.ts || 0; x.mov = 0; }
+    else { if (x.t0 == null) { x.t0 = m.ts || 0; x.base = 0; } x.mov += Number(m.cant) || 0; }
+  });
+  S.cot.forEach(c => {
+    if (c.eliminada) return;
+    if (c.estado === "aprobada") (c.items || []).forEach(i => { const x = X[i.id]; if (x) x.comp += Number(i.cant) || 0; });
+    if (c.estado !== "facturada") return;
+    const ts = invTs(c);
+    (c.items || []).forEach(i => {
+      const x = X[i.id]; if (!x) return; const n = Number(i.cant) || 0;
+      if (x.t0 != null && ts >= x.t0) x.sal += n;
+      if (ahora - ts <= 30 * 864e5) x.v30 += n;
+      if (ahora - ts <= 90 * 864e5) x.v90 += n;
+    });
+  });
+  return Object.values(X).map(x => {
+    const p = x.p, u = uni(p), exist = x.t0 == null ? null : x.base + x.mov - x.sal;
+    const diaria = x.v90 / 90, sug = diaria > 0 ? Math.ceil(diaria * 10 / u) * u : 0; // 7 días de venta + 3 de margen, en presentaciones completas
+    const guardado = (S.inv || {})[p.id], reorden = guardado && guardado.reorden != null ? Number(guardado.reorden) : sug;
+    const disp = exist == null ? null : exist - x.comp;
+    const estado = exist == null ? ["Sin conteo", ""] : exist <= 0 ? ["Agotado", "b-bad"] : disp <= reorden ? ["Pedir", "b-warn"] : ["OK", "b-ok"];
+    return {p, exist, comp: x.comp, disp, reorden, sug, manual: !!(guardado && guardado.reorden != null), estado, v30: x.v30, v90: x.v90, dias: exist != null && diaria > 0 ? Math.max(0, Math.floor(exist / diaria)) : null};
+  });
+}
+function vInventario(){
+  const q = clean(S.f.invq).toLowerCase(), fil = S.f.inv_fil || "todos";
+  const D = invDatos().sort((a, b) => b.v90 - a.v90 || (a.p.orden ?? 999) - (b.p.orden ?? 999));
+  const n = k => D.filter(d => d.estado[0] === k).length;
+  let list = D.filter(d => !q || [codDe(d.p), d.p.nombre, d.p.categoria].join(" ").toLowerCase().includes(q));
+  if (fil !== "todos") list = list.filter(d => d.estado[0] === fil);
+  return `
+  <h1>Inventario</h1>
+  <p class="sub">Se descuenta solo al facturar. "Comprometido" es lo que está por facturar. Ordenado por lo que más se vende (90 días).</p>
+  <div class="pr-resumen">
+    <div><small>Pedir</small><b style="color:${n("Pedir") ? "var(--warn)" : "var(--ink)"}">${n("Pedir")}</b></div>
+    <div><small>Agotados</small><b style="color:${n("Agotado") ? "var(--bad)" : "var(--ink)"}">${n("Agotado")}</b></div>
+    <div><small>Sin conteo</small><b>${n("Sin conteo")}</b></div>
+  </div>
+  <div class="chips" role="group" aria-label="Estado">${[["todos", "Todos"], ["Pedir", "Pedir"], ["Agotado", "Agotados"], ["Sin conteo", "Sin conteo"], ["OK", "OK"]].map(([v, t]) => `<button data-a="invFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
+  <div class="field" style="max-width:360px"><label for="invq">Buscar por código o nombre</label><input id="invq" data-k="invq" value="${fv("invq")}" autocomplete="off"></div>
+  <div class="panel" style="padding:6px 10px"><div class="scroll">
+  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th class="num">Existencia</th><th class="num">Comprometido</th><th class="num">Disponible</th><th class="num">Reorden</th><th>Estado</th><th class="num">Vendido 30 d</th><th class="num">Vendido 90 d</th><th class="num">Días de inventario</th></tr></thead><tbody>
+    ${list.map(d => `<tr class="click" data-a="invAbrir" data-v="${esc(d.p.id)}" tabindex="0">
+      <td><span class="stub">${esc(codDe(d.p) || "—")}</span></td><td>${esc(d.p.nombre)}</td>
+      <td class="num">${cantTxt(d.p, d.exist)}</td><td class="num">${d.comp ? cantTxt(d.p, d.comp) : '<span class="muted">—</span>'}</td>
+      <td class="num">${d.disp == null ? "—" : `<b style="color:${d.disp <= 0 ? "var(--bad)" : "var(--ink)"}">${cantTxt(d.p, d.disp)}</b>`}</td>
+      <td class="num">${d.reorden ? cantTxt(d.p, d.reorden) : '<span class="muted">—</span>'}${d.manual ? "" : ' <small class="muted">sug.</small>'}</td>
+      <td><span class="badge ${d.estado[1]}">${d.estado[0]}</span></td>
+      <td class="num">${d.v30 ? cantTxt(d.p, d.v30) : '<span class="muted">0</span>'}</td><td class="num">${d.v90 ? cantTxt(d.p, d.v90) : '<span class="muted">0</span>'}</td>
+      <td class="num">${d.dias == null ? '<span class="muted">—</span>' : d.dias + " d"}</td></tr>`).join("")}
+  </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
+  </div></div>
+  <p class="note">Toca un producto para registrar entradas, conteos o ajustes y ver su historial. El reorden sugerido es lo que vendes en 10 días (7 de venta + 3 de margen), redondeado a presentaciones completas; lo puedes cambiar. Los productos inactivos no aparecen aquí.</p>`;
+}
+function mInv(){
+  const d = invDatos().find(x => x.p.id === S.m.id); if (!d) return "";
+  const p = d.p, u = uni(p), modo = S.f.inv_modo || (u > 1 ? "p" : "u");
+  const ent = (S.invMov || []).filter(m => m.prod === p.id).map(m => ({ts: m.ts, tipo: {conteo: "Conteo", entrada: "Entrada", ajuste: "Ajuste"}[m.tipo] || m.tipo, cant: m.cant, quien: m.porNombre || "", nota: m.nota || ""}));
+  const sal = S.cot.filter(c => !c.eliminada && c.estado === "facturada").flatMap(c => (c.items || []).filter(i => i.id === p.id).map(i => ({ts: invTs(c), tipo: "Factura", cant: -(Number(i.cant) || 0), quien: c.vendedorNombre || "", nota: c.numero + (c.factura && c.factura.numero ? " · " + c.factura.numero : "")})));
+  const hist = ent.concat(sal).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 30);
+  return `
+  <div class="bigstub">${esc(codDe(p))}</div><h2 style="margin-top:6px">${esc(p.nombre)}</h2>
+  <dl class="kv"><dt>Existencia</dt><dd>${cantTxt(p, d.exist)}</dd><dt>Comprometido</dt><dd>${cantTxt(p, d.comp)}</dd><dt>Disponible</dt><dd>${cantTxt(p, d.disp)}</dd><dt>Estado</dt><dd><span class="badge ${d.estado[1]}">${d.estado[0]}</span></dd></dl>
+  <hr class="sep"><h2>Registrar movimiento</h2>
+  <div class="chips" role="group" aria-label="Tipo">${[["entrada", "Entrada (compra)"], ["conteo", "Conteo físico"], ["ajuste", "Ajuste (merma, error)"]].map(([v, t]) => `<button data-a="invTipo" data-v="${v}" aria-pressed="${(S.f.inv_tipo || "entrada") === v}">${t}</button>`).join("")}</div>
+  ${u > 1 ? `<div class="chips" role="group" aria-label="Cantidad en"><button data-a="invModo" data-v="p" aria-pressed="${modo === "p"}">En ${plu(2, presPal(p))} (${u} c/u)</button><button data-a="invModo" data-v="u" aria-pressed="${modo === "u"}">En ${plu(2, unidadDe(p))}</button></div>` : ""}
+  <div class="row">
+    <div class="field"><label for="inv_cant">${(S.f.inv_tipo || "entrada") === "conteo" ? "Cantidad real en bodega" : (S.f.inv_tipo === "ajuste" ? "Cantidad (negativa si se resta)" : "Cantidad recibida")}</label><input id="inv_cant" type="number" step="any" inputmode="decimal" data-k="inv_cant" value="${fv("inv_cant")}"></div>
+    <div class="field" style="flex:2 1 220px"><label for="inv_nota">Nota (proveedor, motivo…)</label><input id="inv_nota" data-k="inv_nota" value="${fv("inv_nota")}"></div>
+  </div>
+  <div class="actions"><button class="btn pri" data-a="invGuardar" ${S.busy ? "disabled" : ""}>Guardar movimiento</button></div>
+  <hr class="sep"><h2>Punto de reorden</h2>
+  <div class="row" style="align-items:flex-end">
+    <div class="field" style="max-width:220px;margin:0"><label for="inv_ro">Reorden (en ${plu(2, unidadDe(p))})</label><input id="inv_ro" type="number" min="0" step="1" data-k="inv_ro" value="${esc(S.f.inv_ro ?? d.reorden)}"></div>
+    <button class="btn" data-a="invReorden" ${S.busy ? "disabled" : ""}>Guardar reorden</button>${d.manual ? `<button class="btn" data-a="invReordenSug">Usar sugerido (${d.sug})</button>` : ""}
+  </div>
+  <p class="note">Sugerido: ${cantTxt(p, d.sug)} (vendes ${cantTxt(p, d.v90)} en 90 días).</p>
+  <hr class="sep"><h2>Historial</h2>
+  ${hist.length ? `<div class="scroll"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Cantidad</th><th>Quién / nota</th></tr></thead><tbody>${hist.map(h => `<tr><td>${h.ts ? fdate(ymd(new Date(h.ts))) : "—"}</td><td>${esc(h.tipo)}</td><td class="num">${h.tipo === "Conteo" ? "= " : (h.cant > 0 ? "+" : "")}${(Number(h.cant) || 0).toLocaleString("en-US")}</td><td><small>${esc([h.quien, h.nota].filter(Boolean).join(" · "))}</small></td></tr>`).join("")}</tbody></table></div>` : `<p class="empty">Sin movimientos todavía. Empieza con un conteo físico.</p>`}`;
+}
+// Aviso al facturar si no hay existencia (no bloquea)
+function faltantes(c){
+  const D = new Map(invDatos().map(d => [d.p.id, d]));
+  return (c.items || []).map(i => ({i, d: D.get(i.id)})).filter(x => x.d && x.d.exist != null && x.d.exist < (Number(x.i.cant) || 0))
+    .map(x => `${codDe(x.d.p) || x.i.nombre}: hay ${Math.max(0, x.d.exist)} y se facturan ${x.i.cant}`);
+}
+
+/* ---------- utilidad ---------- */
+const costoUnit = id => { const p = S.prod.find(x => x.id === id), c = (S.costos || {})[id]; return p && c && Number(c.compra) > 0 ? Number(c.compra) / uni(p) : 0; };
+const iniDe = u => (String(u.ini || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4)) || String(u.nombre || u.email || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase() || "?";
+function personas(){
+  return S.usuarios.filter(u => ["vendedor", "facturador"].includes(u.rol) || String(u.email || "").toLowerCase() === ADMIN)
+    .map(u => ({uid: u.id, ini: iniDe(u), nombre: u.nombre || u.email || ""})).sort((a, b) => a.ini.localeCompare(b.ini));
+}
+const pagadaCot = c => c.estado === "facturada" && !c.eliminada && saldo(c) <= 0.005;
+function utilDe(c, g){
+  const u = (S.util || {})[c.id] || {};
+  const gastos = g != null ? Math.max(0, r2(Number(g) || 0)) : Math.max(0, Number(u.gastos) || 0);
+  if (u.pagado && u.snap) return Object.assign({}, u.snap, {gastos: Number(u.gastos) || 0, neta: r2(u.snap.venta - u.snap.costo - (Number(u.gastos) || 0)), u, sinCosto: 0});
+  const cc = calc(c.items, c.flete), venta = r2(cc.base + (cc.flete || 0));
+  let sinCosto = 0;
+  const costo = r2((c.items || []).reduce((a, i) => { const cu = i.costoU != null ? Number(i.costoU) : costoUnit(i.id); if (!(cu > 0)) sinCosto++; return a + (cu || 0) * (Number(i.cant) || 0); }, 0));
+  return {venta, costo, gastos, neta: r2(venta - costo - gastos), u, sinCosto};
+}
+const repTxt = rep => (rep || []).length ? rep.map(x => `${esc(x.ini)} ${Number(x.pct) % 1 ? Number(x.pct).toFixed(1) : Number(x.pct)}%`).join(" · ") : "";
+function vUtilidad(){
+  const per = S.f.ut_per || "", fil = S.f.ut_fil || "pend", q = clean(S.f.utq).toLowerCase();
+  let list = S.cot.filter(pagadaCot);
+  if (q) list = list.filter(c => [c.numero, c.factura && c.factura.numero, c.cliente && c.cliente.nombre].join(" ").toLowerCase().includes(q));
+  list = list.map(c => ({c, d: utilDe(c)}));
+  if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado);
+  if (per) list = list.filter(x => (x.d.u.reparto || []).some(r => r.uid === per));
+  list.sort((a, b) => String((b.c.factura || {}).fecha || b.c.fecha || "").localeCompare(String((a.c.factura || {}).fecha || a.c.fecha || "")));
+  const parte = x => { const r = (x.d.u.reparto || []).find(r => r.uid === per); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
+  const T = list.reduce((a, x) => { a.venta += x.d.venta; a.costo += x.d.costo; a.gastos += x.d.gastos; a.neta += x.d.neta; if (per) { const pp = parte(x); if (pp) { a.mia += pp.monto; if (x.d.u.pagado) a.miaPag += pp.monto; } } return a; }, {venta: 0, costo: 0, gastos: 0, neta: 0, mia: 0, miaPag: 0});
+  const P = personas(), pn = P.find(x => x.uid === per);
+  return `
+  <h1>Utilidad</h1>
+  <p class="sub">Facturas ya pagadas. Utilidad neta = total sin ISV − costo sin ISV − gastos. Al marcar "Pagado" la fila queda cerrada y ya no cambia aunque se actualicen precios o costos.</p>
+  <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="Persona"><button data-a="utPer" data-v="" aria-pressed="${!per}">Todas las personas</button>${P.map(x => `<button data-a="utPer" data-v="${esc(x.uid)}" aria-pressed="${per === x.uid}" title="${esc(x.nombre)}">${esc(x.ini)}</button>`).join("")}</div>
+  <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
+  ${pn ? `<div class="pr-resumen"><div><small>${esc(pn.nombre)} · total</small><b>${L(T.mia)}</b></div><div><small>Ya pagado</small><b style="color:var(--ok)">${L(T.miaPag)}</b></div><div><small>Pendiente</small><b style="color:var(--warn)">${L(r2(T.mia - T.miaPag))}</b></div></div>` : ""}
+  <div class="panel" style="padding:6px 10px"><div class="scroll">
+  ${list.length ? `<table><thead><tr><th>Factura</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos</th><th class="num">Utilidad neta</th><th>Reparto</th>${pn ? `<th class="num">${esc(pn.ini)} %</th><th class="num">${esc(pn.ini)} monto</th>` : ""}<th>Pagado</th></tr></thead><tbody>
+    ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, pp = pn ? parte(x) : null, suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
+      return `<tr${cer ? ' style="opacity:.75"' : ""}>
+      <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b><br><small class="muted">${esc(c.numero)} · ${esc((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
+      <td class="num">${L(d.venta)}</td>
+      <td class="num">${L(d.costo)}${d.sinCosto ? `<br><small style="color:var(--warn)">${d.sinCosto} sin costo</small>` : ""}</td>
+      <td class="num">${cer ? L(d.gastos) : `<input class="pin" style="max-width:110px" type="number" min="0" step="0.01" inputmode="decimal" data-gasto="${esc(c.id)}" value="${d.gastos || ""}" placeholder="0.00" aria-label="Gastos de ${esc(c.numero)}">`}</td>
+      <td class="num"><b style="color:${d.neta < 0 ? "var(--bad)" : "var(--ok)"}">${L(d.neta)}</b></td>
+      <td>${cer ? `<small>${repTxt(d.u.reparto) || "—"}</small>` : `<button class="btn sm" data-a="repAbrir" data-v="${esc(c.id)}">${repTxt(d.u.reparto) || "Asignar"}</button>${(d.u.reparto || []).length && Math.abs(suma - 100) > 0.05 ? `<br><small style="color:var(--bad)">Suma ${r2(suma)}%</small>` : ""}`}</td>
+      ${pn ? `<td class="num">${pp ? r2(pp.pct) + "%" : "—"}</td><td class="num">${pp ? L(pp.monto) : "—"}</td>` : ""}
+      <td>${cer ? `<span class="badge b-ok">☑ Pagado</span><br><small class="muted">${d.u.pagadoEn ? fdate(ymd(new Date(d.u.pagadoEn))) : ""}</small>` : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:20px;min-height:20px" data-a="utPagar" data-v="${esc(c.id)}"> Pagado</label>`}</td></tr>`; }).join("")}
+  </tbody><tfoot><tr class="tfoot"><td><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td>${pn ? `<td></td><td class="num"><b>${L(T.mia)}</b></td>` : ""}<td></td></tr></tfoot></table>` : `<p class="empty">No hay facturas pagadas ${fil === "pag" ? "cerradas" : "pendientes"}${pn ? " para " + esc(pn.ini) : ""}.</p>`}
+  </div></div>
+  <p class="note">El costo se toma del precio de compra guardado al facturar (las facturas anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
+}
+function mRep(){
+  const c = S.cot.find(x => x.id === S.m.id); if (!c) return "";
+  const d = utilDe(c), P = personas();
+  if (!S.m.rep) S.m.rep = (d.u.reparto || []).map(r => ({uid: r.uid, ini: r.ini, nombre: r.nombre, pct: Number(r.pct) || 0}));
+  const R = S.m.rep, suma = r2(R.reduce((a, r) => a + (Number(r.pct) || 0), 0));
+  return `
+  <div class="bigstub">${esc((c.factura && c.factura.numero) || c.numero)}</div>
+  <p class="sub" style="margin-top:6px">${esc((c.cliente && c.cliente.nombre) || "")} · Utilidad neta <b>${L(d.neta)}</b></p>
+  <h2>¿Entre quiénes se reparte?</h2>
+  <div class="chips" role="group" aria-label="Personas">${P.map(x => `<button data-a="repToggle" data-v="${esc(x.uid)}" aria-pressed="${R.some(r => r.uid === x.uid)}" title="${esc(x.nombre)}">${esc(x.ini)}</button>`).join("")}</div>
+  ${R.length ? `<div class="scroll"><table><thead><tr><th>Persona</th><th class="num">%</th><th class="num">Monto</th></tr></thead><tbody>
+    ${R.map((r, n) => `<tr><td><b>${esc(r.ini)}</b> <small class="muted">${esc(r.nombre || "")}</small></td><td class="num"><input class="pin" style="max-width:90px" type="number" min="0" max="100" step="0.01" data-rep="${n}" value="${r.pct}"></td><td class="num" id="repm${n}">${L(r2(d.neta * (Number(r.pct) || 0) / 100))}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="note" id="repsum" style="color:${Math.abs(suma - 100) > 0.05 ? "var(--bad)" : "var(--ok)"}">Suma: ${suma}%${Math.abs(suma - 100) > 0.05 ? " (debe ser 100%)" : ""}</p>
+  <div class="actions"><button class="btn" data-a="repIgual">Partes iguales</button><button class="btn pri" data-a="repGuardar" ${S.busy ? "disabled" : ""}>Guardar reparto</button></div>` : `<p class="empty">Marca las iniciales de quienes participan en esta venta.</p>`}`;
+}
+// Guarda la fila de utilidad y la parte de cada persona (los vendedores solo ven su parte)
+async function utilGuardar(c, cambios){
+  const prev = (S.util || {})[c.id] || {};
+  if (prev.pagado) { toast("Esta factura ya está pagada y cerrada."); return false; }
+  const nuevo = Object.assign({}, prev, cambios);
+  const d = utilDe(c, nuevo.gastos);
+  const b = writeBatch(db), ahora = Date.now();
+  const fila = {numero: c.numero, factura: (c.factura && c.factura.numero) || "", gastos: d.gastos, reparto: nuevo.reparto || [], pagado: !!nuevo.pagado, actualizado: ahora, por: S.me.uid,
+    participantes: (nuevo.reparto || []).map(r => r.uid)};
+  if (nuevo.pagado) Object.assign(fila, {pagadoEn: ahora, pagadoPor: S.me.uid, snap: {venta: d.venta, costo: d.costo}});
+  b.set(doc(db, "utilidad", c.id), fila, {merge: true});
+  const quedan = new Set(fila.participantes);
+  (fila.reparto).forEach(r => b.set(doc(db, "utilidad_partes", c.id + "__" + r.uid), {cot: c.id, numero: c.numero, factura: fila.factura, cliente: (c.cliente && c.cliente.nombre) || "",
+    fecha: (c.factura && c.factura.fecha) || c.fecha || "", gastos: d.gastos, pct: Number(r.pct) || 0, monto: r2(d.neta * (Number(r.pct) || 0) / 100), pagado: !!nuevo.pagado, uid: r.uid, actualizado: ahora}));
+  (prev.participantes || []).filter(u => !quedan.has(u)).forEach(u => b.delete(doc(db, "utilidad_partes", c.id + "__" + u)));
+  S.busy = true;
+  try { await b.commit(); S.busy = false; return true; } catch (e) { S.busy = false; fallo(e, "guardar la utilidad (revisa las reglas de Firebase)"); return false; }
+}
+function vMiUtil(){
+  const L2 = (S.misPartes || []).slice().sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")));
+  const tot = L2.reduce((a, x) => { a.t += Number(x.monto) || 0; if (x.pagado) a.p += Number(x.monto) || 0; return a; }, {t: 0, p: 0});
+  return `
+  <h1>Mi utilidad</h1>
+  <p class="sub">Tu parte de cada factura según el reparto asignado. "Pagado" quiere decir que ya se te entregó.</p>
+  <div class="pr-resumen"><div><small>Total</small><b>${L(tot.t)}</b></div><div><small>Pagado</small><b style="color:var(--ok)">${L(tot.p)}</b></div><div><small>Pendiente</small><b style="color:var(--warn)">${L(r2(tot.t - tot.p))}</b></div></div>
+  <div class="panel" style="padding:6px 10px"><div class="scroll">
+  ${L2.length ? `<table><thead><tr><th>Factura</th><th class="num">Gastos</th><th class="num">Utilidad</th><th>Pagado</th></tr></thead><tbody>
+    ${L2.map(x => `<tr><td><b>${esc(x.factura || x.numero)}</b><br><small class="muted">${esc(x.numero)} · ${esc(x.cliente || "")} · ${fdate(x.fecha)}</small></td><td class="num">${L(x.gastos)}</td><td class="num"><b>${L(x.monto)}</b></td><td>${x.pagado ? '<span class="badge b-ok">☑ Pagado</span>' : '<span class="badge">Pendiente</span>'}</td></tr>`).join("")}
+  </tbody></table>` : `<p class="empty">Todavía no tienes facturas asignadas.</p>`}
+  </div></div>`;
 }
 
 /* ---------- vista: mi perfil ---------- */
@@ -1195,7 +1400,7 @@ function vAjustes(){
 function drawModal(){
   const md = $("#modal");
   if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : mCxp();
+  const html = S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
   if (!html) { md.classList.remove("open"); return; }
   $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
   md.classList.add("open");
@@ -1227,7 +1432,9 @@ function mCot(){
   let extra = "";
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
+    const falt = faltantes(c);
     extra = `<hr class="sep"><h2>Registrar factura</h2>
+    ${falt.length ? `<div class="panel" style="border-color:var(--warn);padding:12px"><b>No hay existencia suficiente</b><br>${falt.map(esc).join("<br>")}<br><small class="muted">Puedes facturar igual; el inventario queda en negativo hasta que registres la entrada.</small></div>` : ""}
     ${cc.desc > 0 ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Esta cotización tiene descuento.</b><div class="totals" style="max-width:none">${totalsHtml(cc)}</div></div>` : ""}
     <p class="note">Emite la factura con estos mismos productos y precios, y copia aquí el número.</p>
     <div class="row">
@@ -1309,7 +1516,7 @@ function mProd(){
   const unit = g("unit", precio !== "" ? Math.round(Number(precio) / 1.15 / (Number(unidades) || 1) * 10000) / 10000 : "");
   const venta = g("venta", precio !== "" ? r2(Number(precio) / 1.15) : "");
   const costo = g("costo", p.id && compraDe(p) ? compraDe(p) : "");
-  const adm = puede("admin");
+  const adm = puede("admin", "facturador");
   if (!adm) return "";
   return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
   <div class="field"><label for="pe_codigo">Código</label><input id="pe_codigo" data-k="pe_codigo" value="${esc(g("codigo", p.id ? codDe(p) : sugerirCodigo(g("cat", ""))))}" autocapitalize="characters" placeholder="ETQ-012"></div>
@@ -1569,11 +1776,15 @@ function startData(){
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
   if (fact) dataSubs.push(onSnapshot(collection(db, "cxp"), q => { S.cxp = mapDocs(q); render(); }, onErr));
-  S.costos = {};
-  if (r === "admin") dataSubs.push(onSnapshot(collection(db, "costos"), q => { S.costos = {}; q.docs.forEach(d => { S.costos[d.id] = d.data(); }); render(); }, e => console.warn("costos", e)));
+  S.costos = {}; S.invMov = []; S.inv = {}; S.util = {}; S.misPartes = [];
+  if (fact) dataSubs.push(onSnapshot(collection(db, "inv_mov"), q => { S.invMov = mapDocs(q); render(); }, e => console.warn("inv_mov", e)));
+  if (fact) dataSubs.push(onSnapshot(collection(db, "inventario"), q => { S.inv = {}; q.docs.forEach(d => { S.inv[d.id] = d.data(); }); render(); }, e => console.warn("inventario", e)));
+  if (fact) dataSubs.push(onSnapshot(collection(db, "utilidad"), q => { S.util = {}; q.docs.forEach(d => { S.util[d.id] = d.data(); }); render(); }, e => console.warn("utilidad", e)));
+  if (r === "vendedor") dataSubs.push(onSnapshot(query(collection(db, "utilidad_partes"), where("uid", "==", S.me.uid)), q => { S.misPartes = mapDocs(q); render(); }, e => console.warn("partes", e)));
+  if (fact) dataSubs.push(onSnapshot(collection(db, "costos"), q => { S.costos = {}; q.docs.forEach(d => { S.costos[d.id] = d.data(); }); render(); }, e => console.warn("costos", e)));
   if (r === "admin") dataSubs.push(onSnapshot(doc(db, "config", "agente"), s => { S.ag = s.exists() ? s.data() : {}; render(); }, e => console.warn(e)));
   if (r === "admin") dataSubs.push(onSnapshot(query(collection(db, "conversaciones"), orderBy("actualizado", "desc"), limit(200)), q => { S.convs = mapDocs(q); render(); }, e => console.warn(e)));
-  if (r === "admin") dataSubs.push(onSnapshot(collection(db, "usuarios"), q => { S.usuarios = mapDocs(q); render(); }, onErr));
+  if (fact) dataSubs.push(onSnapshot(collection(db, "usuarios"), q => { S.usuarios = mapDocs(q); render(); }, onErr));
 }
 
 onAuthStateChanged(auth, u => entrar(u));
@@ -1792,7 +2003,11 @@ const A = {
     const yaPago = S.f.fac_pagado ?? (fp !== "Contra entrega");
     const pagos = (c.pagos || []).slice();
     if (yaPago && saldo(c) > 0) pagos.push({monto: saldo(c), fecha, metodo: fp, ref: "", por: S.me.uid});
-    const ok = await upd(doc(db, "cotizaciones", c.id), {estado: "facturada", formaPago: fp, factura: {numero: num, fecha, formaPago: fp, por: S.me.uid}, vence: fecha, pagos}, "Factura registrada");
+    const falt = faltantes(c);
+    if (falt.length && !confirm("No hay existencia suficiente:\n" + falt.join("\n") + "\n\n¿Facturar de todos modos?")) return;
+    // El costo de compra queda congelado en la factura (la utilidad no cambia aunque después cambie el costo)
+    const items = (c.items || []).map(i => { if (i.costoU != null || i.generico) return i; const cu = costoUnit(i.id); return cu > 0 ? Object.assign({}, i, {costoU: Math.round(cu * 1e6) / 1e6}) : i; });
+    const ok = await upd(doc(db, "cotizaciones", c.id), {estado: "facturada", formaPago: fp, factura: {numero: num, fecha, formaPago: fp, por: S.me.uid}, vence: fecha, pagos, items, facturadaEn: Date.now()}, "Factura registrada");
     if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
   },
   async savePag(){
@@ -2225,6 +2440,46 @@ const A = {
   },
   prodNuevo(){ clearProd(); S.m = {type: "prod", id: null}; draw(); },
   prodEdit(v){ clearProd(); S.m = {type: "prod", id: v}; draw(); },
+  async prodActivo(v){ const p = S.prod.find(x => x.id === v); if (!p) return; await upd(doc(db, "productos", v), {activo: p.activo === false}, p.activo === false ? "Producto activado" : "Producto desactivado: ya no sale al cotizar, en inventario ni para el agente"); },
+  invFil(v){ S.f.inv_fil = v; draw(); },
+  invAbrir(v){ ["inv_cant", "inv_nota", "inv_ro", "inv_tipo", "inv_modo"].forEach(k => delete S.f[k]); S.m = {type: "inv", id: v}; draw(); },
+  invTipo(v){ S.f.inv_tipo = v; draw(); },
+  invModo(v){ S.f.inv_modo = v; draw(); },
+  async invGuardar(){
+    const p = S.prod.find(x => x.id === S.m.id); if (!p) return;
+    const tipo = S.f.inv_tipo || "entrada", u = uni(p), modo = S.f.inv_modo || (u > 1 ? "p" : "u");
+    let n = Number(S.f.inv_cant);
+    if (S.f.inv_cant == null || S.f.inv_cant === "" || !isFinite(n)) return toast("Escribe la cantidad.");
+    n = Math.round(n * (modo === "p" ? u : 1) * 1000) / 1000;
+    if (tipo === "entrada" && n <= 0) return toast("La entrada debe ser mayor a cero.");
+    if (tipo === "conteo" && n < 0) return toast("El conteo no puede ser negativo.");
+    if (tipo === "ajuste" && n === 0) return toast("El ajuste no puede ser cero.");
+    S.busy = true; draw();
+    try { await addDoc(collection(db, "inv_mov"), {prod: p.id, tipo, cant: n, ts: Date.now(), por: S.me.uid, porNombre: S.me.nombre || (S.u && S.u.email) || "", nota: clean(S.f.inv_nota)}); toast("Movimiento guardado"); delete S.f.inv_cant; delete S.f.inv_nota; }
+    catch (e) { fallo(e, "guardar el movimiento (revisa las reglas de Firebase)"); }
+    S.busy = false; draw();
+  },
+  async invReorden(){ const v = Number(S.f.inv_ro); if (S.f.inv_ro == null || S.f.inv_ro === "" || !(v >= 0)) return toast("Escribe un número válido."); if (await upd(doc(db, "inventario", S.m.id), {reorden: Math.round(v), actualizado: Date.now(), por: S.me.uid}, "Reorden guardado", true)) { delete S.f.inv_ro; draw(); } },
+  async invReordenSug(){ if (await upd(doc(db, "inventario", S.m.id), {reorden: null, actualizado: Date.now(), por: S.me.uid}, "Se usará el reorden sugerido", true)) { delete S.f.inv_ro; draw(); } },
+  utFil(v){ S.f.ut_fil = v; draw(); },
+  utPer(v){ S.f.ut_per = v; draw(); },
+  repAbrir(v){ S.m = {type: "rep", id: v}; draw(); },
+  repToggle(v){ const R = S.m.rep || []; const i = R.findIndex(r => r.uid === v); if (i >= 0) R.splice(i, 1); else { const x = personas().find(p => p.uid === v); if (x) R.push({uid: x.uid, ini: x.ini, nombre: x.nombre, pct: 0}); } igualar(R); S.m.rep = R; draw(); },
+  repIgual(){ igualar(S.m.rep || []); draw(); },
+  async repGuardar(){
+    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
+    const R = (S.m.rep || []).map(r => ({uid: r.uid, ini: r.ini, nombre: r.nombre || "", pct: r2(Number(r.pct) || 0)}));
+    const s = r2(R.reduce((a, r) => a + r.pct, 0));
+    if (R.length && Math.abs(s - 100) > 0.05) return toast("El reparto debe sumar 100% (ahora suma " + s + "%).");
+    if (await utilGuardar(c, {reparto: R})) { toast("Reparto guardado"); S.m = null; draw(); }
+  },
+  async utPagar(v){
+    const c = S.cot.find(x => x.id === v); if (!c) return;
+    const d = utilDe(c), R = d.u.reparto || [], s = R.reduce((a, r) => a + (Number(r.pct) || 0), 0);
+    if (!R.length || Math.abs(s - 100) > 0.05) { toast("Primero asigna el reparto (debe sumar 100%)."); draw(); return; }
+    if (!confirm(`¿Marcar ${(c.factura && c.factura.numero) || c.numero} como pagado?\nUtilidad neta ${L(d.neta)}: ${R.map(r => r.ini + " " + L(r2(d.neta * r.pct / 100))).join(", ")}.\nYa no se podrá modificar.`)) { draw(); return; }
+    if (await utilGuardar(c, {pagado: true})) { toast("Marcado como pagado"); draw(); }
+  },
   async prodSave(){
     const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : null;
     const g = (k, d) => S.f["pe_" + k] ?? d;
@@ -2239,10 +2494,10 @@ const A = {
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : ""))};
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-    if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
+    if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin", "facturador")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
     const costoNuevo = S.f.pe_costo;
     if (await upd(doc(db, "productos", id), data, p ? "Producto actualizado" : "Producto agregado", true)) {
-      if (puede("admin") && costoNuevo != null) { try { await setDoc(doc(db, "costos", id), {compra: Math.max(0, r2(costoNuevo)), actualizado: Date.now()}, {merge: true}); } catch (e) { fallo(e, "guardar el precio de compra (revisa las reglas de Firebase)"); } }
+      if (puede("admin", "facturador") && costoNuevo != null) { try { await setDoc(doc(db, "costos", id), {compra: Math.max(0, r2(costoNuevo)), actualizado: Date.now()}, {merge: true}); } catch (e) { fallo(e, "guardar el precio de compra (revisa las reglas de Firebase)"); } }
       clearProd(); S.m = null; draw();
     }
   }
@@ -2398,11 +2653,19 @@ document.addEventListener("input", e => {
   if (t.dataset.pc != null) { S.pcEdit[t.dataset.pc] = t.value; return; }
   if (k === "pz_txt" && !S.f.pz_tipoManual) { const sel = $("#pz_tipo"); S.f.pz_tipo = tipoAuto(t.value); if (sel) sel.value = S.f.pz_tipo; }
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
+  if (t.dataset.rep != null && S.m && S.m.rep) {
+    const R = S.m.rep, r = R[Number(t.dataset.rep)]; if (r) r.pct = Math.max(0, Math.min(100, Number(t.value) || 0));
+    const c = S.cot.find(x => x.id === S.m.id), d = c ? utilDe(c) : {neta: 0};
+    R.forEach((x, n) => { const m = document.getElementById("repm" + n); if (m) m.textContent = L(r2(d.neta * (Number(x.pct) || 0) / 100)); });
+    const s = r2(R.reduce((a, x) => a + (Number(x.pct) || 0), 0)), el = document.getElementById("repsum");
+    if (el) { el.textContent = "Suma: " + s + "%" + (Math.abs(s - 100) > 0.05 ? " (debe ser 100%)" : ""); el.style.color = Math.abs(s - 100) > 0.05 ? "var(--bad)" : "var(--ok)"; }
+    return;
+  }
   if (k) {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
     if (k === "flete") refrescarCarrito();
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
-    if (k === "cq" || k === "prq") draw();
+    if (k === "cq" || k === "prq" || k === "invq" || k === "utq") draw();
     if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta") {
       const un = Math.max(1, Number(($("#pe_unidades") || {}).value) || 1);
       const pon = (id, v) => { S.f[id] = v; const o = $("#" + id); if (o) o.value = v; };
@@ -2428,6 +2691,7 @@ document.addEventListener("change", e => {
     if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; i.desc = l.descX; t.value = l.descIsv || ""; }
     refrescarCarrito(); return;
   }
+  if (t.dataset.gasto != null) { const c = S.cot.find(x => x.id === t.dataset.gasto); if (c) utilGuardar(c, {gastos: Math.max(0, r2(Number(t.value) || 0))}).then(ok => { if (ok) toast("Gasto guardado"); }); return; }
   if (t.dataset.k === "fac_fp") delete S.f.fac_pagado;
   if (t.dataset.redraw || t.dataset.k === "fac_fp") draw();
 });
