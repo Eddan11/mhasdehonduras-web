@@ -1112,7 +1112,7 @@ function vProductos(){
   <p class="sub">${edit ? "Escribe el precio de compra sin ISV de cada presentación. Pasa al siguiente con Tab o Enter y al final toca Guardar costos." : "Toca un producto para editarlo. La compra, la ganancia y el margen solo los ven administración y facturación; todo va sin ISV. Con el botón Activo/Inactivo lo quitas de cotizaciones, inventario y del agente sin borrarlo."}</p>
   <div class="actions" style="margin:0 0 12px">
     ${edit ? `<button class="btn pri" data-a="pcGuardar" ${S.busy ? "disabled" : ""}>Guardar costos</button><button class="btn" data-a="pcPegar">Pegar lista</button><button class="btn" data-a="pcCancelar">Cancelar</button>`
-      : `<button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button><button class="btn" data-a="pcEditar">Editar costos</button><button class="btn" data-a="prodExcel">Descargar Excel</button>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}`}
+      : `<button class="btn pri" data-a="prodNuevo">+ Nuevo producto</button><button class="btn" data-a="pcEditar">Editar costos</button><button class="btn" data-a="prodExcel">Descargar Excel</button><a class="btn" href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Catálogo de Meta</a>${S.prod.some(p => Number(p.orden ?? 999) >= 999) ? `<button class="btn" data-a="prodOrdenar" ${S.busy ? "disabled" : ""}>Ordenar por familia</button>` : ""}`}
   </div>
   ${edit && S.pcPegar ? `<div class="panel" style="padding:12px 14px"><label for="pc_lista">Pega una lista: código y precio de compra sin ISV, uno por línea (por ejemplo <b>ROL-003 450</b>). Se llenan las casillas para que las revises antes de guardar.</label>
     <textarea id="pc_lista" rows="5" placeholder="ROL-003 450&#10;ROL-005 975"></textarea><div class="actions" style="margin-top:8px"><button class="btn" data-a="pcAplicar">Llenar casillas</button></div></div>` : ""}
@@ -1593,6 +1593,11 @@ function mProd(){
   <p class="note">Si cambias cualquiera de los precios de venta, los otros se calculan solos. El precio de compra solo lo ves tú.</p>
   <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_solo" ${g("solo", p.id ? soloPres(p) : false) ? "checked" : ""}> Solo se vende por presentación completa (el agente de WhatsApp no lo vende suelto)</label>
+  <h3 style="margin:18px 0 4px">Catálogo de Meta</h3>
+  <p class="note">Meta toma este producto en vivo una vez al día: nombre, presentación y precio con ISV salen de arriba. <a href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Ver qué entra al catálogo</a></p>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${g("meta", p.enMeta !== false) ? "checked" : ""}> Mostrar en el catálogo de Meta (solo si está activo y tiene foto)</label>
+  <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción para Meta (opcional)</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Vacío = descripción estándar. No ponga precios ni mayoreo: el precio sale de arriba.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
+  <div class="field"><label for="pe_foto">Foto para Meta (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
@@ -2960,7 +2965,9 @@ const A = {
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
-      soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : ""))};
+      soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
+      enMeta: !!g("meta", p ? p.enMeta !== false : true), descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
+    if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
     if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin", "facturador")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
     const costoNuevo = S.f.pe_costo;
