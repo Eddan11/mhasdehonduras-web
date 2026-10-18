@@ -283,14 +283,14 @@ const S = {
   screen: "cargando", authMode: "login", u: null, admin: false,
   me: {uid: null, email: "", nombre: "", rol: "", ini: ""},
   cfg: {emp: {}}, prod: [], cli: [], cot: [], cxp: [], usuarios: [], editId: null, convs: [], chatMsgs: [], ag: null,
-  tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false
+  tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false, facturas: [], talForm: false, talFile: null, talProg: "", chatF: "todos"
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "chats", "agente", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil", "ajustes"],
-  facturador: ["cotizar", "pizarra", "cotizaciones", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil"],
+  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil", "ajustes"],
+  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
-const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -389,7 +389,7 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
+  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, facturas: vFacturas, cobros: vCobros, pagar: vPagar, perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -683,6 +683,9 @@ const ESTADO_CHAT = c => {
   if (c.estado === "persona" && vivo) return ["Atiende el equipo", "b-warn"];
   return ["Responde el agente", "b-ok"];
 };
+const chatPide = c => c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now();
+const CHAT_F = [["todos", "Todos", () => true], ["alerta", "Con alerta", c => chatPide(c) || !!c.consultaProduccion], ["persona", "Piden persona", chatPide], ["produccion", "Consultar producción", c => !!c.consultaProduccion]];
+const chatsFiltrados = () => { const f = (CHAT_F.find(x => x[0] === S.chatF) || CHAT_F[0])[2]; return S.convs.filter(f); };
 const horaTxt = ms => { if (!ms) return ""; const d = new Date(ms); const h = d.toLocaleTimeString("es-HN", {hour: "2-digit", minute: "2-digit"}); return ymd(d) === today() ? h : fdate(ymd(d)) + " " + h; };
 /* ---------- asistente (ventana flotante, para todo el equipo) ---------- */
 S.pcEdit = {}; S.pcEditando = false; S.pcPegar = false;
@@ -891,14 +894,15 @@ function vChats(){
   <h1>Chats de WhatsApp</h1>
   <p class="sub">Lo que el agente está conversando. Los que piden una persona salen primero en rojo; respóndelos desde la app de WhatsApp Business y el agente se calla solo en ese chat.</p>
   <div class="actions" style="margin:0 0 12px"><button class="btn" data-a="chatsDescargar" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Descargar todos los mensajes"}</button></div>
+  <div class="chips" role="group" aria-label="Filtrar chats" style="margin-bottom:10px">${CHAT_F.map(([v, t, fn]) => { const n = S.convs.filter(fn).length; return `<button data-a="chatF" data-v="${v}" aria-pressed="${(S.chatF || "todos") === v}">${t}${v !== "todos" ? ` <span class="cnt${n ? " hot" : ""}">${n}</span>` : ""}</button>`; }).join("")}</div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${S.convs.length ? `<table><thead><tr><th>Cliente</th><th>Último mensaje</th><th>Estado</th><th>Hora</th></tr></thead><tbody>
-    ${S.convs.slice().sort((a, b) => (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0)).map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
+  ${chatsFiltrados().length ? `<table><thead><tr><th>Cliente</th><th>Último mensaje</th><th>Estado</th><th>Hora</th></tr></thead><tbody>
+    ${chatsFiltrados().sort((a, b) => (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0)).map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
       <td><b>${esc(nombreChat(c))}</b>${c.proveedor ? ` <span class="badge">Proveedor</span>` : ""}${c.noLeidos ? ` <span class="cnt">${c.noLeidos}</span>` : ""}<br><small class="muted">${esc(c.tel || c.id)}</small></td>
       <td><small>${esc(c.ultimoTexto || "")}</small>${c.ultimaCotizacion ? `<br><span class="stub">${esc(c.ultimaCotizacion)}</span>` : ""}</td>
       <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}${c.consultaProduccion ? `<br><span class="badge b-warn">Consultar producción</span><br><small class="muted">${esc(c.consultaProduccion)}</small>` : ""}</td>
       <td><small>${horaTxt(c.actualizado)}</small></td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">Todavía no hay chats. Cuando el agente esté activo, aquí verás cada conversación.</p>`}
+  </tbody></table>` : `<p class="empty">${S.convs.length ? "No hay chats con alerta en este filtro." : "Todavía no hay chats. Cuando el agente esté activo, aquí verás cada conversación."}</p>`}
   </div></div>`;
 }
 
@@ -1446,17 +1450,41 @@ function mCot(){
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
     const falt = faltantes(c);
-    extra = `<hr class="sep"><h2>Registrar factura</h2>
+    const sig = facSiguiente(), quedan = facBlancos().length, ult = facUltima();
+    const cl = c.cliente || {};
+    const nom = S.f.fac_nom ?? cl.nombre ?? "", rtn = S.f.fac_rtn ?? cl.rtn ?? "", dir = S.f.fac_dir ?? cl.direccion ?? "";
+    const cf = S.f.fac_cf ?? !clean(cl.rtn);
+    const fecha = S.f.fac_fecha || today();
+    extra = `<hr class="sep"><h2>Emitir factura</h2>
     ${falt.length ? `<div class="panel" style="border-color:var(--warn);padding:12px"><b>No hay existencia suficiente</b><br>${falt.map(esc).join("<br>")}<br><small class="muted">Puedes facturar igual; el inventario queda en negativo hasta que registres la entrada.</small></div>` : ""}
     ${cc.desc > 0 ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Esta cotización tiene descuento.</b><div class="totals" style="max-width:none">${totalsHtml(cc)}</div></div>` : ""}
-    <p class="note">Emite la factura con estos mismos productos y precios, y copia aquí el número.</p>
+    ${sig ? `<div class="panel" style="padding:12px"><b>Se emitirá con la factura ${esc(sig.numero)}</b><br><small class="muted">Quedan ${quedan} en blanco · CAI vence ${fdate(sig.fechaLimite)}${ult ? " · última emitida " + esc(ult.numero.slice(-8)) + " el " + fdate(ult.fecha) : ""}</small></div>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-bottom:10px"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_cf" data-redraw="1" ${cf ? "checked" : ""}> Consumidor final (sin RTN; sale "CONSUMIDOR FINAL")</label>
+    ${cf ? "" : `<div class="field"><label for="fnom">Cliente (como sale en la factura)</label><input id="fnom" data-k="fac_nom" value="${esc(nom)}"></div>`}
     <div class="row">
-      <div class="field" style="flex:2 1 220px"><label for="fn">N.º de factura (SAR)</label><input id="fn" data-k="fac_num" value="${fv("fac_num")}" placeholder="000-001-01-00000001"></div>
-      <div class="field"><label for="ff">Fecha</label><input id="ff" type="date" data-k="fac_fecha" value="${esc(S.f.fac_fecha || today())}"></div>
+      ${cf ? "" : `<div class="field"><label for="frtn">RTN</label><input id="frtn" data-k="fac_rtn" value="${esc(rtn)}" inputmode="numeric"></div>`}
+      <div class="field"><label for="ff">Fecha de emisión</label><input id="ff" type="date" data-k="fac_fecha" value="${esc(fecha)}"></div>
     </div>
+    <div class="field"><label for="fdir">Dirección</label><input id="fdir" data-k="fac_dir" value="${esc(dir)}"></div>
+    ${(cf || !clean(rtn)) && cc.total > 10000 ? `<p class="note" style="color:var(--bad)">Ventas de más de L. 10,000 deben llevar los datos del cliente (nombre y RTN).</p>` : ""}
     <div class="field"><label for="fp">Forma de pago</label><select id="fp" data-k="fac_fp">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado ?? (fp !== "Contra entrega")) ? "checked" : ""}> Ya pagó el total (queda finalizada)</label>
-    <div class="actions"><button class="btn pri" data-a="saveFac" ${S.busy ? "disabled" : ""}>Guardar factura</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
+    <p class="note">Los productos y precios salen de la cotización. Antes de guardar vas a ver la factura armada; nada se guarda ni se usa el número hasta que confirmes. Si un producto o precio está mal, devuelve la cotización al vendedor para corregirla.</p>
+    <div class="actions"><button class="btn pri" data-a="facPrevia" ${S.busy ? "disabled" : ""}>${S.busy ? "Armando vista previa…" : "Ver vista previa"}</button><button class="btn" data-a="modeVer">Cancelar</button></div>`
+    : `<div class="panel" style="border-color:var(--bad);padding:12px"><b>No hay facturas en blanco.</b><br>${S.admin ? "Carga páginas del talonario en la pestaña Facturas." : "Avisa al administrador para que cargue más páginas del talonario."}</div>
+    <div class="actions"><button class="btn" data-a="modeVer">Cancelar</button></div>`}`;
+  } else if (mode === "facprev") {
+    const P = S.m.prev || {}, f = P.f || {};
+    extra = `<hr class="sep"><h2>Vista previa · factura ${esc(String(f.numero || "").slice(-8))}</h2>
+    <p class="note">Revisa que todo esté bien. Todavía no se ha guardado nada ni se ha usado el número.</p>
+    ${P.img ? `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff"><img src="${P.img}" alt="Vista previa de la factura ${esc(f.numero || "")}" style="display:block;width:100%;height:auto"></div>` : `<p class="note">No se pudo dibujar la vista previa aquí; revisa los datos:</p>`}
+    <dl class="kv" style="margin-top:10px">
+      <dt>Factura</dt><dd>${esc(f.numero || "")}</dd>
+      <dt>Cliente</dt><dd>${esc((f.cliente || {}).nombre || "")}${(f.cliente || {}).rtn ? " · RTN " + esc(f.cliente.rtn) : ""}</dd>
+      <dt>Fecha</dt><dd>${fdate(f.fecha)} · ${esc(f.formaPago || "")}</dd>
+      <dt>Total</dt><dd><b>${L(f.total)}</b> · ${esc(f.letras || "")}</dd>
+    </dl>
+    <div class="actions"><button class="btn pri" data-a="saveFac" ${S.busy ? "disabled" : ""}>${S.busy ? "Guardando…" : "Guardar y emitir factura " + esc(String(f.numero || "").slice(-8))}</button><button class="btn" data-a="facModificar" ${S.busy ? "disabled" : ""}>Modificar</button></div>`;
   } else if (mode === "pago") extra = pagoForm(c, "savePag");
   else if (mode === "fechas") {
     extra = `<hr class="sep"><h2>Cambiar fechas</h2>
@@ -1483,7 +1511,7 @@ function mCot(){
   let abajo = [];
   if (abierta) abajo = [`<button class="btn" data-a="editar">Editar</button>`, `<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "perdida" && !c.eliminada && (fact || mio)) abajo = [`<button class="btn" data-a="reabrir">Reabrir cotización</button>`];
-  else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Registrar factura</button>`, `<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Emitir factura</button>`, `<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "facturada" && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
   if (S.admin && !c.eliminada) abajo.push(S.m.mas ? `<button class="btn" data-a="modeFechas">Cambiar fechas</button><button class="btn danger" data-a="eliminar">Eliminar</button>` : `<button class="btn" data-a="mas">Más…</button>`);
   return `
@@ -1501,7 +1529,7 @@ function mCot(){
     <dt>Fecha</dt><dd>${fdate(c.fecha)} · válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}</dd>
     <dt>Vendedor</dt><dd>${esc(c.vendedorNombre || "")}</dd>
     ${full && c.formaPago ? `<dt>Forma de pago</dt><dd>${esc(formaTxt(c.formaPago))}</dd>` : ""}
-    ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}</dd>` : ""}
+    ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}${full && facDeCot(c) ? ` <button class="btn sm" data-a="facPdfCot" ${S.busy ? "disabled" : ""}>Ver factura</button>` : ""}</dd>` : ""}${full && (c.facturasAnuladas || []).length ? `<dt>Anuladas</dt><dd>${c.facturasAnuladas.map(esc).join(", ")}</dd>` : ""}
   </dl>
   ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
     ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${i.cant}</td><td>${esc(i.nombre)}</td><td class="num">${LU(l.u)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
@@ -1637,6 +1665,238 @@ function mCxp(){
   ${S.m.mode === "pago" ? pagoForm(x, "savePagCxp") : `<div class="actions">
     ${saldo(x) > 0.005 ? `<button class="btn pri" data-a="modePag">Registrar pago</button>` : ""}
     ${puede("admin") ? `<button class="btn danger" data-a="delCxp">Borrar</button>` : ""}</div>`}`;
+}
+
+/* ---------- facturas (talonario en PDF, correlativo CAI) ---------- */
+const CAI_DEF = {cai: "5620AD-A85131-A9F1E0-63BE03-0909D1-F6", rangoIni: "000-001-01-00001301", rangoFin: "000-001-01-00001500", fechaLimite: "2027-07-08"};
+const MESES_F = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+function numLetras(n){
+  const U = ["", "UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE", "DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE",
+    "VEINTE", "VEINTIUNO", "VEINTIDÓS", "VEINTITRÉS", "VEINTICUATRO", "VEINTICINCO", "VEINTISÉIS", "VEINTISIETE", "VEINTIOCHO", "VEINTINUEVE"];
+  const D = ["", "", "", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const C = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+  const m100 = x => x < 30 ? U[x] : D[Math.floor(x / 10)] + (x % 10 ? " Y " + U[x % 10] : "");
+  const m1000 = x => x === 100 ? "CIEN" : ((x >= 100 ? C[Math.floor(x / 100)] + (x % 100 ? " " : "") : "") + (x % 100 ? m100(x % 100) : ""));
+  if (n === 0) return "CERO";
+  const mill = Math.floor(n / 1e6), mil = Math.floor(n % 1e6 / 1000), r = n % 1000, p = [];
+  if (mill) p.push(mill === 1 ? "UN MILLÓN" : m1000(mill).replace(/UNO$/, "UN") + " MILLONES");
+  if (mil) p.push(mil === 1 ? "MIL" : m1000(mil).replace(/UNO$/, "UN") + " MIL");
+  if (r) p.push(m1000(r));
+  return p.join(" ");
+}
+function totalLetras(t){
+  const c = Math.round((Number(t) || 0) * 100), ent = Math.floor(c / 100), cen = c % 100;
+  const s = numLetras(ent).replace(/UNO$/, "UN");
+  return s + (ent === 1 ? " LEMPIRA" : " LEMPIRAS") + (cen ? " CON " + String(cen).padStart(2, "0") + "/100" : (ent === 1 ? " EXACTO" : " EXACTOS"));
+}
+const fechaFac = s => { const [y, m, d] = String(s || "").split("-"); return y ? Number(d) + " " + MESES_F[Number(m) - 1] + " " + y : ""; };
+const nF = n => (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const facNum = (rangoIni, n) => String(rangoIni || CAI_DEF.rangoIni).split("-").slice(0, 3).join("-") + "-" + String(n).padStart(8, "0");
+const facBlancos = () => (S.facturas || []).filter(f => f.estado === "blanco").sort((a, b) => a.n - b.n);
+const facSiguiente = () => facBlancos()[0] || null;
+const facUltima = () => (S.facturas || []).filter(f => f.estado === "emitida").sort((a, b) => b.n - a.n)[0] || null;
+const facDeCot = c => c && c.factura && c.factura.n != null ? (S.facturas || []).find(f => f.n === c.factura.n) : null;
+function datosFactura(c, cli, fecha, fp){
+  const cc = calc(c.items, c.flete);
+  const lineas = (c.items || []).map((i, k) => ({cant: Number(i.cant) || 0, desc: String(i.nombre || "").toUpperCase(), pu: r2(cc.lines[k].u), imp: cc.lines[k].bruto}));
+  if (cc.flete) lineas.push({cant: 1, desc: "FLETE", pu: cc.flete, imp: cc.flete});
+  const sub = r2(cc.sub + cc.flete), desc = cc.desc;
+  return {cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)};
+}
+function cargarPdfLib(){
+  if (window.PDFLib) return Promise.resolve(window.PDFLib);
+  return new Promise((ok, mal) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";
+    sc.onload = () => window.PDFLib ? ok(window.PDFLib) : mal(new Error("sin pdf-lib")); sc.onerror = mal; document.head.appendChild(sc); });
+}
+const b64de = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const u8de = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+const PDF_CACHE = {};
+async function pdfBlanco(f){
+  if (PDF_CACHE[f.n]) return PDF_CACHE[f.n];
+  const partes = await Promise.all(Array.from({length: f.partes || 1}, (_, k) => getDoc(doc(db, "talonario_pdf", f.n + "_" + k))));
+  if (partes.some(p => !p.exists())) throw new Error("Falta el PDF de la factura " + f.numero);
+  return (PDF_CACHE[f.n] = u8de(partes.map(p => p.data().pdf).join("")));
+}
+async function estamparFactura(PDFLib, bytes, f){
+  const {PDFDocument, StandardFonts, rgb, degrees} = PDFLib;
+  const pdf = await PDFDocument.load(bytes);
+  const pg = pdf.getPage(0), H = pg.getHeight();
+  const font = await pdf.embedFont(StandardFonts.Helvetica), bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const ink = rgb(0.05, 0.05, 0.1);
+  const limpio = s => String(s ?? "").replace(/[^\x20-\x7E -ÿ]/g, "");
+  const ajustar = (s, fnt, size, max) => { s = limpio(s); while (s && fnt.widthOfTextAtSize(s, size) > max) s = s.slice(0, -1); return s; };
+  const t = (s, x, y, o = {}) => {
+    const fnt = o.bold ? bold : font, size = o.size || 10, txt = o.max ? ajustar(s, fnt, size, o.max) : limpio(s);
+    const w = fnt.widthOfTextAtSize(txt, size), xx = o.right ? x - w : o.center ? x - w / 2 : x;
+    pg.drawText(txt, {x: xx, y: H - y, size, font: fnt, color: o.color || ink});
+  };
+  const partir = (s, size, max) => { const out = []; let cur = ""; limpio(s).split(/\s+/).forEach(w => { const p = cur ? cur + " " + w : w; if (font.widthOfTextAtSize(p, size) > max && cur) { out.push(cur); cur = w; } else cur = p; }); if (cur) out.push(cur); return out; };
+  const cl = f.cliente || {};
+  t(cl.nombre, 64, 111, {size: 11, max: 360});
+  t(cl.rtn, 437, 111, {size: 11, max: 140});
+  t(cl.direccion, 71, 147, {size: 10, max: 500});
+  t(fechaFac(f.fecha), 103, 180, {size: 11});
+  let y = 282;
+  (f.lineas || []).forEach(l => {
+    const ls = partir(l.desc, 9.5, 285);
+    t(String(l.cant), 46, y, {size: 9.5, right: true});
+    ls.forEach((x, k) => t(x, 56, y + k * 12, {size: 9.5}));
+    t(nF(l.pu), 462, y, {size: 9.5, right: true});
+    t(nF(l.imp), 568, y, {size: 9.5, right: true});
+    y += ls.length * 12 + 4;
+  });
+  t("------------------------- ÚLTIMA LÍNEA -------------------------", 245, y + 4, {size: 8, center: true});
+  const R = 585;
+  t(nF(f.sub), R, 584, {size: 9.5, right: true});
+  if (f.desc) t(nF(f.desc), R, 595.5, {size: 9.5, right: true});
+  t(nF(f.gravado), R, 607, {size: 9.5, right: true});
+  t(nF(f.isv), R, 644.5, {size: 9.5, right: true});
+  t(nF(f.total), R, 666.5, {size: 11, bold: true, right: true});
+  t(f.letras, 31, 610, {size: 9.5, max: 300});
+  t(f.formaPago, 31, 652, {size: 9, max: 100});
+  t(nF(f.total), 150, 652, {size: 9.5});
+  if (f.previa) {
+    pg.drawText("VISTA PREVIA", {x: 95, y: H - 560, size: 80, font: bold, color: rgb(0.2, 0.45, 0.85), opacity: 0.25, rotate: degrees(28)});
+    t("VISTA PREVIA · SIN VALOR FISCAL", 31, 728, {size: 9, bold: true, color: rgb(0.2, 0.45, 0.85)});
+  }
+  if (f.estado === "anulada") {
+    const red = rgb(0.75, 0.1, 0.1);
+    pg.drawText("ANULADA", {x: 130, y: H - 520, size: 96, font: bold, color: red, opacity: 0.45, rotate: degrees(28)});
+    t("ANULADA: " + ((f.anulada && f.anulada.motivo) || ""), 31, 728, {size: 9, max: 480, color: red, bold: true});
+  }
+  return await pdf.save();
+}
+async function pdfFactura(f){
+  const PDFLib = await cargarPdfLib();
+  const base = await pdfBlanco(f);
+  return f.estado === "blanco" ? base : await estamparFactura(PDFLib, base, f);
+}
+async function entregarPdf(bytes, name){
+  const blob = new Blob([bytes], {type: "application/pdf"});
+  try {
+    const file = new File([blob], name, {type: "application/pdf"});
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: name}); return; }
+  } catch (err) { if (err && err.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+const nombreFac = f => "Factura " + f.numero + (f.cliente && f.cliente.nombre ? " - " + String(f.cliente.nombre).replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) : "") + ".pdf";
+const ESTADO_FAC = {blanco: ["En blanco", ""], emitida: ["Emitida", "b-ok"], anulada: ["Anulada", "b-bad"]};
+
+// Arma los datos de la factura desde la cotización (no guarda nada). Devuelve null si falta algo.
+function facArmar(){
+  const c = S.cot.find(x => x.id === S.m.id); if (!c) return null;
+  if (c.estado !== "aprobada") { toast("La cotización ya no está por facturar."); return null; }
+  const sig = facSiguiente(); if (!sig) { toast("No hay facturas en blanco."); return null; }
+  const fecha = S.f.fac_fecha || today();
+  if (sig.fechaLimite && fecha > sig.fechaLimite) { toast("La fecha pasa la fecha límite de emisión del CAI (" + fdate(sig.fechaLimite) + ")."); return null; }
+  if (fecha > today()) { toast("La fecha de emisión no puede ser futura."); return null; }
+  const ult = facUltima();
+  if (ult && ult.fecha && fecha < ult.fecha && !confirm("La fecha es anterior a la última factura emitida (" + ult.numero.slice(-8) + " del " + fdate(ult.fecha) + "). ¿Seguir?")) return null;
+  const cl = c.cliente || {};
+  const cf = S.f.fac_cf ?? !clean(cl.rtn);
+  const cli = cf ? {nombre: "CONSUMIDOR FINAL", rtn: "", direccion: clean(S.f.fac_dir ?? cl.direccion)}
+                 : {nombre: clean(S.f.fac_nom ?? cl.nombre), rtn: clean(S.f.fac_rtn ?? cl.rtn), direccion: clean(S.f.fac_dir ?? cl.direccion)};
+  if (!cli.nombre) { toast("Escribe el nombre del cliente o marca Consumidor final."); return null; }
+  if (cli.rtn && !/^\d{14}$/.test(cli.rtn.replace(/\D/g, "")) && !confirm("El RTN no tiene 14 dígitos. ¿Seguir?")) return null;
+  const tot = calc(c.items, c.flete).total;
+  if (!cli.rtn && tot > 10000 && !confirm("La venta pasa de L. 10,000 y va sin RTN. El SAR pide los datos del cliente en esos casos. ¿Seguir de todos modos?")) return null;
+  const fp = S.f.fac_fp || c.formaPago || "Efectivo";
+  const yaPago = S.f.fac_pagado ?? (fp !== "Contra entrega");
+  const pagos = (c.pagos || []).slice();
+  if (yaPago && saldo(c) > 0) pagos.push({monto: saldo(c), fecha, metodo: fp, ref: "", por: S.me.uid});
+  const falt = faltantes(c);
+  if (falt.length && !confirm("No hay existencia suficiente:\n" + falt.join("\n") + "\n\n¿Facturar de todos modos?")) return null;
+  // El costo de compra queda congelado en la factura (la utilidad no cambia aunque después cambie el costo)
+  const items = (c.items || []).map(i => { if (i.costoU != null || i.generico) return i; const cu = costoUnit(i.id); return cu > 0 ? Object.assign({}, i, {costoU: Math.round(cu * 1e6) / 1e6}) : i; });
+  const fd = datosFactura(c, cli, fecha, fp);
+  return {sig, fecha, fp, pagos, items, fd, f: Object.assign({}, sig, {estado: "emitida"}, fd)};
+}
+function cargarPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  const B = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  return new Promise((ok, mal) => { const sc = document.createElement("script"); sc.src = B + "pdf.min.js";
+    sc.onload = () => { if (!window.pdfjsLib) return mal(new Error("sin pdf.js")); window.pdfjsLib.GlobalWorkerOptions.workerSrc = B + "pdf.worker.min.js"; ok(window.pdfjsLib); };
+    sc.onerror = mal; document.head.appendChild(sc); });
+}
+async function pdfImagen(bytes){
+  const pdfjs = await cargarPdfJs();
+  const pdf = await pdfjs.getDocument({data: bytes.slice(0)}).promise;
+  const pg = await pdf.getPage(1), vp = pg.getViewport({scale: 2});
+  const cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height;
+  await pg.render({canvasContext: cv.getContext("2d"), viewport: vp}).promise;
+  return cv.toDataURL("image/jpeg", 0.85);
+}
+function vFacturas(){
+  const all = S.facturas || [];
+  const blancos = facBlancos(), sig = blancos[0], ult = facUltima();
+  const ref = sig || all[0] || CAI_DEF;
+  const dLim = ref.fechaLimite ? diffDays(ref.fechaLimite, today()) : null;
+  const mes = today().slice(0, 7);
+  const facMes = r2(all.filter(f => f.estado === "emitida" && String(f.fecha || "").startsWith(mes)).reduce((a, f) => a + (Number(f.total) || 0), 0));
+  const fl = S.f.fl_est || "usadas", por = S.f.fl_por || "", q = clean(S.f.flq).toLowerCase();
+  let list = all.filter(f => fl === "usadas" ? f.estado !== "blanco" : f.estado === fl);
+  if (por) list = list.filter(f => f.por === por);
+  if (q) list = list.filter(f => [f.numero, f.cliente && f.cliente.nombre, f.cliente && f.cliente.rtn, f.cotNumero, f.porNombre].join(" ").toLowerCase().includes(q));
+  list = list.slice().sort((a, b) => fl === "blanco" ? a.n - b.n : b.n - a.n);
+  const quienes = [...new Map(all.filter(f => f.por).map(f => [f.por, f.porNombre || f.porIni || "—"])).entries()];
+  const cnt = k => all.filter(f => k === "usadas" ? f.estado !== "blanco" : f.estado === k).length;
+  const fact = puede("admin", "facturador");
+  return `
+  <h1>Facturas</h1>
+  <p class="sub">Talonario con CAI. Al emitir desde una cotización "Por facturar", el sistema usa la siguiente factura en blanco y la amarra a la cotización.</p>
+  <div class="stats">
+    <div class="stat"><b>${sig ? esc(sig.numero.slice(-8)) : "—"}</b><span>Siguiente factura</span></div>
+    <div class="stat ${blancos.length <= 10 ? "alert" : ""}"><b>${blancos.length}</b><span>Quedan en blanco</span></div>
+    <div class="stat ${dLim != null && dLim <= 30 ? "alert" : ""}"><b>${ref.fechaLimite ? fdate(ref.fechaLimite) : "—"}</b><span>Fecha límite de emisión${dLim != null ? (dLim < 0 ? " · vencido" : " · " + dLim + " días") : ""}</span></div>
+    <div class="stat"><b>${L(facMes)}</b><span>Facturado este mes</span></div>
+  </div>
+  ${blancos.length <= 10 ? `<div class="panel" style="border-color:var(--warn);padding:12px"><b>${blancos.length ? "Quedan pocas facturas en blanco." : "No hay facturas en blanco."}</b> ${S.admin ? "Carga más páginas del talonario abajo." : "Avisa al administrador para que cargue más páginas del talonario."}</div>` : ""}
+  <div class="panel">
+    <div class="chips" role="group" aria-label="Estado">${[["usadas", "Todas"], ["emitida", "Emitidas"], ["anulada", "Anuladas"], ["blanco", "En blanco"]].map(([v, t]) => `<button data-a="flEst" data-v="${v}" aria-pressed="${fl === v}">${t} <span class="cnt">${cnt(v)}</span></button>`).join("")}</div>
+    <div class="row" style="margin-top:10px">
+      <div class="field" style="flex:2 1 220px"><label for="flq">Buscar</label><input id="flq" data-k="flq" value="${fv("flq")}" placeholder="Número, empresa, RTN o cotización"></div>
+      <div class="field"><label for="flpor">Facturó</label><select id="flpor" data-k="fl_por" data-redraw="1"><option value="">Todos</option>${quienes.map(([u, n]) => `<option value="${esc(u)}" ${por === u ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+    </div>
+    <div class="actions" style="margin-top:4px"><button class="btn" data-a="facExcel" ${S.busy || !all.length ? "disabled" : ""}>Descargar Excel</button></div>
+    <div class="scroll">
+    ${list.length ? `<table><thead><tr><th>Factura</th><th>Fecha</th><th>Empresa</th><th>Cotización</th><th>Facturó</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${list.map(f => { const [et, ec] = ESTADO_FAC[f.estado] || [f.estado, ""]; return `<tr>
+        <td><b>${esc(f.numero)}</b></td>
+        <td>${f.fecha ? fdate(f.fecha) : ""}</td>
+        <td>${esc((f.cliente && f.cliente.nombre) || "")}${f.cliente && f.cliente.rtn ? `<br><small class="muted">RTN ${esc(f.cliente.rtn)}</small>` : ""}</td>
+        <td>${f.cotId ? `<a href="#" data-a="facCot" data-v="${esc(f.cotId)}">${esc(f.cotNumero || "")}</a>` : ""}</td>
+        <td>${esc(f.porNombre || "")}${f.emitidaEn ? `<br><small class="muted">${horaTxt(f.emitidaEn)}</small>` : ""}</td>
+        <td class="num">${f.estado === "blanco" ? "" : L(f.total)}</td>
+        <td><span class="badge ${ec}">${et}</span>${f.anulada ? `<br><small class="muted">${esc(f.anulada.motivo || "")}${f.anulada.porNombre ? " · " + esc(f.anulada.porNombre) : ""}</small>` : ""}</td>
+        <td style="white-space:nowrap"><button class="btn sm" data-a="facPdf" data-v="${f.n}" ${S.busy ? "disabled" : ""}>PDF</button>${(f.estado === "emitida" && fact) || (f.estado === "blanco" && S.admin) ? ` <button class="btn sm danger" data-a="facAnular" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Anular</button>` : ""}</td></tr>`; }).join("")}
+    </tbody></table>` : `<p class="empty">${all.length ? "No hay facturas con ese filtro." : "Todavía no hay talonario cargado."}</p>`}
+    </div>
+    ${ult ? `<p class="note">Última emitida: ${esc(ult.numero)} · ${fdate(ult.fecha)} · ${esc((ult.cliente && ult.cliente.nombre) || "")}${ult.porNombre ? " · " + esc(ult.porNombre) : ""}</p>` : ""}
+  </div>
+  ${S.admin ? vTalonario(all) : ""}`;
+}
+function vTalonario(all){
+  const ref = all.slice().sort((a, b) => b.n - a.n)[0];
+  const g = (k, d) => S.f["tal_" + k] ?? d;
+  if (!S.talForm) return `<div class="panel"><button class="btn" data-a="talForm">Cargar páginas del talonario</button></div>`;
+  return `<div class="panel">
+    <h2>Cargar talonario (PDF)</h2>
+    <p class="note">Sube el PDF de la imprenta. Solo se guardan las páginas del rango que indiques; las que ya existen se saltan.</p>
+    <div class="field"><label for="tal_file">PDF del talonario</label><input id="tal_file" type="file" accept="application/pdf"></div>
+    ${S.talFile ? `<p class="note">${esc(S.talFile.name)} · ${(S.talFile.size / 1048576).toFixed(1)} MB</p>` : ""}
+    <div class="row">
+      <div class="field"><label for="tal_ini">N.º de la 1.ª página del PDF</label><input id="tal_ini" type="number" data-k="tal_ini" value="${esc(g("ini", ""))}" placeholder="1351"></div>
+      <div class="field"><label for="tal_desde">Cargar desde</label><input id="tal_desde" type="number" data-k="tal_desde" value="${esc(g("desde", ref ? ref.n + 1 : ""))}" placeholder="1395"></div>
+      <div class="field"><label for="tal_hasta">Hasta (vacío = hasta el final)</label><input id="tal_hasta" type="number" data-k="tal_hasta" value="${esc(g("hasta", ""))}"></div>
+    </div>
+    <div class="field"><label for="tal_cai">CAI</label><input id="tal_cai" data-k="tal_cai" value="${esc(g("cai", (ref || CAI_DEF).cai))}"></div>
+    <div class="row">
+      <div class="field"><label for="tal_ri">Rango desde</label><input id="tal_ri" data-k="tal_ri" value="${esc(g("ri", (ref || CAI_DEF).rangoIni))}"></div>
+      <div class="field"><label for="tal_rf">Rango hasta</label><input id="tal_rf" data-k="tal_rf" value="${esc(g("rf", (ref || CAI_DEF).rangoFin))}"></div>
+      <div class="field"><label for="tal_lim">Fecha límite de emisión</label><input id="tal_lim" type="date" data-k="tal_lim" value="${esc(g("lim", (ref || CAI_DEF).fechaLimite))}"></div>
+    </div>
+    <div class="actions"><button class="btn pri" data-a="talCargar" ${S.busy ? "disabled" : ""}>${S.busy && S.talProg ? esc(S.talProg) : "Cargar facturas en blanco"}</button><button class="btn" data-a="talForm">Cerrar</button></div>
+  </div>`;
 }
 
 /* ---------- WhatsApp y PDF ---------- */
@@ -1789,7 +2049,8 @@ function startData(){
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
   if (fact) dataSubs.push(onSnapshot(collection(db, "cxp"), q => { S.cxp = mapDocs(q); render(); }, onErr));
-  S.costos = {}; S.invMov = []; S.inv = {}; S.util = {}; S.misPartes = [];
+  S.costos = {}; S.invMov = []; S.inv = {}; S.util = {}; S.misPartes = []; S.facturas = [];
+  if (fact) dataSubs.push(onSnapshot(collection(db, "facturas"), q => { S.facturas = mapDocs(q).map(f => Object.assign(f, {n: Number(f.n)})).sort((a, b) => b.n - a.n); render(); }, e => console.warn("facturas", e)));
   if (fact) dataSubs.push(onSnapshot(collection(db, "inv_mov"), q => { S.invMov = mapDocs(q); render(); }, e => console.warn("inv_mov", e)));
   if (fact) dataSubs.push(onSnapshot(collection(db, "inventario"), q => { S.inv = {}; q.docs.forEach(d => { S.inv[d.id] = d.data(); }); render(); }, e => console.warn("inventario", e)));
   if (fact) dataSubs.push(onSnapshot(collection(db, "utilidad"), q => { S.util = {}; q.docs.forEach(d => { S.util[d.id] = d.data(); }); render(); }, e => console.warn("utilidad", e)));
@@ -2008,21 +2269,156 @@ const A = {
   },
   async aprobar(){ if (!confirm("¿El cliente confirmó? Se envía a facturar y ya no se podrá editar.")) return; await upd(doc(db, "cotizaciones", S.m.id), {estado: "aprobada", aprobada: Date.now()}, "Enviada a facturar"); },
   async anular(){ if (!confirm("¿Anular esta cotización? No se puede deshacer.")) return; if (await upd(doc(db, "cotizaciones", S.m.id), {estado: "anulada", anulada: Date.now()}, "Cotización anulada")) { S.m = null; draw(); } },
-  async saveFac(){
-    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
-    const num = clean(S.f.fac_num); if (!num) return toast("Escribe el número de factura.");
-    const fecha = S.f.fac_fecha || today();
-    const fp = S.f.fac_fp || c.formaPago || "Efectivo";
-    const yaPago = S.f.fac_pagado ?? (fp !== "Contra entrega");
-    const pagos = (c.pagos || []).slice();
-    if (yaPago && saldo(c) > 0) pagos.push({monto: saldo(c), fecha, metodo: fp, ref: "", por: S.me.uid});
-    const falt = faltantes(c);
-    if (falt.length && !confirm("No hay existencia suficiente:\n" + falt.join("\n") + "\n\n¿Facturar de todos modos?")) return;
-    // El costo de compra queda congelado en la factura (la utilidad no cambia aunque después cambie el costo)
-    const items = (c.items || []).map(i => { if (i.costoU != null || i.generico) return i; const cu = costoUnit(i.id); return cu > 0 ? Object.assign({}, i, {costoU: Math.round(cu * 1e6) / 1e6}) : i; });
-    const ok = await upd(doc(db, "cotizaciones", c.id), {estado: "facturada", formaPago: fp, factura: {numero: num, fecha, formaPago: fp, por: S.me.uid}, vence: fecha, pagos, items, facturadaEn: Date.now()}, "Factura registrada");
-    if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
+  async facPrevia(){
+    const x = facArmar(); if (!x) return;
+    S.busy = true; draw();
+    let img = "";
+    try {
+      const bytes = await estamparFactura(await cargarPdfLib(), await pdfBlanco(x.sig), Object.assign({}, x.f, {previa: true}));
+      img = await pdfImagen(bytes);
+    } catch (e) { console.error(e); toast("No se pudo dibujar la vista previa; revisa los datos abajo."); }
+    S.busy = false;
+    if (!S.m) return draw();
+    S.m.prev = Object.assign(x, {img}); S.m.mode = "facprev"; draw();
+    const sh = $("#sheet"); if (sh) sh.scrollTop = sh.scrollHeight;
   },
+  facModificar(){ if (S.m) { S.m.mode = "factura"; S.m.prev = null; } draw(); },
+  async saveFac(){
+    const P = S.m && S.m.prev; if (!P) return;
+    const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
+    const sig = facSiguiente();
+    if (!sig) return toast("Ya no hay facturas en blanco.");
+    if (sig.n !== P.sig.n) { toast("La factura " + P.sig.numero.slice(-8) + " ya la usó otra persona. Revisa la vista previa con la " + sig.numero.slice(-8) + "."); return A.facPrevia(); }
+    const {fd, fp, pagos, items, fecha} = P;
+    const quien = {por: S.me.uid, porNombre: S.me.nombre || (S.u && S.u.email) || "", porIni: S.me.ini || "", emitidaEn: Date.now(), cotId: c.id, cotNumero: c.numero};
+    S.busy = true; draw();
+    try {
+      await runTransaction(db, async tx => {
+        const fr = doc(db, "facturas", String(sig.n)), cr = doc(db, "cotizaciones", c.id);
+        const fs = await tx.get(fr), cs = await tx.get(cr);
+        if (!fs.exists() || fs.data().estado !== "blanco") throw new Error("ocupada");
+        if (!cs.exists() || cs.data().estado !== "aprobada") throw new Error("cotizacion");
+        tx.update(fr, Object.assign({estado: "emitida"}, quien, fd));
+        tx.update(cr, {estado: "facturada", formaPago: fp, factura: {numero: sig.numero, n: sig.n, fecha, formaPago: fp, por: S.me.uid}, vence: fecha, pagos, items, facturadaEn: Date.now()});
+      });
+      toast("Factura " + sig.numero.slice(-8) + " emitida");
+      S.m.mode = "ver"; S.m.prev = null; clearForm(); S.busy = false; draw();
+      const f = Object.assign({}, sig, {estado: "emitida"}, quien, fd);
+      try { await entregarPdf(await pdfFactura(f), nombreFac(f)); } catch (e) { console.error(e); toast("La factura quedó emitida, pero no se pudo armar el PDF. Descárgalo desde Facturas."); }
+    } catch (e) {
+      S.busy = false; draw();
+      if (e && e.message === "ocupada") toast("Otra persona acaba de usar esa factura. Toca Modificar y vuelve a revisar.");
+      else if (e && e.message === "cotizacion") toast("La cotización cambió de estado. Revísala.");
+      else fallo(e, "emitir la factura");
+    }
+  },
+  async facPdf(v){
+    const f = (S.facturas || []).find(x => String(x.n) === String(v)); if (!f) return;
+    S.busy = true; draw();
+    try { await entregarPdf(await pdfFactura(f), f.estado === "blanco" ? "Factura en blanco " + f.numero + ".pdf" : nombreFac(f)); }
+    catch (e) { console.error(e); toast(e && e.code === "permission-denied" ? "No tienes permiso para ver el PDF." : "No se pudo armar el PDF."); }
+    S.busy = false; draw();
+  },
+  async facPdfCot(){
+    const c = S.cot.find(x => x.id === S.m.id), f = facDeCot(c);
+    if (!f) return toast("Esta factura no está en el talonario del sistema.");
+    return A.facPdf(f.n);
+  },
+  facCot(v){ A.open(v); },
+  flEst(v){ S.f.fl_est = v; draw(); },
+  async facAnular(v){
+    const f = (S.facturas || []).find(x => String(x.n) === String(v)); if (!f) return;
+    if (f.estado === "blanco" && !S.admin) return;
+    if (f.estado !== "blanco" && f.estado !== "emitida") return;
+    const c = f.cotId ? S.cot.find(x => x.id === f.cotId) : null;
+    const msg = f.estado === "blanco" ? `¿Anular la factura en blanco ${f.numero}? (por ejemplo, si se dañó). No se podrá usar.\n\nEscribe el motivo:`
+      : `¿Anular la factura ${f.numero} de ${(f.cliente && f.cliente.nombre) || ""} por ${L(f.total)}?\nEl número queda anulado y no se vuelve a usar.${c ? " La cotización " + c.numero + " vuelve a \"Por facturar\"" + (pagado(c) > 0 ? " (los pagos registrados se quedan)" : "") + "." : ""}\n\nEscribe el motivo:`;
+    const motivo = clean(prompt(msg) || ""); if (!motivo) return;
+    const an = {motivo, por: S.me.uid, porNombre: S.me.nombre || (S.u && S.u.email) || "", en: Date.now()};
+    S.busy = true; draw();
+    try {
+      await runTransaction(db, async tx => {
+        const fr = doc(db, "facturas", String(f.n)), fs = await tx.get(fr);
+        const cr = f.cotId ? doc(db, "cotizaciones", f.cotId) : null, cs = cr ? await tx.get(cr) : null;
+        if (!fs.exists() || fs.data().estado !== f.estado) throw new Error("cambio");
+        tx.update(fr, {estado: "anulada", anulada: an});
+        if (cs && cs.exists() && cs.data().factura && cs.data().factura.n === f.n)
+          tx.update(cr, {estado: "aprobada", factura: null, facturadaEn: null, facturasAnuladas: (cs.data().facturasAnuladas || []).concat([f.numero])});
+      });
+      toast("Factura " + f.numero.slice(-8) + " anulada");
+    } catch (e) { if (e && e.message === "cambio") toast("La factura cambió. Revisa e intenta de nuevo."); else fallo(e, "anular la factura"); }
+    S.busy = false; draw();
+  },
+  talForm(){ S.talForm = !S.talForm; if (!S.talForm) S.talFile = null; draw(); },
+  async talCargar(){
+    if (!S.admin) return;
+    const file = S.talFile; if (!file) return toast("Elige el PDF del talonario.");
+    const ini = parseInt(S.f.tal_ini, 10);
+    if (!(ini > 0)) return toast("Escribe el número de factura de la primera página del PDF.");
+    const ref = (S.facturas || []).slice().sort((a, b) => b.n - a.n)[0] || CAI_DEF;
+    const desde = parseInt(S.f.tal_desde ?? (ref.n ? ref.n + 1 : NaN), 10);
+    if (!(desde > 0)) return toast("Escribe desde qué número cargar.");
+    const cai = clean(S.f.tal_cai ?? ref.cai), ri = clean(S.f.tal_ri ?? ref.rangoIni), rf = clean(S.f.tal_rf ?? ref.rangoFin), lim = S.f.tal_lim ?? ref.fechaLimite;
+    if (!cai || !ri || !rf || !lim) return toast("Completa CAI, rango y fecha límite.");
+    const nIni = parseInt(ri.slice(-8), 10), nFin = parseInt(rf.slice(-8), 10);
+    S.busy = true; S.talProg = "Leyendo PDF…"; draw();
+    try {
+      const PDFLib = await cargarPdfLib();
+      const src = await PDFLib.PDFDocument.load(await file.arrayBuffer(), {updateMetadata: false});
+      const ultimo = ini + src.getPageCount() - 1;
+      const hasta = Math.min(parseInt(S.f.tal_hasta, 10) || ultimo, ultimo, nFin || ultimo);
+      if (desde < ini || desde > hasta) throw new Error("El PDF tiene de la " + ini + " a la " + ultimo + "; revisa \"Cargar desde\".");
+      if (nIni && desde < nIni) throw new Error("La " + desde + " está fuera del rango autorizado.");
+      const ya = new Set((S.facturas || []).map(f => f.n));
+      const nums = []; for (let n = desde; n <= hasta; n++) if (!ya.has(n)) nums.push(n);
+      if (!nums.length) throw new Error("Esas facturas ya están cargadas.");
+      S.busy = false; S.talProg = ""; draw();
+      if (!confirm(`Se cargarán ${nums.length} facturas en blanco: de la ${nums[0]} a la ${nums[nums.length - 1]}.\n\nRevisa que la página 1 del PDF sea la factura ${ini}. Después puedes abrir cualquiera con el botón PDF para comprobar.`)) return;
+      S.busy = true; draw();
+      const {PDFDocument, PDFName} = PDFLib;
+      let k = 0;
+      for (const n of nums) {
+        S.talProg = "Cargando " + (++k) + " de " + nums.length + "…"; draw();
+        const page = src.getPage(n - ini);
+        ["PieceInfo", "Thumb", "LastModified", "Metadata"].forEach(x => page.node.delete(PDFName.of(x)));
+        const out = await PDFDocument.create();
+        const [cp] = await out.copyPages(src, [n - ini]); out.addPage(cp);
+        const b64 = b64de(await out.save({useObjectStreams: true}));
+        const T = 700000, partes = Math.ceil(b64.length / T);
+        if (partes > 4) throw new Error("La página " + n + " pesa demasiado (" + Math.round(b64.length / 1024) + " KB).");
+        for (let p = 0; p < partes; p++) await setDoc(doc(db, "talonario_pdf", n + "_" + p), {pdf: b64.slice(p * T, (p + 1) * T)});
+        await setDoc(doc(db, "facturas", String(n)), {n, numero: facNum(ri, n), estado: "blanco", cai, rangoIni: ri, rangoFin: rf, fechaLimite: lim, partes, cargado: Date.now(), cargadoPor: S.me.uid});
+      }
+      toast(nums.length + " facturas en blanco cargadas");
+      S.talForm = false; S.talFile = null; Object.keys(S.f).filter(x => x.startsWith("tal_")).forEach(x => delete S.f[x]);
+    } catch (e) { console.error(e); toast(e && e.code ? "No se pudo guardar (revisa las reglas de Firebase)." : (e && e.message) || "No se pudo leer el PDF."); }
+    S.busy = false; S.talProg = ""; draw();
+  },
+  async facExcel(){
+    S.busy = true; draw();
+    try {
+      const ExcelJS = await cargarExcelJS();
+      const wb = new ExcelJS.Workbook(); wb.creator = "MHAS Ventas";
+      const ws = wb.addWorksheet("Facturas", {views: [{state: "frozen", ySplit: 1}]});
+      const cols = [["Factura", 22], ["Fecha", 12], ["Cliente", 38], ["RTN", 17], ["Cotización", 13], ["Facturó", 20], ["Forma de pago", 15], ["Subtotal", 13], ["Descuento", 12], ["Gravado", 13], ["ISV 15%", 12], ["Total", 13], ["Estado", 11], ["Motivo anulación", 30], ["CAI", 40]];
+      ws.columns = cols.map(([h, w]) => ({header: h, width: w}));
+      ws.getRow(1).font = {bold: true}; ws.getRow(1).fill = {type: "pattern", pattern: "solid", fgColor: {argb: "FFE0A526"}};
+      (S.facturas || []).filter(f => f.estado !== "blanco").sort((a, b) => a.n - b.n).forEach(f => {
+        const an = f.estado === "anulada";
+        const row = ws.addRow([f.numero, f.fecha ? fdate(f.fecha) : "", (f.cliente && f.cliente.nombre) || "", (f.cliente && f.cliente.rtn) || "", f.cotNumero || "", f.porNombre || "", f.formaPago || "",
+          an ? 0 : f.sub || 0, an ? 0 : f.desc || 0, an ? 0 : f.gravado || 0, an ? 0 : f.isv || 0, an ? 0 : f.total || 0, (ESTADO_FAC[f.estado] || [f.estado])[0], (f.anulada && f.anulada.motivo) || "", f.cai || ""]);
+        [8, 9, 10, 11, 12].forEach(c => row.getCell(c).numFmt = '"L." #,##0.00');
+        if (an) row.font = {color: {argb: "FFB42318"}};
+      });
+      ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: cols.length}};
+      const buf = await wb.xlsx.writeBuffer();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+      a.download = "Facturas MHAS " + today() + ".xlsx"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast("Excel descargado");
+    } catch (e) { console.error(e); toast("No se pudo armar el Excel."); }
+    S.busy = false; draw();
+  },
+  chatF(v){ S.chatF = v; draw(); },
   async savePag(){
     const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
     const p = leerPago(c); if (!p) return;
@@ -2678,7 +3074,7 @@ document.addEventListener("input", e => {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
     if (k === "flete") refrescarCarrito();
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
-    if (k === "cq" || k === "prq" || k === "invq" || k === "utq") draw();
+    if (k === "cq" || k === "prq" || k === "invq" || k === "utq" || k === "flq") draw();
     if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta") {
       const un = Math.max(1, Number(($("#pe_unidades") || {}).value) || 1);
       const pon = (id, v) => { S.f[id] = v; const o = $("#" + id); if (o) o.value = v; };
@@ -2695,6 +3091,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target;
+  if (t.id === "tal_file") { S.talFile = (t.files && t.files[0]) || null; draw(); return; }
   if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
   if (t.dataset.k === "pz_tipo") { S.f.pz_tipoManual = true; const f = $("#pz_fecha"); if (f && !S.f.pz_fecha) f.value = t.value === "entregas" ? proxRuta() : today(); }
   if (t.dataset.k === "tz_tipo" && t.value === "entregas" && !S.f.tz_fecha) { const f = $("#tz_fecha"); if (f) { f.value = proxRuta(); S.f.tz_fecha = f.value; } }
