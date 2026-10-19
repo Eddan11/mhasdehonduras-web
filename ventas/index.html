@@ -296,10 +296,16 @@ const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-w
 
 function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
 const puede = (...roles) => roles.includes(rol());
-function iniciales(){
-  const c = String(S.me.ini || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+// El administrador cotiza a nombre de su cuenta de vendedor (comercial@): número, firma del PDF, reportes y cliente asignado
+function vendCot(){
+  if (S.admin) { const v = (S.usuarios || []).find(u => (u.email || "").toLowerCase() === "comercial@mhasdehonduras.com"); if (v && v.id !== S.me.uid) return v; }
+  return Object.assign({}, S.me, {id: S.me.uid});
+}
+function iniciales(u){
+  u = u || S.me;
+  const c = String(u.ini || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
   if (c) return c;
-  const n = (S.me.nombre || "").split(/\s+/).filter(Boolean);
+  const n = (u.nombre || "").split(/\s+/).filter(Boolean);
   const g = n.length >= 2 ? n[0][0] + n[1][0] : (n[0] || "MH").slice(0, 2);
   return g.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 4) || "MH";
 }
@@ -440,7 +446,7 @@ function vCotizar(){
   const dirCot = nuevo ? S.f.cli_dir : (cliSel || {}).direccion, fueraCot = esFueraSPS(dirCot), ns = notasForm();
   return `<div class="narrow">
   <h1>${S.editId ? "Editar cotización" : "Nueva cotización"}</h1>
-  <p class="sub">Número: <span class="stub">${S.editId ? esc(S.editId) : "COT-" + esc(iniciales()) + "-····"}</span></p>
+  <p class="sub">Número: <span class="stub">${S.editId ? esc(S.editId) : "COT-" + esc(iniciales(vendCot())) + "-····"}</span></p>
   ${S.editId ? `<div class="panel" style="border-color:var(--gold)"><b>Editando ${esc(S.editId)}</b> <span class="note">· cotización abierta. Guarda los cambios o toca Cotizar para generar el PDF actualizado.</span>
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="nuevaBlanco">Cancelar edición</button></div></div>` : ""}
   ${S.admin ? `<div class="panel">
@@ -2261,6 +2267,7 @@ const A = {
     if (!sel) return toast("Elige o crea un cliente.");
     if (!S.cart.length) return toast("Agrega al menos un producto.");
     let cliente, nuevoCtc = null;
+    const V = vendCot();
     if (sel === "__nuevo") {
       const nom = clean(S.f.cli_nombre);
       if (!nom) return toast("Escribe el nombre de la empresa.");
@@ -2283,7 +2290,7 @@ const A = {
         await updateDoc(doc(db, "clientes", nuevoCtc.c.id), {contactos: nuevoCtc.lista, contacto: L0.nombre || "", tel: L0.tel || "", email: L0.correo || ""});
         delete S.f.cli_ctc; ["ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]);
       }
-      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", contactos: cliente.contacto || cliente.tel || cliente.email ? [{nombre: cliente.contacto || "", cargo: cliente.cargo || "", tel: cliente.tel || "", correo: cliente.email || ""}] : [], direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: S.me.uid}); cliente.id = ref.id; }
+      if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", contactos: cliente.contacto || cliente.tel || cliente.email ? [{nombre: cliente.contacto || "", cargo: cliente.cargo || "", tel: cliente.tel || "", correo: cliente.email || ""}] : [], direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: V.id}); cliente.id = ref.id; }
       const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
       const flete = Math.max(0, r2(Number(S.f.flete) || 0));
@@ -2303,10 +2310,10 @@ const A = {
           numero = "COT-" + ant.replace(/^COT-?/, "").replace(/^-+|-+$/g, "");
           if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
-        } else numero = await siguienteNumero(iniciales());
+        } else numero = await siguienteNumero(iniciales(V));
         cot = {numero, cliente, items, total, flete, notas: clean(S.f.notas), notasSel: notasForm(), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
-          vendedor: S.me.uid, vendedorNombre: S.me.nombre || S.me.email,
-          vendedorInfo: {nombre: S.me.nombre || S.me.email, cargo: S.me.cargo || "Ventas", tel: S.me.tel || e.whatsapp, correo: S.me.correo || S.me.email},
+          vendedor: V.id, vendedorNombre: V.nombre || V.email,
+          vendedorInfo: {nombre: V.nombre || V.email, cargo: V.cargo || "Ventas", tel: V.tel || e.whatsapp, correo: V.correo || V.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
         await setDoc(doc(db, "cotizaciones", numero), cot);
       }
