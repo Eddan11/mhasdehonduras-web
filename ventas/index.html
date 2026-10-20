@@ -1785,7 +1785,7 @@ function datosFactura(c, cli, fecha, fp){
   const cc = calc(c.items, c.flete);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
   const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: vuDe(i).n.toUpperCase(), desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
-  if (cc.flete) lineas.push({cant: 1, desc: "FLETE", pu: cc.flete, imp: cc.flete});
+  if (cc.flete) lineas.push({cant: 1, unidad: "SERVICIO", desc: "FLETE DE ENTREGA", pu: cc.flete, imp: cc.flete});
   const sub = r2(cc.base + cc.flete), desc = 0;
   const cred = fp === "Crédito" ? {plazo: PLAZO_CRED, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha)} : {};
   return Object.assign({cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)}, cred);
@@ -1833,9 +1833,10 @@ async function estamparFactura(PDFLib, bytes, f){
   const cl = f.cliente || {};
   t(cl.nombre, 64, 111, {size: 11, max: 360});
   t(cl.rtn, 437, 111, {size: 11, max: 140});
-  t(cl.direccion, 71, 147, {size: 10, max: 500});
+  // Orden de compra debajo del RTN, en la línea de la dirección (la dirección se acorta para no chocar)
+  t(cl.direccion, 71, 147, {max: f.ordenCompra ? 330 : 500});
+  if (f.ordenCompra) t("ORDEN DE COMPRA: " + f.ordenCompra, 410, 147, {max: 180});
   t(fechaFac(f.fecha), 103, 180, {size: 11});
-  if (f.ordenCompra) t("ORDEN DE COMPRA No. " + f.ordenCompra, 360, 180, {size: 10, max: 215});
   let y = 282;
   (f.lineas || []).forEach(l => {
     // unidad (CAJA, BOLSA, FARDO…) a la izquierda y la descripción centrada en el espacio que queda
