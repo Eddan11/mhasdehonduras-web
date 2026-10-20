@@ -2082,7 +2082,7 @@ function armarPdf(c, interno){
   });
   y += 6;
   // columnas
-  const wC = 18, wP = 31, wT = 31, wD = hasD ? 27 : 0, wN = IW - wC - wP - wT - wD;
+  const wC = 24, wP = 31, wT = 31, wD = hasD ? 27 : 0, wN = IW - wC - wP - wT - wD;
   const xs = [M, M + wC, M + wC + wN, M + wC + wN + wP, M + wC + wN + wP + wD];
   const heads = ["CANT.", "PRODUCTO", "PRECIO UNIT."].concat(hasD ? ["DESCUENTO"] : []).concat(["TOTAL"]);
   const widths = [wC, wN, wP].concat(hasD ? [wD] : []).concat([wT]);
@@ -2096,14 +2096,15 @@ function armarPdf(c, interno){
   for (let r = 0; r < filas; r++) {
     const it = (c.items || [])[r], l = it ? cc.lines[r] : null;
     const nl = it ? d.splitTextToSize(it.nombre, wN - 3) : [""];
-    const h = Math.max(it ? 8.6 : 5.8, nl.length * 4.2 + 1.6);
+    const h = Math.max(5.8, nl.length * 4.2 + 1.6);
     if (y + h > 240) { d.addPage(); y = 20; header(); d.setFont("helvetica", "normal"); d.setFontSize(9.5); }
     fc(YEL); d.rect(M, y, wC + wN, h, "F"); dc(LINE);
     let x = M; widths.forEach(w => { d.rect(x, y, w, h); x += w; });
     if (it) {
       tc(INK);
-      d.text(String(qV(it)), M + wC / 2, y + 4.1, {align: "center"});
-      d.setFontSize(7); tc(GRAY); d.text(vuDe(it).n, M + wC / 2, y + 7.2, {align: "center"}); d.setFontSize(9.5); tc(INK);
+      // cantidad y unidad en la misma línea ("5 fardos"); si no cabe, se achica la letra
+      const qt = qV(it) + " " + vuDe(it).n; let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
+      d.setFontSize(fs); d.text(qt, M + wC / 2, y + 4.1, {align: "center"}); d.setFontSize(9.5);
       d.text(nl, M + wC + 1.5, y + 4.1);
       d.text(LU((interno ? l.u : l.un) * vuDe(it).f), xs[2] + wP / 2, y + 4.1, {align: "center"});
       if (hasD) d.text(l.desc ? L(l.desc) + " (" + pctTxt(l.pct) + ")" : "", xs[3] + wD / 2, y + 4.1, {align: "center"});
