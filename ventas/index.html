@@ -530,7 +530,6 @@ function vCotizar(){
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
       </div></div>`; }).join("") + `<p class="note">Precios sin ISV. Para cambiar el precio escriba el nuevo precio unitario, o rebaje una cantidad del total con ISV; el importe se recalcula solo.</p>
-    <div class="row" style="align-items:flex-end;margin:6px 0 4px"><div class="field" style="max-width:220px;margin:0"><label for="aj_total">Dejar total con ISV en (L.)</label><input id="aj_total" type="number" min="0" step="0.01" inputmode="decimal" data-k="aj_total" value="${fv("aj_total")}" placeholder="${r2(cc.total - cc.fleteIsv)}"></div><button class="btn" data-a="ajustarTotal">Aplicar</button></div>
     <div class="field" style="max-width:220px;margin:6px 0 4px"><label for="flete">Flete L. con ISV (opcional)</label><input id="flete" type="number" min="0" step="0.01" inputmode="decimal" data-k="flete" value="${fv("flete")}" placeholder="0.00"></div>
     <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
     : `<p class="empty">Todavía no agregas productos.</p>`}
@@ -2262,17 +2261,7 @@ const A = {
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; Object.assign(AS, {abierto: false, msgs: null, quedan: null, completo: false}); asRender(); },
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
-  ajustarTotal(){
-    const T = r2(Number(S.f.aj_total));
-    if (!S.cart.length) return;
-    const brutos = S.cart.map(i => r2(i.cant * (Number(i.precio) || 0))), G = r2(brutos.reduce((a, b) => a + b, 0));
-    if (!(T > 0) || T > G) return toast("Escribe un total menor o igual a " + L(G) + ".");
-    const D = r2(G - T); let usado = 0;
-    S.cart.forEach((i, n) => { const d = n === S.cart.length - 1 ? r2(D - usado) : r2(D * brutos[n] / G); usado = r2(usado + d); i.desc = d / 1.15; });
-    let dif = r2(calc(S.cart).total - T), k = 0; // corrige centavos de redondeo
-    while (Math.abs(dif) >= 0.005 && k++ < 5) { const u = S.cart[S.cart.length - 1]; u.desc = Math.max(0, (u.desc * 1.15 + dif) / 1.15); dif = r2(calc(S.cart).total - T); }
-    delete S.f.aj_total; draw(); toast("Total ajustado a " + L(calc(S.cart).total));
-  },
+
   cliPick(v){ S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
