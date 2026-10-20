@@ -524,12 +524,12 @@ function vCotizar(){
       <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
         <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(vuDe(i).n)}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
-        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
+        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
       </div>
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
-      </div></div>`; }).join("") + `<p class="note">Precios sin ISV. Para cambiar el precio escriba el nuevo precio unitario, o rebaje una cantidad del total con ISV; el importe se recalcula solo.</p>
+      </div></div>`; }).join("") + `<p class="note">Precios sin ISV. Para cambiar el precio escriba el nuevo precio, el % rebajado de la lista o una cantidad a rebajar del total con ISV; las demás casillas y el importe se recalculan solos.</p>
     <div class="field" style="max-width:220px;margin:6px 0 4px"><label for="flete">Flete L. con ISV (opcional)</label><input id="flete" type="number" min="0" step="0.01" inputmode="decimal" data-k="flete" value="${fv("flete")}" placeholder="0.00"></div>
     <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
     : `<p class="empty">Todavía no agregas productos.</p>`}
@@ -3223,18 +3223,32 @@ async function upd(ref, data, msg, merge){
   } catch (e) { fallo(e, "guardar"); S.busy = false; draw(); return false; }
 }
 
+// Precio de lista (catálogo, con ISV, por unidad suelta) para calcular el % rebajado; los genéricos no tienen
+function listaDe(i){ if (!i || i.generico) return 0; const p = S.prod.find(x => x.id === i.id); return p ? (Number(p.precio) || 0) / uni(p) : 0; }
+// % rebajado respecto a la lista: positivo = más barato que la lista, negativo = más caro
+function pctLista(i, l){ const li = listaDe(i) / 1.15; return li > 0 ? Math.round((1 - l.un / li) * 1000) / 10 : null; }
 function refrescarCarrito(){
   const cc = calc(S.cart, S.f.flete);
   cc.lines.forEach((l, n) => {
     const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
     const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? "Queda a " + LU(l.un) + " c/u" : "";
     const ci = document.getElementById("cisv" + n); if (ci) ci.textContent = L(l.conIsv) + " con ISV";
+    const i = S.cart[n], act = document.activeElement;
+    const pr = document.querySelector(`[data-cpr="${n}"]`); if (pr && pr !== act && i) pr.value = Math.round(l.u * vuDe(i).f * 100) / 100;
+    const pc = document.querySelector(`[data-cpct="${n}"]`); if (pc && pc !== act && i) { const v = pctLista(i, l); pc.value = v == null ? "" : v; }
   });
   const t = document.getElementById("ctot"); if (t) t.innerHTML = totalsHtml(cc);
   const b = document.getElementById("ctabtn"); if (b && !S.busy) b.textContent = "Cotizar · " + L(cc.total);
 }
 function leerCarrito(t){
-  const n = Number(t.dataset.cq ?? t.dataset.cd ?? t.dataset.cpr), i = S.cart[n]; if (!i) return null;
+  const n = Number(t.dataset.cq ?? t.dataset.cd ?? t.dataset.cpr ?? t.dataset.cpct), i = S.cart[n]; if (!i) return null;
+  if (t.dataset.cpct != null) {
+    // % rebajado de la lista: fija el precio y quita lo rebajado aparte
+    if (t.value === "" || !isFinite(Number(t.value)) || !listaDe(i)) return null;
+    i.precio = listaDe(i) * (1 - Math.min(100, Number(t.value)) / 100);
+    if (i.desc) { i.desc = 0; const d = document.getElementById("d" + n); if (d) d.value = ""; }
+    return i;
+  }
   const v = Number(t.value);
   if (t.dataset.cq != null) { if (v > 0) i.cant = Math.max(1, Math.round(v * vuDe(i).f)); }
   else if (t.dataset.cd != null) i.desc = Math.max(0, Number(t.value) || 0) / 1.15; // se escribe con ISV, se guarda sin ISV
@@ -3267,7 +3281,7 @@ document.addEventListener("input", e => {
   if (t.dataset.pc != null) { S.pcEdit[t.dataset.pc] = t.value; return; }
   if (t.dataset.ctc) { const [n, campo] = t.dataset.ctc.split(":"), L1 = S.f.ce_ctcs || []; if (L1[Number(n)]) L1[Number(n)][campo] = t.value; return; }
   if (k === "pz_txt" && !S.f.pz_tipoManual) { const sel = $("#pz_tipo"); S.f.pz_tipo = tipoAuto(t.value); if (sel) sel.value = S.f.pz_tipo; }
-  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
+  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null || t.dataset.cpct != null) { if (leerCarrito(t)) refrescarCarrito(); return; }
   if (t.dataset.rep != null && S.m && S.m.rep) {
     const R = S.m.rep, r = R[Number(t.dataset.rep)]; if (r) r.pct = Math.max(0, Math.min(100, Number(t.value) || 0));
     const c = S.cot.find(x => x.id === S.m.id), d = c ? utilDe(c) : {neta: 0};
@@ -3302,7 +3316,7 @@ document.addEventListener("change", e => {
   if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
   if (t.dataset.k === "pz_tipo") { S.f.pz_tipoManual = true; const f = $("#pz_fecha"); if (f && !S.f.pz_fecha) f.value = t.value === "entregas" ? proxRuta() : today(); }
   if (t.dataset.k === "tz_tipo" && t.value === "entregas" && !S.f.tz_fecha) { const f = $("#tz_fecha"); if (f) { f.value = proxRuta(); S.f.tz_fecha = f.value; } }
-  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null) {
+  if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null || t.dataset.cpct != null) {
     const i = leerCarrito(t);
     if (i && t.dataset.cq != null) t.value = qV(i);
     if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; i.desc = l.descX; t.value = l.descIsv || ""; }
