@@ -446,7 +446,7 @@ function vCotizar(){
   const nuevo = sel === "__nuevo";
   const cliSel = S.cli.find(c => c.id === sel);
   const cc = calc(S.cart, S.f.flete);
-  const edPrecio = puede("admin", "facturador");
+  const edPrecio = true; // precios variables: todos (vendedores incluidos) pueden cambiar el precio de cada línea
   const cats = [];
   S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const psel = S.prod.find(p => p.id === S.f.psel);
@@ -524,7 +524,7 @@ function vCotizar(){
       <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
         <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(vuDe(i).n)}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
-        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 10000) / 10000}">` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
+        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
       </div>
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
