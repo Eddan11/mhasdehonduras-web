@@ -516,9 +516,9 @@ function vCotizar(){
         <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio unit. sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * 10000) / 10000}">` : `<span class="muted">${LU(l.u)} c/${esc(i.unidad || "u")}</span>`}</div>
       </div>
       <div class="irow">
-        <div class="dsc"><label class="mini" for="d${n}">Descuento L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.desc ? pctTxt(l.pct) : "0%"}</span></div>
+        <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
-      </div></div>`; }).join("") + `<p class="note">Precios sin ISV. El descuento se escribe sobre el total con ISV.</p>
+      </div></div>`; }).join("") + `<p class="note">Precios sin ISV. Para cambiar el precio escriba el nuevo precio unitario, o rebaje una cantidad del total con ISV; el importe se recalcula solo.</p>
     <div class="row" style="align-items:flex-end;margin:6px 0 4px"><div class="field" style="max-width:220px;margin:0"><label for="aj_total">Dejar total con ISV en (L.)</label><input id="aj_total" type="number" min="0" step="0.01" inputmode="decimal" data-k="aj_total" value="${fv("aj_total")}" placeholder="${r2(cc.total - cc.fleteIsv)}"></div><button class="btn" data-a="ajustarTotal">Aplicar</button></div>
     <div class="field" style="max-width:220px;margin:6px 0 4px"><label for="flete">Flete L. con ISV (opcional)</label><input id="flete" type="number" min="0" step="0.01" inputmode="decimal" data-k="flete" value="${fv("flete")}" placeholder="0.00"></div>
     <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
@@ -1761,6 +1761,8 @@ function totalLetras(t){
 }
 const fechaFac = s => { const [y, m, d] = String(s || "").split("-"); return y ? Number(d) + " " + MESES_F[Number(m) - 1] + " " + y : ""; };
 const nF = n => (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+// Precio unitario: 2 decimales, o hasta 4 si el precio final no es exacto (para que cantidad x precio cuadre con el importe)
+const nPU = n => (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 4});
 const facNum = (rangoIni, n) => String(rangoIni || CAI_DEF.rangoIni).split("-").slice(0, 3).join("-") + "-" + String(n).padStart(8, "0");
 const facBlancos = () => (S.facturas || []).filter(f => f.estado === "blanco").sort((a, b) => a.n - b.n);
 const facSiguiente = () => facBlancos()[0] || null;
@@ -1768,9 +1770,10 @@ const facUltima = () => (S.facturas || []).filter(f => f.estado === "emitida").s
 const facDeCot = c => c && c.factura && c.factura.n != null ? (S.facturas || []).find(f => f.n === c.factura.n) : null;
 function datosFactura(c, cli, fecha, fp){
   const cc = calc(c.items, c.flete);
-  const lineas = (c.items || []).map((i, k) => ({cant: Number(i.cant) || 0, desc: String(i.nombre || "").toUpperCase(), pu: r2(cc.lines[k].u), imp: cc.lines[k].bruto}));
+  // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
+  const lineas = (c.items || []).map((i, k) => ({cant: Number(i.cant) || 0, desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * 1e4) / 1e4, imp: cc.lines[k].imp}));
   if (cc.flete) lineas.push({cant: 1, desc: "FLETE", pu: cc.flete, imp: cc.flete});
-  const sub = r2(cc.sub + cc.flete), desc = cc.desc;
+  const sub = r2(cc.base + cc.flete), desc = 0;
   return {cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)};
 }
 function cargarPdfLib(){
@@ -1824,7 +1827,7 @@ async function estamparFactura(PDFLib, bytes, f){
     const ls = partir(l.desc, SZ, 300);
     t(String(l.cant), 46, y, {center: true});
     ls.forEach((x, k) => t(x, 232, y + k * 12, {center: true}));
-    t(nF(l.pu), 445, y, {center: true});
+    t(nPU(l.pu), 445, y, {center: true});
     t(nF(l.imp), 568, y, {size: 9.5, right: true});
     y += ls.length * 12 + 4;
   });
@@ -3209,7 +3212,7 @@ function refrescarCarrito(){
   const cc = calc(S.cart, S.f.flete);
   cc.lines.forEach((l, n) => {
     const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
-    const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? pctTxt(l.pct) : "0%";
+    const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? "Queda a " + LU(l.un) + " c/u" : "";
     const ci = document.getElementById("cisv" + n); if (ci) ci.textContent = L(l.conIsv) + " con ISV";
   });
   const t = document.getElementById("ctot"); if (t) t.innerHTML = totalsHtml(cc);
@@ -3220,7 +3223,11 @@ function leerCarrito(t){
   const v = Number(t.value);
   if (t.dataset.cq != null) { if (v >= 1) i.cant = Math.round(v); }
   else if (t.dataset.cd != null) i.desc = Math.max(0, Number(t.value) || 0) / 1.15; // se escribe con ISV, se guarda sin ISV
-  else if (t.value !== "" && v >= 0) i.precio = v * 1.15;
+  else if (t.value !== "" && v >= 0) {
+    // Precio variable: el precio nuevo reemplaza al anterior y quita lo rebajado, para que el importe sea cantidad x precio
+    i.precio = v * 1.15;
+    if (i.desc) { i.desc = 0; const d = document.getElementById("d" + n); if (d) d.value = ""; }
+  }
   return i;
 }
 
