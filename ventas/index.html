@@ -573,6 +573,15 @@ function cliFiltrados(){
   return S.cli.filter(c => !q || [c.nombre, c.contacto, c.tel, c.rtn, ctcBusca(c)].join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q))
     .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 }
+// Al terminar de escribir en el buscador (Enter o salir del campo): si el nombre, teléfono o RTN coincide exacto con un cliente, se toma ese;
+// si no coincide con ninguno, se abre el formulario de cliente nuevo con lo escrito. Si hay varios parecidos, se deja la lista para elegir.
+function cliResolver(){
+  const q = clean(S.f.cli_q); if (!q || S.f.cli_sel) return;
+  const nz = x => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim(), d = q.replace(/\D/g, "");
+  const exacto = S.cli.find(c => nz(c.nombre) === nz(q) || (c.contacto && nz(c.contacto) === nz(q)) || (d.length >= 8 && (String(c.tel || "").replace(/\D/g, "").slice(-8) === d.slice(-8) || String(c.rtn || "").replace(/\D/g, "") === d)));
+  if (exacto) return A.cliPick(exacto.id);
+  if (!cliFiltrados().length) return A.cliPick("__nuevo");
+}
 function cliListHtml(){
   const lista = cliFiltrados(), qv = clean(S.f.cli_q);
   return `<button class="cli-op nuevo" data-a="cliPick" data-v="__nuevo">+ Cliente nuevo${qv && !lista.length ? ": <b>" + esc(qv) + "</b>" : ""}</button>` +
@@ -1858,16 +1867,19 @@ async function estamparFactura(PDFLib, bytes, f){
     pg.drawText(txt, {x: XR - font.widthOfTextAtSize(txt, size), y: H - 147, size, font, color: ink});
   }
   t(fechaFac(f.fecha), 103, 180, {size: 11});
+  // Columna de números a la derecha (Importe y Sub-Total…Total): todos terminan en el mismo punto, al centro del recuadro de valores (x 481–586)
+  const R = 557;
   let y = 282;
+  // Unidad (UND, CAJA, SERVICIO…) a la izquierda; la descripción empieza en una misma columna para todas las líneas, después de la unidad más ancha
+  const anchoUn = Math.max(0, ...(f.lineas || []).map(l => l.unidad ? font.widthOfTextAtSize(limpio(l.unidad), SZ) : 0));
+  const xDesc = 56 + (anchoUn ? anchoUn + 10 : 0), xFinDesc = 410;
   (f.lineas || []).forEach(l => {
-    // unidad (CAJA, BOLSA, FARDO…) a la izquierda y la descripción centrada en el espacio que queda
-    const un = l.unidad ? limpio(l.unidad) : "", uw = un ? font.widthOfTextAtSize(un, SZ) + 8 : 0;
-    const x0 = 56 + uw, x1 = 405, ls = partir(l.desc, SZ, x1 - x0);
+    const un = l.unidad ? limpio(l.unidad) : "", ls = partir(l.desc, SZ, xFinDesc - xDesc);
     t(String(l.cant), 46, y, {center: true});
     if (un) t(un, 56, y);
-    ls.forEach((x, k) => t(x, (x0 + x1) / 2, y + k * 17, {center: true}));
+    ls.forEach((x, k) => t(x, xDesc, y + k * 17));
     t(nPU(l.pu), 445, y, {center: true});
-    t(nF(l.imp), 568, y, {right: true});
+    t(nF(l.imp), R, y, {right: true});
     y += ls.length * 17 + 4;
   });
   t("------------------------- ÚLTIMA LÍNEA -------------------------", 232, y + 4, {center: true});
@@ -1878,14 +1890,15 @@ async function estamparFactura(PDFLib, bytes, f){
   };
   etiqueta("TOTAL EN LETRAS:", 25, 576.2, 66, 7.6);
   etiqueta("RECIBÍ CONFORME:", 22.5, 693.5, 58, 7.5);
-  const R = 562; // borde derecho de los números de Sub-Total…Total (más al centro del recuadro)
-  t(nF(f.sub), R, 584, {size: 9.5, right: true});
-  if (f.desc) t(nF(f.desc), R, 595.5, {size: 9.5, right: true});
-  t(nF(f.gravado), R, 607, {size: 9.5, right: true});
-  t(nF(f.isv), R, 644.5, {size: 9.5, right: true});
-  t(nF(f.total), R, 667.5, {big: true, bold: true, right: true});
-  const lt = partir(f.letras, SZ, 365).slice(0, 2); // la columna de Sub-Total empieza en x≈405
-  lt.forEach((x, k) => t(x, 31, (lt.length > 1 ? 601 : 610) + k * 15));
+  // Cada valor centrado en la altura de su etiqueta (medido sobre el talonario impreso)
+  t(nF(f.sub), R, 586, {right: true});                         // Sub-Total
+  if (f.desc) t(nF(f.desc), R, 598.3, {right: true});          // Descuento y Rebaja
+  t(nF(f.gravado), R, 610.3, {right: true});                   // Importe Gravado
+  t(nF(f.isv), R, 645.8, {right: true});                       // Impto. 15%
+  t(nF(f.total), R, 669.9, {big: true, bold: true, right: true}); // TOTAL A PAGAR
+  // Total en letras: hasta 2 renglones, más arriba, sin llegar al recuadro de Sub-Total (empieza en x≈418)
+  const lt = partir(f.letras, SZ, 378).slice(0, 2);
+  lt.forEach((x, k) => t(x, 31, (lt.length > 1 ? 597 : 604) + k * 15));
   t(f.formaPago, 31, 652, {max: 100});
   t(nF(f.total), 150, 652);
   if (f.plazo) { t(String(f.plazo), 240, 652, {center: true}); t(f.tiempo || "DÍAS", 311, 652, {center: true}); }
@@ -3298,6 +3311,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && e.target.id === "as_txt") { e.preventDefault(); A.asEnviar(); }
   if (e.key === "Escape" && AS.abierto && !S.m) A.asCerrar();
   if (e.key === "Enter" && e.target.id === "pz_txt") { e.preventDefault(); A.pzAgregar(); }
+  if (e.key === "Enter" && e.target.id === "cli_q") { e.preventDefault(); S.f.cli_q = e.target.value; cliResolver(); }
   if (e.key === "Enter" && e.target.classList && e.target.classList.contains("pc-in")) { e.preventDefault(); const ins = [...document.querySelectorAll(".pc-in")], i = ins.indexOf(e.target); if (ins[i + 1]) { ins[i + 1].focus(); ins[i + 1].select(); } }
   if (e.key === "Enter" && S.screen === "auth" && e.target.matches("#view input")) A.authGo();
 });
@@ -3338,6 +3352,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "tal_file") { S.talFile = (t.files && t.files[0]) || null; draw(); return; }
+  if (t.id === "cli_q") { S.f.cli_q = t.value; cliResolver(); return; }
   if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
   if (t.dataset.k === "pz_tipo") { S.f.pz_tipoManual = true; const f = $("#pz_fecha"); if (f && !S.f.pz_fecha) f.value = t.value === "entregas" ? proxRuta() : today(); }
   if (t.dataset.k === "tz_tipo" && t.value === "entregas" && !S.f.tz_fecha) { const f = $("#tz_fecha"); if (f) { f.value = proxRuta(); S.f.tz_fecha = f.value; } }
@@ -3357,7 +3372,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-21d";
+const APP_VER = "2026-10-21f";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
