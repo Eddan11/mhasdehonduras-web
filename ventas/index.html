@@ -286,10 +286,12 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false, facturas: [], talForm: false, talFile: null, talProg: "", chatF: "todos"
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil", "ajustes"],
-  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "inventario", "utilidad", "cobros", "pagar", "perfil"],
+  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "clientes", "productos", "cobros", "agente", "inventario", "utilidad", "perfil", "ajustes"],
+  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "cobros", "productos", "inventario", "utilidad", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
+// Pestañas que van dentro de "Más" (se usan poco). "Por pagar" se quitó del menú hasta que exista el módulo de compras.
+const TABS_MAS = {admin: ["agente", "inventario", "utilidad", "perfil", "ajustes"], facturador: ["productos", "inventario", "utilidad", "perfil"]};
 const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
@@ -413,7 +415,9 @@ function drawHeader(){
   if (!r && AS.abierto) { AS.abierto = false; $("#asisPanel").hidden = true; }
   const pf = r && r !== "vendedor" ? S.cot.filter(c => !c.eliminada && c.estado === "aprobada").length : 0;
   const pp = r === "admin" ? S.convs.filter(c => (c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now()) || c.consultaProduccion).length : 0;
-  $("#tabs").innerHTML = r ? TABS[r].map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}${t === "cotizaciones" && pf ? ` <span class="cnt hot" title="Por facturar">${pf}</span>` : ""}${t === "chats" && pp ? ` <span class="cnt hot" title="Piden persona">${pp}</span>` : ""}</button>`).join("") : "";
+  const mas = TABS_MAS[r] || [], verMas = S.verMas || mas.includes(S.tab);
+  const tabsVis = r ? TABS[r].filter(t => !mas.includes(t) || verMas) : [];
+  $("#tabs").innerHTML = r ? tabsVis.map(t => `<button data-a="tab" data-v="${t}" ${S.tab === t ? 'aria-current="page"' : ""}>${TAB_NAME[t]}${t === "cotizaciones" && pf ? ` <span class="cnt hot" title="Por facturar">${pf}</span>` : ""}${t === "chats" && pp ? ` <span class="cnt hot" title="Piden persona">${pp}</span>` : ""}</button>`).join("") + (mas.length ? `<button data-a="verMas" aria-expanded="${verMas}">${verMas ? "Menos ▴" : "Más ▾"}</button>` : "") : "";
   $("#who").innerHTML = S.u ? `<span>${esc(S.me.nombre || S.u.email)}${r ? " · " + ROL_NAME[r] : ""}</span><button class="out" data-a="salir">Salir</button>` : "";
 }
 const fv = k => esc(S.f[k] ?? "");
@@ -669,7 +673,7 @@ function vCobros(){
   const fac = S.cot.filter(c => c.estado === "facturada" && !c.eliminada);
   const pend = fac.filter(c => saldo(c) > 0.005).sort((a, b) => (a.vence || "").localeCompare(b.vence || ""));
   const porCobrar = r2(pend.reduce((a, c) => a + saldo(c), 0));
-  const vencido = r2(pend.filter(c => c.vence && diffDays(today(), c.vence) > 7).reduce((a, c) => a + saldo(c), 0));
+  const vencido = r2(pend.filter(c => c.vence && diffDays(today(), c.vence) > 0).reduce((a, c) => a + saldo(c), 0)); // vence = fecha máx. de crédito, o 3 días después de la factura
   const mes = today().slice(0, 7);
   const cobradoMes = r2(fac.reduce((a, c) => a + (c.pagos || []).filter(p => (p.fecha || "").startsWith(mes)).reduce((x, p) => x + (Number(p.monto) || 0), 0), 0));
   const porCli = {};
@@ -680,11 +684,11 @@ function vCobros(){
   <p class="sub">Facturas con saldo pendiente, de la más antigua a la más reciente.</p>
   <div class="stats">
     <div class="stat"><b>${L(porCobrar)}</b><span>Pendiente de cobro</span></div>
-    <div class="stat ${vencido > 0 ? "alert" : ""}"><b>${L(vencido)}</b><span>Más de 7 días sin cobrar</span></div>
+    <div class="stat ${vencido > 0 ? "alert" : ""}"><b>${L(vencido)}</b><span>Vencido</span></div>
     <div class="stat"><b>${L(cobradoMes)}</b><span>Cobrado este mes</span></div>
   </div>
   ${cli.length ? `<div class="panel"><h2>Quién debe</h2><div class="scroll"><table><thead><tr><th>Cliente</th><th class="num">Facturas</th><th class="num">Saldo</th><th>Situación</th></tr></thead><tbody>
-    ${cli.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num">${L(v.s)}</td><td>${v.max > 0 ? `<span class="badge ${v.max > 7 ? "b-bad" : "b-warn"}">${v.max} días sin cobrar</span>` : `<span class="badge b-warn">Por cobrar</span>`}</td></tr>`).join("")}
+    ${cli.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num">${L(v.s)}</td><td>${v.max > 0 ? `<span class="badge b-bad">Vencido hace ${v.max} ${v.max === 1 ? "día" : "días"}</span>` : `<span class="badge b-warn">Por cobrar</span>`}</td></tr>`).join("")}
   </tbody></table></div></div>` : ""}
   <div class="panel"><h2>Facturas pendientes</h2><div class="scroll">
   ${pend.length ? `<table><thead><tr><th>Factura</th><th>Cliente</th><th>Fecha</th><th class="num">Saldo</th><th>Situación</th><th></th></tr></thead><tbody>
@@ -993,8 +997,7 @@ function vAgente(){
     <p class="note">${modo === "apagado" ? "El agente no responde a nadie. Los chats llegan solo a la app del celular." : modo === "prueba" ? "Solo responde a los números de prueba de abajo. Los clientes reales no lo ven." : "Responde a todos los clientes. Recuerda apagar el agente de Meta en la app del celular."}</p>
     <div class="field"><label for="ag_nums">Números de prueba (uno por línea)</label><textarea id="ag_nums" data-k="ag_nums" placeholder="9999-8888">${esc(g("nums", (a.numerosPrueba || []).join("\n")))}</textarea></div>
     <div class="field"><label for="ag_eq">Números del equipo: el agente nunca les responde (uno por línea)</label><textarea id="ag_eq" data-k="ag_eq" placeholder="9468-9500">${esc(g("eq", (a.numerosEquipo || []).join("\n")))}</textarea></div>
-    <div class="field"><label for="ag_anp">Productos del anuncio (códigos, uno por línea): el agente los ofrece cuando el cliente llega del anuncio sin decir qué quiere</label><textarea id="ag_anp" data-k="ag_anp" placeholder="ROL-003">${esc(g("anp", (a.anuncioProductos || ["ROL-003", "ROL-005", "ETQ-009", "EMP-006", "EMP-010", "EMP-007"]).join("\n")))}</textarea></div>
-    <div class="field"><label for="ag_av">WhatsApp para avisos: le llega un mensaje cuando el agente pasa un chat o consulta a bodega (uno por línea)</label><textarea id="ag_av" data-k="ag_av" placeholder="9999-8888">${esc(g("av", (a.avisosA || []).join("\n")))}</textarea></div>
+    <div class="field"><label for="ag_av">WhatsApp para avisos: le suena cuando el agente lo necesita o deja una cotización lista (uno por línea)</label><textarea id="ag_av" data-k="ag_av" placeholder="9999-8888">${esc(g("av", (a.avisosA || []).join("\n")))}</textarea></div>
   </div>
   <div class="panel">
     <h2>Mensaje de bienvenida</h2>
@@ -1011,43 +1014,10 @@ function vAgente(){
       <div class="field" style="max-width:220px"><label for="ag_rech">Después de (horas)</label><input id="ag_rech" type="number" min="1" max="20" data-k="ag_rech" value="${esc(g("rech", a.recordatorioHoras || 2))}"></div>
     </div>
     <div class="field"><label for="ag_rect">Texto del recordatorio</label><textarea id="ag_rect" data-k="ag_rect" style="min-height:80px">${esc(g("rect", a.recordatorioTexto || "Hola{nombre}, ¿pudo revisar la información? Si me dice qué producto y cantidad necesita, con gusto le preparo la cotización. 😊"))}</textarea></div>
-    <p class="note">Se envía una sola vez, de 7 a. m. a 7 p. m., solo si la última respuesta del agente fue una pregunta y el cliente no contestó. No se envía si ya se hizo la cotización o si el chat lo atiende el equipo.</p>
+    <p class="note">Se envía una sola vez, en horario de atención (L-V 8 a 5, sábado 8 a 12), solo si la última respuesta del agente fue una pregunta y el cliente no contestó. No se envía si ya se hizo la cotización o si el chat lo atiende el equipo.</p>
   </div>
   <div class="panel">
-    <h2>Ritmo de respuesta</h2>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_pausaNat" ${g("pausaNat", a.pausaNatural !== false) ? "checked" : ""}> Responder con ritmo humano: muestra "escribiendo…" y espera más o menos según lo largo de la respuesta</label>
-    <div class="field" style="max-width:320px;margin-top:10px"><label for="ag_espera">Esperar antes de responder (segundos desde el último mensaje del cliente)</label><input id="ag_espera" type="number" min="3" max="120" data-k="ag_espera" value="${esc(g("espera", a.esperaSeg || 30))}"></div>
-    <p class="note">Si el cliente manda varios mensajes seguidos, cada mensaje nuevo reinicia la espera y el agente responde una sola vez a todo. Las fotos las analiza para identificar la medida y las notas de voz las transcribe a texto.</p>
-  </div>
-  <div class="panel">
-    <h2>Asistente interno del equipo</h2>
-    <p class="note">El botón "Asistente" del sistema. Las listas rápidas (pendientes, esperando, por cobrar, abiertas) no gastan saldo. Escribir preguntas y cotizar es solo para ti y para quien tenga "Asistente completo" en Ajustes → Personas.</p>
-    <div class="chips" role="group" aria-label="Modelo del asistente">${[["haiku", "Económico (Haiku)"], ["sonnet", "Más preciso (Sonnet)"]].map(([v, t]) => `<button data-a="agModeloAs" data-v="${v}" aria-pressed="${g("modeloAs", a.modeloAsistente || "haiku") === v}">${t}</button>`).join("")}</div>
-    <div class="row" style="margin-top:12px">
-      <div class="field"><label for="ag_limAdm">Preguntas por día (administrador)</label><input id="ag_limAdm" type="number" min="1" data-k="ag_limAdm" value="${esc(g("limAdm", a.limiteAsistenteAdmin || 50))}"></div>
-      <div class="field"><label for="ag_limEq">Preguntas por día (límite general para el equipo)</label><input id="ag_limEq" type="number" min="1" data-k="ag_limEq" value="${esc(g("limEq", a.limiteAsistenteEquipo || 20))}"></div>
-    </div>
-  </div>
-  <div class="panel">
-    <h2>Modelo de inteligencia</h2>
-    <div class="chips" role="group" aria-label="Modelo">${[["economico", "Económico (Haiku)"], ["preciso", "Más preciso (Sonnet)"]].map(([v, t]) => `<button data-a="agModelo" data-v="${v}" aria-pressed="${g("modelo", a.modelo || "economico") === v}">${t}</button>`).join("")}</div>
-    <p class="note">${g("modelo", a.modelo || "economico") === "preciso" ? "Sigue mejor las reglas y comete menos errores, pero cada conversación cuesta unas 3 a 4 veces más." : "El más barato: unos centavos por conversación. Si notas que no sigue bien las reglas, prueba el modo preciso."}</p>
-  </div>
-  <div class="panel">
-    <h2>Clientes y límites</h2>
-    <div class="field"><label for="ag_asig">Clientes nuevos de WhatsApp se asignan a</label><select id="ag_asig" data-k="ag_asignar">${opciones.map(([v, t]) => `<option value="${esc(v)}" ${asignar === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-    <p class="note">Si el cliente ya existe en el sistema, se respeta su vendedor asignado.</p>
-    <div class="field"><label for="ag_recompra">Clientes que ya compraron</label><select id="ag_recompra" data-k="ag_recompra">
-      <option value="agente" ${g("recompra", a.recompra || "agente") === "agente" ? "selected" : ""}>Los atiende el agente, igual que a los demás</option>
-      <option value="equipo" ${g("recompra", a.recompra || "agente") === "equipo" ? "selected" : ""}>No responder: los atiende el equipo</option>
-    </select></div>
-    <p class="note">"Ya compró" = tiene al menos una cotización enviada a facturar o facturada. Con "No responder", el agente no les escribe nada y el chat sale en rojo en Chats WhatsApp como "Cliente que ya compró".</p>
-    <div class="row">
-      <div class="field"><label for="ag_pausa">Pausa al responder tú (horas)</label><input id="ag_pausa" type="number" min="1" data-k="ag_pausa" value="${esc(g("pausa", a.pausaHoras || 12))}"></div>
-      <div class="field"><label for="ag_max">Máx. respuestas por chat al día</label><input id="ag_max" type="number" min="1" data-k="ag_max" value="${esc(g("max", a.maxRespuestasDia || 40))}"></div>
-    </div>
-    <div class="field"><label for="ag_diasEq">Días que el chat queda contigo después de que escribes</label><input id="ag_diasEq" type="number" min="0" max="30" data-k="ag_diasEq" value="${esc(g("diasEq", a.diasEquipo ?? 3))}"></div>
-    <p class="note">Cuando escribes en un chat desde el celular, el agente no vuelve a responder ahí hasta que pasen estos días sin que escribas, o hasta que le des "Devolver al agente". Con 0 se usa solo la pausa en horas.</p>
+    <h2>Flete y pedido mínimo</h2>
     <div class="row">
       <div class="field"><label for="ag_flete">Flete en SPS (L. con ISV)</label><input id="ag_flete" type="number" min="0" step="0.01" data-k="ag_flete" value="${esc(g("flete", a.fleteSPS ?? 80))}"></div>
       <div class="field"><label for="ag_fleteHasta">Cobrar flete si el pedido es menor a (L.)</label><input id="ag_fleteHasta" type="number" min="0" step="1" data-k="ag_fleteHasta" value="${esc(g("fleteHasta", a.fleteHasta ?? 500))}"></div>
@@ -1065,6 +1035,44 @@ function vAgente(){
     <h2>Productos y precios</h2>
     <p class="note">El agente los toma <b>en vivo</b> de la pestaña Productos: ${activos.length} productos activos. Si cambias un precio o desactivas un producto allá, el agente lo sabe al instante. No hace falta escribir precios en las reglas.</p>
   </div>
+  <details class="panel"><summary style="cursor:pointer;font-weight:700">Opciones avanzadas (casi no se cambian)</summary>
+  <div style="margin-top:14px;border-top:1px solid var(--line,#333);padding-top:10px">
+    <h2>Ritmo de respuesta</h2>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="ag_pausaNat" ${g("pausaNat", a.pausaNatural !== false) ? "checked" : ""}> Responder con ritmo humano: muestra "escribiendo…" y espera más o menos según lo largo de la respuesta</label>
+    <div class="field" style="max-width:320px;margin-top:10px"><label for="ag_espera">Esperar antes de responder (segundos desde el último mensaje del cliente)</label><input id="ag_espera" type="number" min="3" max="120" data-k="ag_espera" value="${esc(g("espera", a.esperaSeg || 30))}"></div>
+    <p class="note">Si el cliente manda varios mensajes seguidos, cada mensaje nuevo reinicia la espera y el agente responde una sola vez a todo. Las fotos las analiza para identificar la medida y las notas de voz las transcribe a texto.</p>
+  </div>
+  <div style="margin-top:14px;border-top:1px solid var(--line,#333);padding-top:10px">
+    <h2>Clientes y límites</h2>
+    <div class="field"><label for="ag_asig">Clientes nuevos de WhatsApp se asignan a</label><select id="ag_asig" data-k="ag_asignar">${opciones.map(([v, t]) => `<option value="${esc(v)}" ${asignar === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+    <p class="note">Si el cliente ya existe en el sistema, se respeta su vendedor asignado.</p>
+    <div class="field"><label for="ag_recompra">Clientes que ya compraron</label><select id="ag_recompra" data-k="ag_recompra">
+      <option value="agente" ${g("recompra", a.recompra || "agente") === "agente" ? "selected" : ""}>Los atiende el agente, igual que a los demás</option>
+      <option value="equipo" ${g("recompra", a.recompra || "agente") === "equipo" ? "selected" : ""}>No responder: los atiende el equipo</option>
+    </select></div>
+    <p class="note">"Ya compró" = tiene al menos una cotización enviada a facturar o facturada. Con "No responder", el agente no les escribe nada y el chat sale en rojo en Chats WhatsApp como "Cliente que ya compró".</p>
+    <div class="row">
+      <div class="field"><label for="ag_pausa">Pausa al responder tú (horas)</label><input id="ag_pausa" type="number" min="1" data-k="ag_pausa" value="${esc(g("pausa", a.pausaHoras || 12))}"></div>
+      <div class="field"><label for="ag_max">Máx. respuestas por chat al día</label><input id="ag_max" type="number" min="1" data-k="ag_max" value="${esc(g("max", a.maxRespuestasDia || 40))}"></div>
+    </div>
+    <div class="field"><label for="ag_diasEq">Días que el chat queda contigo después de que escribes</label><input id="ag_diasEq" type="number" min="0" max="30" data-k="ag_diasEq" value="${esc(g("diasEq", a.diasEquipo ?? 3))}"></div>
+    <p class="note">Cuando escribes en un chat desde el celular, el agente no vuelve a responder ahí hasta que pasen estos días sin que escribas, o hasta que le des "Devolver al agente". Con 0 se usa solo la pausa en horas.</p>
+  </div>
+  <div style="margin-top:14px;border-top:1px solid var(--line,#333);padding-top:10px">
+    <h2>Modelo de inteligencia</h2>
+    <div class="chips" role="group" aria-label="Modelo">${[["economico", "Económico (Haiku)"], ["preciso", "Más preciso (Sonnet)"]].map(([v, t]) => `<button data-a="agModelo" data-v="${v}" aria-pressed="${g("modelo", a.modelo || "economico") === v}">${t}</button>`).join("")}</div>
+    <p class="note">${g("modelo", a.modelo || "economico") === "preciso" ? "Sigue mejor las reglas y comete menos errores, pero cada conversación cuesta unas 3 a 4 veces más." : "El más barato: unos centavos por conversación. Si notas que no sigue bien las reglas, prueba el modo preciso."}</p>
+  </div>
+  <div style="margin-top:14px;border-top:1px solid var(--line,#333);padding-top:10px">
+    <h2>Asistente interno del equipo</h2>
+    <p class="note">El botón "Asistente" del sistema. Las listas rápidas (pendientes, esperando, por cobrar, abiertas) no gastan saldo. Escribir preguntas y cotizar es solo para ti y para quien tenga "Asistente completo" en Ajustes → Personas.</p>
+    <div class="chips" role="group" aria-label="Modelo del asistente">${[["haiku", "Económico (Haiku)"], ["sonnet", "Más preciso (Sonnet)"]].map(([v, t]) => `<button data-a="agModeloAs" data-v="${v}" aria-pressed="${g("modeloAs", a.modeloAsistente || "haiku") === v}">${t}</button>`).join("")}</div>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label for="ag_limAdm">Preguntas por día (administrador)</label><input id="ag_limAdm" type="number" min="1" data-k="ag_limAdm" value="${esc(g("limAdm", a.limiteAsistenteAdmin || 50))}"></div>
+      <div class="field"><label for="ag_limEq">Preguntas por día (límite general para el equipo)</label><input id="ag_limEq" type="number" min="1" data-k="ag_limEq" value="${esc(g("limEq", a.limiteAsistenteEquipo || 20))}"></div>
+    </div>
+  </div>
+  </details>
   <div class="cta"><button class="btn pri big" data-a="agGuardar" ${S.busy ? "disabled" : ""}>Guardar configuración</button></div>
   </div>`;
 }
@@ -2296,7 +2304,8 @@ const A = {
   },
   async reenviar(){ try { await sendEmailVerification(auth.currentUser); toast("Correo reenviado."); } catch (e) { toast(authError(e && e.code)); } },
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; Object.assign(AS, {abierto: false, msgs: null, quedan: null, completo: false}); asRender(); },
-  tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
+  tab(v){ S.tab = v; S.m = null; if (!(TABS_MAS[rol()] || []).includes(v)) S.verMas = false; draw(); window.scrollTo(0, 0); },
+  verMas(){ S.verMas = !S.verMas; drawHeader(); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
 
   cliPick(v){ if (v === "__nuevo") pasarBusquedaANuevo(); S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
@@ -2501,7 +2510,7 @@ const A = {
         if (fs.exists()) throw new Error("existe");
         if (!cs.exists() || cs.data().estado !== "aprobada") throw new Error("cotizacion");
         tx.set(fr, fac);
-        tx.update(cr, {estado: "facturada", formaPago: fp, factura: {numero, n, fecha, formaPago: fp, por: S.me.uid, historica: true}, vence: fd.fechaMax || fecha, pagos, items, facturadaEn: Date.now()});
+        tx.update(cr, {estado: "facturada", formaPago: fp, factura: {numero, n, fecha, formaPago: fp, por: S.me.uid, historica: true}, vence: fd.fechaMax || addDays(fecha, 3), pagos, items, facturadaEn: Date.now()});
       });
       toast("Factura " + n + " registrada"); S.m.mode = "ver"; clearForm();
     } catch (e) { if (e && e.message === "existe") toast("La factura " + n + " ya está registrada."); else if (e && e.message === "cotizacion") toast("La cotización cambió de estado."); else fallo(e, "registrar la factura"); }
@@ -2524,7 +2533,7 @@ const A = {
         if (!fs.exists() || fs.data().estado !== "blanco") throw new Error("ocupada");
         if (!cs.exists() || cs.data().estado !== "aprobada") throw new Error("cotizacion");
         tx.update(fr, Object.assign({estado: "emitida"}, quien, fd));
-        tx.update(cr, {estado: "facturada", formaPago: fp, factura: {numero: sig.numero, n: sig.n, fecha, formaPago: fp, por: S.me.uid}, vence: fd.fechaMax || fecha, pagos, items, facturadaEn: Date.now()});
+        tx.update(cr, {estado: "facturada", formaPago: fp, factura: {numero: sig.numero, n: sig.n, fecha, formaPago: fp, por: S.me.uid}, vence: fd.fechaMax || addDays(fecha, 3), pagos, items, facturadaEn: Date.now()});
       });
       toast("Factura " + sig.numero.slice(-8) + " emitida");
       S.m.mode = "ver"; S.m.prev = null; clearForm(); S.busy = false; draw();
@@ -3373,7 +3382,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-21g";
+const APP_VER = "2026-10-21h";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
