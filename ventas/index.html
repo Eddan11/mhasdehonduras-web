@@ -505,7 +505,10 @@ function vCotizar(){
       </select></div>
     ${S.f.psel === "__gen" ? `
     <div class="field"><label for="gen_desc">Descripción del producto</label><input id="gen_desc" data-k="gen_desc" value="${fv("gen_desc")}" placeholder="Ej. Rollo térmico 110 mm x 60 m" autocomplete="off"></div>
-    <div class="field" style="max-width:220px"><label for="gen_precio">Precio unitario sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div class="field" style="max-width:180px"><label for="gen_unidad">Unidad</label><input id="gen_unidad" list="gen_unidades" data-k="gen_unidad" value="${fv("gen_unidad")}" placeholder="unidad" autocomplete="off"><datalist id="gen_unidades">${["unidad", "caja", "rollo", "millar", "bolsa", "fardo", "libra", "paquete", "resma"].map(u => `<option value="${u}">`).join("")}</datalist></div>
+    <div class="field" style="max-width:220px"><label for="gen_precio">Precio por unidad sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
+    </div>
     <p class="note" style="margin:-4px 0 12px">Solo queda en esta cotización; no se agrega al catálogo.</p>` : ""}
     ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     <div class="chips" role="group" aria-label="Cantidad en" style="align-items:center">
@@ -2275,8 +2278,9 @@ const A = {
       if (!(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
       const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
       const n = S.cart.filter(x => x.generico).length + 1;
-      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad: "unidad", cant, generico: true});
-      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio"].forEach(k => delete S.f[k]); draw(); return;
+      const unidad = clean(S.f.gen_unidad).toLowerCase() || "unidad";
+      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad, cant, generico: true});
+      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio", "gen_unidad"].forEach(k => delete S.f[k]); draw(); return;
     }
     const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
     const q = Math.max(1, Math.round(Number(S.f.pcant) || 1));
