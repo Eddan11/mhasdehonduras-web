@@ -1674,13 +1674,14 @@ function mProd(){
   <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Margen por presentación: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
   <p class="note">Si cambias cualquiera de los precios de venta, los otros se calculan solos. El precio de compra solo lo ves tú.</p>
   <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_solo" ${g("solo", p.id ? soloPres(p) : false) ? "checked" : ""}> Solo se vende por presentación completa (el agente de WhatsApp no lo vende suelto)</label>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_agente" ${g("agente", p.enAgente !== false) ? "checked" : ""}> Ofrece el agente</label>
   <h3 style="margin:18px 0 4px">Catálogo de Meta</h3>
   <p class="note">Meta toma este producto en vivo una vez al día: nombre, presentación y precio con ISV salen de arriba. <a href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Ver qué entra al catálogo</a></p>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${g("meta", p.enMeta !== false) ? "checked" : ""}> Mostrar en el catálogo de Meta (solo si está activo y tiene foto)</label>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${g("meta", p.enMeta !== false) ? "checked" : ""}> Mostrar en catálogo (*foto)</label>
   <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción para Meta (opcional)</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Vacío = descripción estándar. No ponga precios ni mayoreo: el precio sale de arriba.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
   <div class="field"><label for="pe_foto">Foto para Meta (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
-  ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo (aparece al cotizar)</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
+  ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
 function mChat(){
@@ -3138,7 +3139,7 @@ const A = {
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
-      soloPresentacion: !!g("solo", p ? soloPres(p) : false), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
+      soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !!g("agente", p ? p.enAgente !== false : true), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
       enMeta: !!g("meta", p ? p.enMeta !== false : true), descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
@@ -3372,7 +3373,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-21f";
+const APP_VER = "2026-10-21g";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
