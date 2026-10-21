@@ -1840,7 +1840,14 @@ async function estamparFactura(PDFLib, bytes, f){
   t(cl.rtn, 437, 111, {size: 11, max: 140});
   // Orden de compra debajo del RTN, en la línea de la dirección (la dirección se acorta para no chocar)
   t(cl.direccion, 71, 147, {max: f.ordenCompra ? 330 : 500});
-  if (f.ordenCompra) t("ORDEN DE COMPRA: " + f.ordenCompra, 410, 147, {max: 180});
+  if (f.ordenCompra) {
+    // "OC: número", terminando antes del borde del recuadro (x≈575); si el número es muy largo se achica la letra hasta 10
+    const MAXW = 165, XR = 575;
+    let txt = limpio("OC: " + f.ordenCompra), size = SZ;
+    while (size > 10 && font.widthOfTextAtSize(txt, size) > MAXW) size -= 0.5;
+    txt = ajustar(txt, font, size, MAXW);
+    pg.drawText(txt, {x: XR - font.widthOfTextAtSize(txt, size), y: H - 147, size, font, color: ink});
+  }
   t(fechaFac(f.fecha), 103, 180, {size: 11});
   let y = 282;
   (f.lineas || []).forEach(l => {
