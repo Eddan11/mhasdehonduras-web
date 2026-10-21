@@ -405,7 +405,8 @@ var CATS=[
 ];
 // versión de fotos: cuando cambies fotos de productos, sube este número (2, 3, 4...)
 var IMGV='2';
-function waUrl(item){return 'https://wa.me/'+WA+'?text='+encodeURIComponent('Hola MHAS, vi su página web y quiero cotizar: '+item);}
+// Todos los botones mandan el mismo mensaje; el agente le pregunta al cliente qué producto necesita (data-item solo se usa para el píxel)
+function waUrl(){return 'https://wa.me/'+WA+'?text='+encodeURIComponent('Hola MHAS, vi su página web y quiero cotizar');}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 var html='';
 CATS.forEach(function(c){
@@ -417,7 +418,7 @@ CATS.forEach(function(c){
 });
 document.getElementById('cats').innerHTML=html;
 
-// enlaces de WhatsApp con texto del producto
+// enlaces de WhatsApp (mismo mensaje en todos)
 document.querySelectorAll('.js-wa').forEach(function(a){a.href=waUrl(a.getAttribute('data-item')||'Consulta general');});
 
 // eventos del píxel
