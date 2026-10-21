@@ -1825,12 +1825,12 @@ async function estamparFactura(PDFLib, bytes, f){
     pdf.registerFontkit(await cargarFontkit());
     font = await pdf.embedFont(u8de(FAC_FONT.r), {subset: true}); bold = await pdf.embedFont(u8de(FAC_FONT.b), {subset: true});
   } catch (err) { console.error(err); font = await pdf.embedFont(StandardFonts.Helvetica); bold = await pdf.embedFont(StandardFonts.HelveticaBold); }
-  const SZ = 14; // un solo tamaño para todo; el total a pagar va en negrita tamaño 16
+  const SZ = 13; // un solo tamaño para todo (13); el total a pagar va en negrita tamaño 14
   const ink = rgb(0.05, 0.05, 0.1);
   const limpio = s => String(s ?? "").toUpperCase().replace(/[^\x20-\x7E -ÿ]/g, "");
   const ajustar = (s, fnt, size, max) => { s = limpio(s); while (s && fnt.widthOfTextAtSize(s, size) > max) s = s.slice(0, -1); return s; };
   const t = (s, x, y, o = {}) => {
-    const fnt = o.bold ? bold : font, size = o.big ? 16 : SZ, txt = o.max ? ajustar(s, fnt, size, o.max) : limpio(s);
+    const fnt = o.bold ? bold : font, size = o.big ? 14 : SZ, txt = o.max ? ajustar(s, fnt, size, o.max) : limpio(s);
     const w = fnt.widthOfTextAtSize(txt, size), xx = o.right ? x - w : o.center ? x - w / 2 : x;
     pg.drawText(txt, {x: xx, y: H - y, size, font: fnt, color: o.color || ink});
   };
@@ -1873,7 +1873,7 @@ async function estamparFactura(PDFLib, bytes, f){
   t(nF(f.gravado), R, 607, {size: 9.5, right: true});
   t(nF(f.isv), R, 644.5, {size: 9.5, right: true});
   t(nF(f.total), R, 667.5, {big: true, bold: true, right: true});
-  const lt = partir(f.letras, SZ, 400).slice(0, 2);
+  const lt = partir(f.letras, SZ, 365).slice(0, 2); // la columna de Sub-Total empieza en x≈405
   lt.forEach((x, k) => t(x, 31, (lt.length > 1 ? 601 : 610) + k * 15));
   t(f.formaPago, 31, 652, {max: 100});
   t(nF(f.total), 150, 652);
@@ -3340,6 +3340,40 @@ document.addEventListener("change", e => {
   if (t.dataset.redraw || t.dataset.k === "fac_fp") draw();
 });
 draw();
+
+/* ---------------- versión del sistema ----------------
+   Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
+   Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
+   cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
+const APP_VER = "2026-10-21b";
+function algoSinGuardar(){
+  if (S.cart && S.cart.length) return true;
+  if (S.m) return true;
+  const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  return [...document.querySelectorAll("input[data-k], textarea[data-k]")].some(e => e.offsetParent && e.type !== "date" && e.type !== "checkbox" && !/(^|_)q$|buscar/i.test(e.dataset.k || "") && String(e.value || "").trim() !== "");
+}
+function irAVersion(v){
+  try { const k = "mhas_recarga_" + v, n = Number(sessionStorage.getItem(k) || 0); if (n >= 2) return; sessionStorage.setItem(k, String(n + 1)); } catch (_) {}
+  location.replace(location.pathname + "?v=" + encodeURIComponent(v) + location.hash);
+}
+function barraVersion(v){
+  if (document.getElementById("barra_ver")) return;
+  const d = document.createElement("div"); d.id = "barra_ver";
+  d.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#f0b93a;color:#111;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.3)";
+  d.innerHTML = '<span>Hay una versión nueva del sistema. Guarde lo que está haciendo y actualice.</span>';
+  const b = document.createElement("button"); b.textContent = "Actualizar"; b.style.cssText = "background:#111;color:#fff;border:0;border-radius:99px;padding:6px 16px;font-weight:700;cursor:pointer";
+  b.onclick = () => irAVersion(v); d.appendChild(b); document.body.appendChild(d);
+}
+async function revisarVersion(){
+  try {
+    const r = await fetch("version.json?t=" + Date.now(), {cache: "no-store"}); if (!r.ok) return;
+    const v = String((await r.json()).v || ""); if (!v || v <= APP_VER) return; // solo si version.json es MÁS nueva que esta página
+    if (algoSinGuardar()) barraVersion(v); else irAVersion(v);
+  } catch (_) {}
+}
+setInterval(revisarVersion, 5 * 60e3);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") revisarVersion(); });
+setTimeout(revisarVersion, (window.__verT || 15e3));
 
 </script>
 </body>
