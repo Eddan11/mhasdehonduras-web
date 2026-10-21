@@ -560,13 +560,24 @@ function notasForm(){
   const sel = S.f.cli_sel || "", cl = S.cli.find(c => c.id === sel);
   return Object.assign(notasAuto(sel === "__nuevo" ? S.f.cli_dir : (cl || {}).direccion), S.f.nsel || {});
 }
-function cliListHtml(){
+// Lo que se escribió en el buscador se aprovecha para el cliente nuevo: 8 dígitos = teléfono, 13-14 dígitos = RTN, lo demás = nombre
+function pasarBusquedaANuevo(){
+  const q = clean(S.f.cli_q); if (!q) return;
+  const d = q.replace(/[\s-]/g, "");
+  if (/^\d{8}$/.test(d)) { if (!S.f.cli_tel) S.f.cli_tel = d.slice(0, 4) + "-" + d.slice(4); }
+  else if (/^\d{13,14}$/.test(d)) { if (!S.f.cli_rtn) S.f.cli_rtn = d; }
+  else if (!S.f.cli_nombre) S.f.cli_nombre = q.toUpperCase() === q ? q : q.replace(/\S+/g, w => w.charAt(0).toUpperCase() + w.slice(1));
+}
+function cliFiltrados(){
   const q = clean(S.f.cli_q).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const lista = S.cli.filter(c => !q || [c.nombre, c.contacto, c.tel, c.rtn, ctcBusca(c)].join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q))
+  return S.cli.filter(c => !q || [c.nombre, c.contacto, c.tel, c.rtn, ctcBusca(c)].join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q))
     .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
-  return `<button class="cli-op nuevo" data-a="cliPick" data-v="__nuevo">+ Cliente nuevo</button>` +
+}
+function cliListHtml(){
+  const lista = cliFiltrados(), qv = clean(S.f.cli_q);
+  return `<button class="cli-op nuevo" data-a="cliPick" data-v="__nuevo">+ Cliente nuevo${qv && !lista.length ? ": <b>" + esc(qv) + "</b>" : ""}</button>` +
     lista.map(c => `<button class="cli-op" data-a="cliPick" data-v="${esc(c.id)}"><b>${esc(c.nombre)}</b>${c.contacto || c.tel ? `<small>${esc([c.contacto, c.tel].filter(Boolean).join(" · "))}</small>` : ""}</button>`).join("") +
-    (lista.length ? "" : `<p class="empty" style="padding:10px">Ningún cliente coincide.</p>`);
+    (lista.length ? "" : `<p class="empty" style="padding:10px">Ningún cliente coincide${qv ? ": se tomará como cliente nuevo." : "."}</p>`);
 }
 function totalsHtml(cc, simple){
   if (simple) return `<div><span class="muted">Subtotal</span><span>${L(cc.base)}</span></div>
@@ -1867,7 +1878,7 @@ async function estamparFactura(PDFLib, bytes, f){
   };
   etiqueta("TOTAL EN LETRAS:", 25, 576.2, 66, 7.6);
   etiqueta("RECIBÍ CONFORME:", 22.5, 693.5, 58, 7.5);
-  const R = 585;
+  const R = 562; // borde derecho de los números de Sub-Total…Total (más al centro del recuadro)
   t(nF(f.sub), R, 584, {size: 9.5, right: true});
   if (f.desc) t(nF(f.desc), R, 595.5, {size: 9.5, right: true});
   t(nF(f.gravado), R, 607, {size: 9.5, right: true});
@@ -2274,7 +2285,7 @@ const A = {
   tab(v){ S.tab = v; S.m = null; draw(); window.scrollTo(0, 0); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
 
-  cliPick(v){ S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
+  cliPick(v){ if (v === "__nuevo") pasarBusquedaANuevo(); S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
     if (S.f.psel === "__gen") {
@@ -2311,6 +2322,7 @@ const A = {
   vaciar(){ S.cart = []; draw(); },
   async saveCot(v){
     const conPdf = v !== "g";
+    if (!S.f.cli_sel && clean(S.f.cli_q) && !cliFiltrados().length) { pasarBusquedaANuevo(); S.f.cli_sel = "__nuevo"; delete S.f.cli_q; draw(); return toast("Se tomó como cliente nuevo: revise los datos y vuelva a guardar."); }
     const sel = S.f.cli_sel || "";
     if (!sel) return toast("Elige o crea un cliente.");
     if (!S.cart.length) return toast("Agrega al menos un producto.");
@@ -3345,7 +3357,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-21c";
+const APP_VER = "2026-10-21d";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
