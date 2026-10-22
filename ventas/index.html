@@ -1652,6 +1652,7 @@ function mCot(){
   ${extra}
   ${mode === "ver" ? `<div class="actions">
     ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button><button class="btn" data-a="guia">Guía de envío</button>` : ""}
+    ${S.f.guiaOpc && window.jspdf ? `<div class="chips" role="group" aria-label="Tamaño de la guía" style="width:100%">${Object.entries(GUIA_FMT).map(([k, f]) => `<button data-a="guia" data-v="${k}">${f.n}</button>`).join("")}</div>` : ""}
     ${abierta ? `<button class="btn" data-a="editar">Editar</button>` : ""}
     ${full && window.jspdf ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}
   </div>
@@ -2207,38 +2208,45 @@ function armarPdf(c, interno){
   for (let pg = 1; pg <= d.getNumberOfPages(); pg++) { d.setPage(pg); marcaAgua(d); }
   return d;
 }
-// Guía de envío (etiqueta 90 x 60 mm): cliente, atención, dirección, celular, qué producto va y nuestro número de pedidos
+// Guía de envío: el mismo diseño (90 x 60) en etiqueta térmica 90 x 60, etiqueta 4x6 o carta/A4 (se escala y se centra)
 const TEL_PEDIDOS = "+504 9468-9500";
-function armarGuia(c){
-  const {jsPDF} = window.jspdf, d = new jsPDF({unit: "mm", format: [90, 60], orientation: "landscape"});
-  const W = 90, cx = W / 2, cl = c.cliente || {}, up = s => String(s || "").toUpperCase().trim();
-  try { d.addImage(LOGO, "JPEG", cx - 10, 2.5, 20, 9.9); } catch (_) {}
+const GUIA_FMT = {eti: {n: "Etiqueta 90 x 60", page: [90, 60], o: "landscape"}, "4x6": {n: "Etiqueta 4 x 6", page: [152.4, 101.6], o: "landscape"}, carta: {n: "Carta / A4", page: "letter", o: "portrait"}};
+function armarGuia(c, fmt){
+  const F = GUIA_FMT[fmt] || GUIA_FMT.eti, {jsPDF} = window.jspdf, d = new jsPDF({unit: "mm", format: F.page, orientation: F.o});
+  const PW = d.internal.pageSize.getWidth(), PH = d.internal.pageSize.getHeight();
+  // Diseño en un área de 90 x 60 (las posiciones verticales se escriben en una escala de 63 y se comprimen a 60);
+  // en carta va arriba con 10 mm de margen (A4 también entra)
+  const BH = 60, sy = BH / 63;
+  const k = fmt === "carta" ? Math.min((PW - 20) / 90, 2.2) : Math.min(PW / 90, PH / BH);
+  const ox = (PW - 90 * k) / 2, oy = fmt === "carta" ? 10 : (PH - BH * k) / 2;
+  const X = v => ox + v * k, Y = v => oy + v * sy * k, fsz = n => d.setFontSize(n * k);
+  const W = 90, cx = 45, cl = c.cliente || {}, up = s => String(s || "").toUpperCase().trim();
+  const txt = (s, x, y, o) => d.text(s, X(x), Y(y), o || {align: "center"});
+  const ancho = s => d.getTextWidth(s) / k, partir = (s, w) => d.splitTextToSize(s, w * k);
+  if (fmt === "carta") { d.setDrawColor(150, 150, 150); d.setLineDashPattern([2, 2], 0); d.setLineWidth(0.2); d.rect(X(0), Y(0), 90 * k, BH * k); d.setLineDashPattern([], 0); }
+  try { d.addImage(LOGO, "JPEG", X(cx - 10), Y(2.6), 20.3 * k, 10 * k); } catch (_) {}
   d.setTextColor(0, 0, 0);
-  // Nombre del cliente, grande y subrayado
-  let fs = 14; d.setFont("helvetica", "bold"); d.setFontSize(fs);
-  while (fs > 9 && d.getTextWidth(up(cl.nombre)) > W - 8) d.setFontSize(--fs);
-  const nom = d.splitTextToSize(up(cl.nombre), W - 8)[0] || "";
-  d.text(nom, cx, 17.2, {align: "center"});
-  const wn = Math.min(W - 8, d.getTextWidth(nom)); d.setLineWidth(0.3); d.line(cx - wn / 2 - 1, 18.3, cx + wn / 2 + 1, 18.3);
-  // Atención y dirección
-  d.setFont("helvetica", "bold"); d.setFontSize(8.5);
+  let fs = 14; d.setFont("helvetica", "bold"); fsz(fs);
+  while (fs > 9 && ancho(up(cl.nombre)) > W - 8) fsz(--fs);
+  const nom = partir(up(cl.nombre), W - 8)[0] || "";
+  txt(nom, cx, 19);
+  const wn = Math.min(W - 8, ancho(nom)); d.setLineWidth(0.3 * k); d.line(X(cx - wn / 2 - 1), Y(20.1), X(cx + wn / 2 + 1), Y(20.1));
+  d.setFont("helvetica", "bold"); fsz(8.5);
   const dir = [cl.contacto ? "ATE: " + up(cl.contacto) + "." : "", cl.direccion ? "DIRECCIÓN: " + up(cl.direccion) : ""].filter(Boolean).join(" ");
-  const ld = d.splitTextToSize(dir || "DIRECCIÓN:", W - 8).slice(0, 3);
-  ld.forEach((x, k) => d.text(x, cx, 22.6 + k * 3.6, {align: "center"}));
-  let y = 22.6 + ld.length * 3.6 + 1.6;
-  if (cl.tel) { d.setFontSize(10); d.text("CEL: " + cl.tel, cx, y + 1, {align: "center"}); y += 5; }
-  // Qué producto va
+  const ld = partir(dir || "DIRECCIÓN:", W - 8).slice(0, 3);
+  ld.forEach((x, n) => txt(x, cx, 24.8 + n * 3.8));
+  let y = 24.8 + ld.length * 3.8 + 2;
+  if (cl.tel) { fsz(10.5); txt("CEL: " + cl.tel, cx, y + 1.2); y += 6; }
   const prods = (c.items || []).map(i => `${qV(i)} ${up(vuDe(i).n)} ${up(i.nombre)}`).join(" · ");
-  d.setFont("helvetica", "normal"); d.setFontSize(7);
-  const lp = d.splitTextToSize("CONTENIDO: " + prods, W - 8).slice(0, 2);
-  lp.forEach((x, k) => d.text(x, cx, y + k * 3, {align: "center"}));
-  // Barra negra con nuestro número
-  d.setFillColor(0, 0, 0); d.setFont("helvetica", "bold"); d.setFontSize(7.5);
+  fsz(7.5);
+  partir("CONTENIDO: " + prods, W - 8).slice(0, 2).forEach((x, n) => txt(x, cx, y + n * 3.3));
   const tv = String((c.vendedorInfo && c.vendedorInfo.tel) || "").trim(), dg = tv.replace(/\D/g, "");
   const telV = dg.length === 8 ? "+504 " + dg.slice(0, 4) + "-" + dg.slice(4) : dg.length === 11 && dg.startsWith("504") ? "+504 " + dg.slice(3, 7) + "-" + dg.slice(7) : (tv || TEL_PEDIDOS);
-  const tp = "PARA PEDIDOS: " + telV, wt = d.getTextWidth(tp) + 4;
-  d.rect(cx - wt / 2, 52.4, wt, 4.4, "F"); d.setTextColor(255, 255, 255); d.text(tp, cx, 55.6, {align: "center"});
-  d.setTextColor(120, 120, 120); d.setFont("helvetica", "normal"); d.setFontSize(5.5); d.text(c.numero || "", W - 2, 58.8, {align: "right"});
+  const tp = "PARA PEDIDOS: " + telV;
+  d.setFillColor(0, 0, 0); d.setFont("helvetica", "bold"); fsz(7.5);
+  const wt = ancho(tp) + 4;
+  d.rect(X(cx - wt / 2), Y(54.6), wt * k, 4.6 * sy * k, "F"); d.setTextColor(255, 255, 255); txt(tp, cx, 57.9);
+  d.setTextColor(120, 120, 120); d.setFont("helvetica", "normal"); fsz(5.5); txt(c.numero || "", W - 3, 61.4, {align: "right"});
   return d;
 }
 function nombrePdf(c){ return "Cotizacion " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"; }
@@ -2383,7 +2391,7 @@ const A = {
   pmenos(){ S.f.pcant = Math.max(1, Math.round(Number(S.f.pcant) || 1) - 1); draw(); },
   qmas(v){ const i = S.cart[Number(v)]; if (i) i.cant += vuDe(i).f; draw(); },
   qmenos(v){ const i = S.cart[Number(v)]; if (i && i.cant > vuDe(i).f) i.cant -= vuDe(i).f; draw(); },
-  guia(){ const c = S.cot.find(x => x.id === S.m.id); if (c && window.jspdf) armarGuia(c).save("Guia " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"); },
+  guia(v){ if (!v) { S.f.guiaOpc = !S.f.guiaOpc; draw(); return; } const c = S.cot.find(x => x.id === S.m.id); S.f.guiaOpc = false; draw(); if (c && window.jspdf) armarGuia(c, v).save("Guia " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"); },
   pdfInterno(){ const c = S.cot.find(x => x.id === S.m.id); if (c && window.jspdf) armarPdf(c, true).save("INTERNA " + nombrePdf(c)); },
   async share(){ const c = S.cot.find(x => x.id === S.m.id); if (c) { await compartirPdf(c); marcarEnviada(); } },
   rmp(v){ S.cart.splice(Number(v), 1); draw(); },
@@ -3442,7 +3450,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-22a";
+const APP_VER = "2026-10-22b";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
