@@ -286,12 +286,12 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false, facturas: [], talForm: false, talFile: null, talProg: "", chatF: "todos"
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "clientes", "productos", "cobros", "agente", "inventario", "utilidad", "perfil", "ajustes"],
-  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "cobros", "productos", "inventario", "utilidad", "perfil"],
+  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "clientes", "productos", "inventario", "utilidad", "cobros", "perfil", "ajustes"],
+  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "inventario", "utilidad", "cobros", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
-// Pestañas que van dentro de "Más" (se usan poco). "Por pagar" se quitó del menú hasta que exista el módulo de compras.
-const TABS_MAS = {admin: ["agente", "inventario", "utilidad", "perfil", "ajustes"], facturador: ["productos", "inventario", "utilidad", "perfil"]};
+// Todas las pestañas en la barra (se desliza). Para agrupar algunas en un botón "Más", ponerlas aquí. "Por pagar" se quitó hasta que exista el módulo de compras.
+const TABS_MAS = {};
 const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
@@ -3382,7 +3382,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-21h";
+const APP_VER = "2026-10-21i";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
