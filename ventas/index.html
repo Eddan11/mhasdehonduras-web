@@ -299,6 +299,9 @@ const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-w
 function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
 const puede = (...roles) => roles.includes(rol());
 // El administrador cotiza a nombre de su cuenta de vendedor (comercial@): número, firma del PDF, reportes y cliente asignado
+// Eduardo tiene dos cuentas (admin y comercial@): en reportes, facturas y utilidad cuentan como una sola persona (la comercial)
+function cuentasEM(){ const U = S.usuarios || []; return {adm: U.find(u => String(u.email || "").toLowerCase() === ADMIN), com: U.find(u => String(u.email || "").toLowerCase() === "comercial@mhasdehonduras.com")}; }
+const unif = uid => { const {adm, com} = cuentasEM(); return adm && com && uid === adm.id ? com.id : uid; };
 function vendCot(){
   if (S.admin) { const v = (S.usuarios || []).find(u => (u.email || "").toLowerCase() === "comercial@mhasdehonduras.com"); if (v && v.id !== S.me.uid) return v; }
   return Object.assign({}, S.me, {id: S.me.uid});
@@ -630,10 +633,10 @@ function vCotizaciones(){
   const desde = S.f.fl_desde || "", hasta = S.f.fl_hasta || "", vend = S.f.fl_vend || "";
   if (desde) list = list.filter(c => (c.fecha || "") >= desde);
   if (hasta) list = list.filter(c => (c.fecha || "") <= hasta);
-  if (vend) list = list.filter(c => c.vendedor === vend);
+  if (vend) list = list.filter(c => unif(c.vendedor) === vend);
   S._listaCot = list;
   const esVend = rol() === "vendedor";
-  const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => [c.vendedor, c.vendedorNombre || "Sin nombre"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => { const k = unif(c.vendedor), u = (S.usuarios || []).find(x => x.id === k); return [k, (k !== c.vendedor && u && (u.nombre || u.email)) || c.vendedorNombre || "Sin nombre"]; })).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const tot = list.reduce((a, c) => { const cc = calc(c.items, c.flete); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
   const hoyS = today(), mes = hoyS.slice(0, 7);
   const mesAnt = (() => { const d = new Date(hoyS + "T12:00:00"); d.setDate(1); d.setMonth(d.getMonth() - 1); return ymd(d).slice(0, 7); })();
@@ -1333,7 +1336,8 @@ function faltantes(c){
 const costoUnit = id => { const p = S.prod.find(x => x.id === id), c = (S.costos || {})[id]; return p && c && Number(c.compra) > 0 ? Number(c.compra) / uni(p) : 0; };
 const iniDe = u => (String(u.ini || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4)) || String(u.nombre || u.email || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase() || "?";
 function personas(){
-  return S.usuarios.filter(u => ["vendedor", "facturador"].includes(u.rol) || String(u.email || "").toLowerCase() === ADMIN)
+  const {adm, com} = cuentasEM();
+  return S.usuarios.filter(u => (["vendedor", "facturador"].includes(u.rol) || String(u.email || "").toLowerCase() === ADMIN) && !(adm && com && u.id === adm.id))
     .map(u => ({uid: u.id, ini: iniDe(u), nombre: u.nombre || u.email || ""})).sort((a, b) => a.ini.localeCompare(b.ini));
 }
 const pagadaCot = c => c.estado === "facturada" && !c.eliminada && saldo(c) <= 0.005;
@@ -1350,14 +1354,14 @@ const repTxt = rep => (rep || []).length ? rep.map(x => `${esc(x.ini)} ${Number(
 // Dueño de la venta: lo del agente (EMW), lo importado y lo de la cuenta comercial es de Eduardo (EM)
 function duenoDe(c){
   const U = S.usuarios || [], adm = U.find(u => String(u.email || "").toLowerCase() === ADMIN), com = U.find(u => String(u.email || "").toLowerCase() === "comercial@mhasdehonduras.com");
-  const em = adm ? iniDe(adm) : "EM";
+  const em = com ? iniDe(com) : adm ? iniDe(adm) : "EM";
   if (c.origen === "whatsapp") return {grupo: em, tag: em + "W"};
   const u = U.find(x => x.id === c.vendedor);
   if (!u || (adm && u.id === adm.id) || (com && u.id === com.id) || !["vendedor", "facturador"].includes(u.rol)) return {grupo: em, tag: em};
   const ini = iniDe(u); return {grupo: ini, tag: ini};
 }
 function vUtilidad(){
-  const fil = S.f.ut_fil || "pend", ven = S.f.ut_ven || "", q = clean(S.f.utq).toLowerCase(), yo = S.me.uid;
+  const fil = S.f.ut_fil || "pend", ven = S.f.ut_ven || "", q = clean(S.f.utq).toLowerCase(), yo = unif(S.me.uid);
   const todas = S.cot.filter(pagadaCot).map(c => ({c, d: utilDe(c), o: duenoDe(c)}));
   const parteDe = (x, uid) => { const r = (x.d.u.reparto || []).find(r => r.uid === uid); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
   const miParte = x => parteDe(x, yo);
@@ -1880,16 +1884,12 @@ async function estamparFactura(PDFLib, bytes, f){
   const cl = f.cliente || {};
   t(cl.nombre, 64, 111, {size: 11, max: 360});
   t(cl.rtn, 437, 111, {size: 11, max: 140});
-  // Orden de compra debajo del RTN, en la línea de la dirección (la dirección se acorta para no chocar)
-  t(cl.direccion, 71, 147, {max: f.ordenCompra ? 330 : 500});
-  if (f.ordenCompra) {
-    // "OC-00número": se quitan los ceros de relleno y se dejan solo 2 antes del número (OC-00000000033666 → OC-0033666)
-    const txt = ajustar(ocCorto(f.ordenCompra), font, SZ, 165);
-    pg.drawText(txt, {x: 575 - font.widthOfTextAtSize(txt, SZ), y: H - 147, size: SZ, font, color: ink});
-  }
+  // Dirección con todo el renglón; la OC y el número de cotización van a la derecha en la línea de la fecha de emisión
+  t(cl.direccion, 71, 147, {max: 500});
   t(fechaFac(f.fecha), 103, 180, {size: 11});
-  // Número de la cotización en la línea de la fecha de emisión, a la derecha
-  if (f.cotNumero) { const txt = ajustar(f.cotNumero, font, SZ, 200); pg.drawText(txt, {x: 575 - font.widthOfTextAtSize(txt, SZ), y: H - 180, size: SZ, font, color: ink}); }
+  // "OC-00número": se quitan los ceros de relleno y se dejan solo 2 antes del número (OC-00000000033666 → OC-0033666)
+  const der = [f.ordenCompra ? ocCorto(f.ordenCompra) : "", f.cotNumero || ""].filter(Boolean).join("     ");
+  if (der) { const txt = ajustar(der, font, SZ, 330); pg.drawText(txt, {x: 575 - font.widthOfTextAtSize(txt, SZ), y: H - 180, size: SZ, font, color: ink}); }
   // Columna de números a la derecha (Importe y Sub-Total…Total): todos terminan en el mismo punto, al centro del recuadro de valores (x 481–586)
   const R = 557;
   let y = 282;
@@ -2011,10 +2011,14 @@ function vFacturas(){
   const facMes = r2(all.filter(f => f.estado === "emitida" && String(f.fecha || "").startsWith(mes)).reduce((a, f) => a + (Number(f.total) || 0), 0));
   const fl = S.f.fl_est || "usadas", por = S.f.fl_por || "", q = clean(S.f.flq).toLowerCase();
   let list = all.filter(f => fl === "usadas" ? f.estado !== "blanco" : f.estado === fl);
-  if (por) list = list.filter(f => f.por === por);
+  // La factura es del vendedor de la cotización (aunque la emita un facturador); las viejas lo toman de su cotización
+  const duenoFac = f => { const c = f.cotId ? S.cot.find(x => x.id === f.cotId) : null; return unif(f.vendedor || (c && c.vendedor) || f.por || ""); };
+  const nomUid = uid => { const u = (S.usuarios || []).find(x => x.id === uid); return u ? (u.nombre || u.email || "") : ""; };
+  const vendFac = f => nomUid(duenoFac(f)) || f.vendedorNombre || ((f.cotId && S.cot.find(x => x.id === f.cotId)) || {}).vendedorNombre || f.porNombre || "—";
+  if (por) list = list.filter(f => duenoFac(f) === por);
   if (q) list = list.filter(f => [f.numero, f.cliente && f.cliente.nombre, f.cliente && f.cliente.rtn, f.cotNumero, f.porNombre].join(" ").toLowerCase().includes(q));
   list = list.slice().sort((a, b) => fl === "blanco" ? a.n - b.n : b.n - a.n);
-  const quienes = [...new Map(all.filter(f => f.por).map(f => [f.por, f.porNombre || f.porIni || "—"])).entries()];
+  const quienes = [...new Map(all.filter(f => f.estado !== "blanco").map(f => [duenoFac(f), vendFac(f)]).filter(([k]) => k)).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const cnt = k => all.filter(f => k === "usadas" ? f.estado !== "blanco" : f.estado === k).length;
   const fact = puede("admin", "facturador");
   return `
@@ -2031,17 +2035,17 @@ function vFacturas(){
     <div class="chips" role="group" aria-label="Estado">${[["usadas", "Todas"], ["emitida", "Emitidas"], ["anulada", "Anuladas"], ["blanco", "En blanco"]].map(([v, t]) => `<button data-a="flEst" data-v="${v}" aria-pressed="${fl === v}">${t} <span class="cnt">${cnt(v)}</span></button>`).join("")}</div>
     <div class="row" style="margin-top:10px">
       <div class="field" style="flex:2 1 220px"><label for="flq">Buscar</label><input id="flq" data-k="flq" value="${fv("flq")}" placeholder="Número, empresa, RTN o cotización"></div>
-      <div class="field"><label for="flpor">Facturó</label><select id="flpor" data-k="fl_por" data-redraw="1"><option value="">Todos</option>${quienes.map(([u, n]) => `<option value="${esc(u)}" ${por === u ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+      <div class="field"><label for="flpor">Vendedor</label><select id="flpor" data-k="fl_por" data-redraw="1"><option value="">Todos</option>${quienes.map(([u, n]) => `<option value="${esc(u)}" ${por === u ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
     </div>
     <div class="actions" style="margin-top:4px"><button class="btn" data-a="facExcel" ${S.busy || !all.length ? "disabled" : ""}>Descargar Excel</button></div>
     <div class="scroll">
-    ${list.length ? `<table><thead><tr><th>Factura</th><th>Fecha</th><th>Empresa</th><th>Cotización</th><th>Facturó</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead><tbody>
+    ${list.length ? `<table><thead><tr><th>Factura</th><th>Fecha</th><th>Empresa</th><th>Cotización</th><th>Vendedor</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead><tbody>
       ${list.map(f => { const [et, ec] = ESTADO_FAC[f.estado] || [f.estado, ""]; return `<tr>
         <td><b>${esc(f.numero)}</b></td>
         <td>${f.fecha ? fdate(f.fecha) : ""}</td>
         <td>${esc((f.cliente && f.cliente.nombre) || "")}${f.cliente && f.cliente.rtn ? `<br><small class="muted">RTN ${esc(f.cliente.rtn)}</small>` : ""}</td>
         <td>${f.cotId ? `<a href="#" data-a="facCot" data-v="${esc(f.cotId)}">${esc(f.cotNumero || "")}</a>` : ""}</td>
-        <td>${esc(f.porNombre || "")}${f.emitidaEn ? `<br><small class="muted">${horaTxt(f.emitidaEn)}</small>` : ""}</td>
+        <td>${f.estado === "blanco" ? "" : esc(vendFac(f))}${f.emitidaEn ? `<br><small class="muted">${unif(f.por) !== duenoFac(f) && f.por ? "Facturó " + esc(nomUid(unif(f.por)) || f.porNombre || "") + " · " : ""}${horaTxt(f.emitidaEn)}</small>` : ""}</td>
         <td class="num">${f.estado === "blanco" ? "" : L(f.total)}</td>
         <td><span class="badge ${ec}">${et}</span>${f.historica ? ` <span class="badge">Histórica</span>` : ""}${f.anulada ? `<br><small class="muted">${esc(f.anulada.motivo || "")}${f.anulada.porNombre ? " · " + esc(f.anulada.porNombre) : ""}</small>` : ""}</td>
         <td style="white-space:nowrap">${f.historica ? "" : `<button class="btn sm" data-a="facPdf" data-v="${f.n}" ${S.busy ? "disabled" : ""}>PDF</button>`}${(f.estado === "emitida" && fact) || (f.estado === "blanco" && S.admin) ? ` <button class="btn sm danger" data-a="facAnular" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Anular</button>` : ""}</td></tr>`; }).join("")}
@@ -2558,7 +2562,7 @@ const A = {
     const numero = facNum(ref.rangoIni, n);
     if (!confirm(`¿Registrar la factura ${numero} (ya hecha) para ${c.numero}?\n${fd.cliente.nombre} · ${L(fd.total)} · ${fdate(fecha)}`)) return;
     const fac = Object.assign({n, numero, estado: "emitida", historica: true, cai: ref.cai, rangoIni: ref.rangoIni, rangoFin: ref.rangoFin, fechaLimite: ref.fechaLimite,
-      por: S.me.uid, porNombre: S.me.nombre || (S.u && S.u.email) || "", porIni: S.me.ini || "", emitidaEn: Date.now(), cotId: c.id, cotNumero: c.numero}, fd);
+      por: S.me.uid, porNombre: vendCot().nombre || S.me.nombre || (S.u && S.u.email) || "", porIni: iniciales(vendCot()), emitidaEn: Date.now(), cotId: c.id, cotNumero: c.numero, vendedor: unif(c.vendedor || "") || "", vendedorNombre: c.vendedorNombre || ""}, fd);
     S.busy = true; draw();
     try {
       await runTransaction(db, async tx => {
@@ -2581,7 +2585,7 @@ const A = {
     if (!sig) return toast("Ya no hay facturas en blanco.");
     if (sig.n !== P.sig.n) { toast("La factura " + P.sig.numero.slice(-8) + " ya la usó otra persona. Revisa la vista previa con la " + sig.numero.slice(-8) + "."); return A.facPrevia(); }
     const {fd, fp, pagos, items, fecha} = P;
-    const quien = {por: S.me.uid, porNombre: S.me.nombre || (S.u && S.u.email) || "", porIni: S.me.ini || "", emitidaEn: Date.now(), cotId: c.id, cotNumero: c.numero};
+    const quien = {por: S.me.uid, porNombre: vendCot().nombre || S.me.nombre || (S.u && S.u.email) || "", porIni: iniciales(vendCot()), emitidaEn: Date.now(), cotId: c.id, cotNumero: c.numero, vendedor: unif(c.vendedor || "") || "", vendedorNombre: c.vendedorNombre || ""};
     S.busy = true; draw();
     try {
       await runTransaction(db, async tx => {
@@ -2692,14 +2696,14 @@ const A = {
       const ExcelJS = await cargarExcelJS();
       const wb = new ExcelJS.Workbook(); wb.creator = "MHAS Ventas";
       const ws = wb.addWorksheet("Facturas", {views: [{state: "frozen", ySplit: 1}]});
-      const cols = [["Factura", 22], ["Fecha", 12], ["Cliente", 38], ["RTN", 17], ["Cotización", 13], ["Facturó", 20], ["Forma de pago", 15], ["Subtotal", 13], ["Descuento", 12], ["Gravado", 13], ["ISV 15%", 12], ["Total", 13], ["Estado", 11], ["Motivo anulación", 30], ["CAI", 40]];
+      const cols = [["Factura", 22], ["Fecha", 12], ["Cliente", 38], ["RTN", 17], ["Cotización", 13], ["Vendedor", 20], ["Facturó", 20], ["Forma de pago", 15], ["Subtotal", 13], ["Descuento", 12], ["Gravado", 13], ["ISV 15%", 12], ["Total", 13], ["Estado", 11], ["Motivo anulación", 30], ["CAI", 40]];
       ws.columns = cols.map(([h, w]) => ({header: h, width: w}));
       ws.getRow(1).font = {bold: true}; ws.getRow(1).fill = {type: "pattern", pattern: "solid", fgColor: {argb: "FFE0A526"}};
       (S.facturas || []).filter(f => f.estado !== "blanco").sort((a, b) => a.n - b.n).forEach(f => {
         const an = f.estado === "anulada";
-        const row = ws.addRow([f.numero, f.fecha ? fdate(f.fecha) : "", (f.cliente && f.cliente.nombre) || "", (f.cliente && f.cliente.rtn) || "", f.cotNumero || "", f.porNombre || "", f.formaPago || "",
+        const row = ws.addRow([f.numero, f.fecha ? fdate(f.fecha) : "", (f.cliente && f.cliente.nombre) || "", (f.cliente && f.cliente.rtn) || "", f.cotNumero || "", (() => { const c = f.cotId ? S.cot.find(x => x.id === f.cotId) : null, k = unif(f.vendedor || (c && c.vendedor) || f.por || ""), u = (S.usuarios || []).find(x => x.id === k); return (u && (u.nombre || u.email)) || f.vendedorNombre || (c && c.vendedorNombre) || ""; })(), f.porNombre || "", f.formaPago || "",
           an ? 0 : f.sub || 0, an ? 0 : f.desc || 0, an ? 0 : f.gravado || 0, an ? 0 : f.isv || 0, an ? 0 : f.total || 0, (ESTADO_FAC[f.estado] || [f.estado])[0], (f.anulada && f.anulada.motivo) || "", f.cai || ""]);
-        [8, 9, 10, 11, 12].forEach(c => row.getCell(c).numFmt = '"L." #,##0.00');
+        [9, 10, 11, 12, 13].forEach(c => row.getCell(c).numFmt = '"L." #,##0.00');
         if (an) row.font = {color: {argb: "FFB42318"}};
       });
       ws.autoFilter = {from: {row: 1, column: 1}, to: {row: 1, column: cols.length}};
@@ -3454,7 +3458,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-22c";
+const APP_VER = "2026-10-22f";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
