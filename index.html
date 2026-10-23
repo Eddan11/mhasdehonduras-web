@@ -317,6 +317,7 @@ body.lb-lock{overflow:hidden}
         <div><label for="q-prod">Producto *</label><select id="q-prod" name="Producto" required></select></div>
         <div><label for="q-cant">Cantidad *</label><input id="q-cant" name="Cantidad" required placeholder="Ej. 10 cajas, 50 rollos"></div>
         <div class="full"><label for="q-det">Detalles u otros productos</label><textarea id="q-det" name="Detalles" placeholder="Medidas, frecuencia de compra, fecha de entrega, otros productos…"></textarea></div>
+        <p class="full note">Usamos sus datos para atender esta solicitud. <a href="/privacidad.html">Consulte nuestra política de privacidad</a>.</p>
         <input class="hp" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div class="full"><button class="btn btn-orange" type="submit" id="q-btn">Enviar solicitud de cotización</button></div>
         <div class="qmsg" id="q-msg" role="status" aria-live="polite"></div>
@@ -360,7 +361,7 @@ body.lb-lock{overflow:hidden}
 <footer>
   <div class="wrap">
     <span>&copy; <span id="y">2026</span> MHAS de Honduras · San Pedro Sula, Honduras</span>
-    <span>www.mhasdehonduras.com</span>
+    <span>www.mhasdehonduras.com · <a href="/privacidad.html">Política de privacidad</a></span>
   </div>
 </footer>
 
@@ -406,7 +407,17 @@ var CATS=[
 // versión de fotos: cuando cambies fotos de productos, sube este número (2, 3, 4...)
 var IMGV='2';
 // Todos los botones mandan el mismo mensaje; el agente le pregunta al cliente qué producto necesita (data-item solo se usa para el píxel)
-function waUrl(){return 'https://wa.me/'+WA+'?text='+encodeURIComponent('Hola MHAS, vi su página web y quiero cotizar');}
+function origenConsulta(){
+  var q=new URLSearchParams(location.search),o={canal:'web'};
+  ['utm_source','utm_medium','utm_campaign','utm_content'].forEach(function(k){var v=(q.get(k)||'').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ _.-]/g,'').slice(0,80);if(v)o[k]=v;});
+  return o;
+}
+function waUrl(item){
+  var o=origenConsulta(),producto=(item||'').trim();
+  var t='Hola MHAS, vi su página web y quiero cotizar'+(producto&&producto!=='Consulta general'?' '+producto:'')+'.';
+  t+=' [Origen: web'+(o.utm_source?'; fuente: '+o.utm_source:'')+(o.utm_campaign?'; campaña: '+o.utm_campaign:'')+']';
+  return 'https://wa.me/'+WA+'?text='+encodeURIComponent(t);
+}
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 var html='';
 CATS.forEach(function(c){
@@ -418,7 +429,7 @@ CATS.forEach(function(c){
 });
 document.getElementById('cats').innerHTML=html;
 
-// enlaces de WhatsApp (mismo mensaje en todos)
+// Enlaces de WhatsApp con producto y origen comercial.
 document.querySelectorAll('.js-wa').forEach(function(a){a.href=waUrl(a.getAttribute('data-item')||'Consulta general');});
 
 // eventos del píxel
@@ -498,6 +509,7 @@ qf.addEventListener('submit',function(e){
   if(bad.length){qmsg('Por favor complete: '+bad.map(function(i){return qf.querySelector('label[for="'+i.id+'"]').textContent.replace(' *','');}).join(', ')+'.',false);bad[0].focus();return;}
   var d={},fd=new FormData(qf);fd.forEach(function(v,k){d[k]=v;});
   if(d._honey)return;
+  var origen=origenConsulta();d.Origen='Web MHAS';Object.keys(origen).forEach(function(k){if(k!=='canal')d[k]=origen[k];});
   var now=new Date(),ref='COT-'+String(now.getFullYear()).slice(2)+('0'+(now.getMonth()+1)).slice(-2)+('0'+now.getDate()).slice(-2)+'-'+('0'+now.getHours()).slice(-2)+('0'+now.getMinutes()).slice(-2);
   d['Referencia']=ref;
   d._subject='Solicitud de cotización '+ref+' – '+(d.Empresa||d.Nombre)+' – '+d.Producto;
