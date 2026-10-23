@@ -1101,25 +1101,7 @@ function statsCliente(c){
     cotRec: cs.slice().sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0))[0] || null,
     ciclo, auto, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
 }
-let migrando = false;
-function migrarClientes(){
-  if (migrando) return;
-  const sin = S.cli.filter(c => !c.asignado);
-  if (!sin.length) return;
-  migrando = true;
-  setTimeout(async () => {
-    try {
-      const b = writeBatch(db); let n = 0;
-      S.cli.filter(c => !c.asignado).forEach(c => {
-        const prim = S.cot.filter(x => x.cliente && x.cliente.id === c.id).sort((a, z) => (a.creado || 0) - (z.creado || 0))[0];
-        const dueno = c.creadoPor || (prim && prim.vendedor) || S.me.uid;
-        b.update(doc(db, "clientes", c.id), {asignado: dueno}); n++;
-      });
-      if (n) await b.commit();
-    } catch (e) { console.error(e); }
-    migrando = false;
-  }, 2500);
-}
+// Las asignaciones se cambian explícitamente desde Clientes; cargar la app no migra datos.
 const nomUsuario = id => (S.usuarios.find(u => u.id === id) || {}).nombre || "";
 const normNom = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 function duplicadoDe(c){
@@ -2288,7 +2270,7 @@ function startData(){
   dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
   dataSubs.push(onSnapshot(collection(db, "productos"), q => { S.prod = mapDocs(q).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || (a.nombre || "").localeCompare(b.nombre || "")); render(); }, onErr));
   const cliQ = fact ? collection(db, "clientes") : query(collection(db, "clientes"), where("asignado", "==", S.me.uid));
-  dataSubs.push(onSnapshot(cliQ, q => { S.cli = mapDocs(q); if (r === "admin") migrarClientes(); render(); }, onErr));
+  dataSubs.push(onSnapshot(cliQ, q => { S.cli = mapDocs(q); render(); }, onErr));
   const cq = fact ? query(collection(db, "cotizaciones"), orderBy("creado", "desc"), limit(1000))
                   : query(collection(db, "cotizaciones"), where("vendedor", "==", S.me.uid));
   dataSubs.push(onSnapshot(cq, q => { S.cot = mapDocs(q).sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0)); render(); }, onErr));
@@ -3461,7 +3443,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-23a";
+const APP_VER = "2026-10-23b";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
