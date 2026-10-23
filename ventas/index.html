@@ -1359,10 +1359,14 @@ function duenoDe(c){
 function vUtilidad(){
   const fil = S.f.ut_fil || "pend", ven = S.f.ut_ven || "", q = clean(S.f.utq).toLowerCase(), yo = S.me.uid;
   const todas = S.cot.filter(pagadaCot).map(c => ({c, d: utilDe(c), o: duenoDe(c)}));
-  const miParte = x => { const r = (x.d.u.reparto || []).find(r => r.uid === yo); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
-  // Resumen personal: solo lo de quien entró
-  const R = todas.reduce((a, x) => { const m = miParte(x); if (m) { a.t += m.monto; if (x.d.u.pagado) a.p += m.monto; } return a; }, {t: 0, p: 0});
-  const grupos = [...new Set(todas.map(x => x.o.grupo))].sort();
+  const parteDe = (x, uid) => { const r = (x.d.u.reparto || []).find(r => r.uid === uid); return r ? {pct: Number(r.pct) || 0, monto: r2(x.d.neta * (Number(r.pct) || 0) / 100)} : null; };
+  const miParte = x => parteDe(x, yo);
+  // Botones: todas las personas (aunque todavía no tengan ventas) y cualquier otro grupo con ventas
+  const P = personas(), grupos = [...new Set(P.map(p => p.ini).concat(todas.map(x => x.o.grupo)))].sort();
+  // Cuadros de arriba: de la persona seleccionada; con "Ventas de todos", los de quien entró
+  const pSel = ven ? P.find(p => p.ini === ven) : null, uidR = pSel ? pSel.uid : yo;
+  const R = todas.reduce((a, x) => { const m = parteDe(x, uidR); if (m) { a.t += m.monto; if (x.d.u.pagado) a.p += m.monto; } return a; }, {t: 0, p: 0});
+  const quien = pSel && pSel.uid !== yo ? esc(pSel.ini) : "";
   let list = todas;
   if (ven) list = list.filter(x => x.o.grupo === ven);
   if (q) list = list.filter(x => [x.c.numero, x.c.factura && x.c.factura.numero, x.c.cliente && x.c.cliente.nombre].join(" ").toLowerCase().includes(q));
@@ -1376,7 +1380,7 @@ function vUtilidad(){
   return `
   <h1>Utilidad</h1>
   <p class="sub">Facturas ya pagadas. Utilidad neta = total sin ISV − costo sin ISV − gastos. Al marcar "Pagado" la fila queda cerrada y ya no cambia aunque se actualicen precios o costos.</p>
-  <div class="pr-resumen"><div><small>Mi utilidad · total</small><b>${L(R.t)}</b></div><div><small>Ya me pagaron</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>Me falta recibir</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
+  <div class="pr-resumen"><div><small>${quien ? "Utilidad de " + quien + " · total" : "Mi utilidad · total"}</small><b>${L(R.t)}</b></div><div><small>${quien ? "Ya le pagaron" : "Ya me pagaron"}</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>${quien ? "Le falta recibir" : "Me falta recibir"}</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
   <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
@@ -3450,7 +3454,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-22b";
+const APP_VER = "2026-10-22c";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.m) return true;
