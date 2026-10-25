@@ -36,8 +36,7 @@ export function crearCompras(ctx) {
       <p><b>Total de compra: ${L(total())}</b> <button class="btn sm" data-a="cpContado">Marcar pagada completa</button></p>
       ${input('cp_nota','Nota (opcional)')}
       ${chk('cp_recibida','Ya recibí toda la mercadería (registrar entrada de inventario)')}
-      ${chk('cp_costos','Actualizar el costo de referencia de Productos al recibir')}
-      <p class="note">Los costos de referencia no incluyen otros cargos. Pueden afectar utilidades que aún usan el costo actual; las ya cerradas se conservan.</p>
+      <p class="note">Al recibir la mercadería se actualiza automáticamente el último costo de compra en Productos; el precio de venta se conserva. Otros cargos no se reparten en ese costo. Las facturas sin costo guardado aún usan el costo de referencia actual.</p>
       <div class="actions"><button class="btn pri" data-a="cpGuardar" ${S.busy?'disabled':''}>Guardar compra</button><button class="btn" data-a="cpCancelar" ${S.busy?'disabled':''}>Cancelar</button></div></section>`;
   }
   function modal() {
@@ -72,7 +71,7 @@ export function crearCompras(ctx) {
     cpGuardar(){
       if(!String(S.f.cp_prov||'').trim()||!String(S.f.cp_fact||'').trim()||!cart().length)return toast('Complete proveedor, referencia y productos.');
       // Un reintento conserva la misma operación: no duplica compra, pago ni inventario si se perdió la respuesta.
-      const payload=S.compraIntento||(S.compraIntento={accion:'registrar',id:S.compraId,proveedor:S.f.cp_prov,rtn:S.f.cp_rtn||'',factura:S.f.cp_fact,fecha:S.f.cp_fecha||today(),vence:S.f.cp_vence||today(),cotizacionId:S.f.cp_venta||'',items:cart().map(({prod,cantidad,costo,tasa})=>({prod,cantidad,costo,tasa})),cargos:Number(S.f.cp_cargos||0),abono:Number(S.f.cp_abono||0),metodo:S.f.cp_metodo||'Transferencia',ref:S.f.cp_ref||'',nota:S.f.cp_nota||'',recibido:!!S.f.cp_recibida,actualizarCosto:!!S.f.cp_costos});
+      const payload=S.compraIntento||(S.compraIntento={accion:'registrar',id:S.compraId,proveedor:S.f.cp_prov,rtn:S.f.cp_rtn||'',factura:S.f.cp_fact,fecha:S.f.cp_fecha||today(),vence:S.f.cp_vence||today(),cotizacionId:S.f.cp_venta||'',items:cart().map(({prod,cantidad,costo,tasa})=>({prod,cantidad,costo,tasa})),cargos:Number(S.f.cp_cargos||0),abono:Number(S.f.cp_abono||0),metodo:S.f.cp_metodo||'Transferencia',ref:S.f.cp_ref||'',nota:S.f.cp_nota||'',recibido:!!S.f.cp_recibida,actualizarCosto:true});
       return enviar(payload,()=>{S.compraForm=false;S.compraCart=[];S.compraIntento=null;Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);S.m={type:'compra',id:payload.id};toast('Compra guardada y vinculada con Por pagar.');});
     },
     cpAbrir(id){S.m={type:'compra',id};draw();},
