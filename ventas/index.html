@@ -244,8 +244,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { crearGastos } from "./gastos-ui.js?v=2026-10-25b";
-import { crearCompras } from "./compras-ui.js?v=2026-10-25b";
+import { crearGastos } from "./gastos-ui.js?v=2026-10-25c";
+import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -1331,7 +1331,7 @@ function personas(){
 const pagadaCot = c => c.estado === "facturada" && !c.eliminada && saldo(c) <= 0.005;
 function utilDe(c, g){
   const u = (S.util || {})[c.id] || {};
-  const gastos = g != null ? Math.max(0, r2(Number(g) || 0)) : Math.max(0, Number(u.gastos) || 0);
+  const gastos = 0; // Los descuentos nuevos provienen exclusivamente de Gastos.
   if (u.pagado && u.snap) return Object.assign({}, u.snap, {gastos: Number(u.gastos) || 0, neta: r2(u.snap.venta - u.snap.costo - (Number(u.gastos) || 0)), u, sinCosto: 0});
   const cc = calc(c.items, c.flete), venta = r2(cc.base + (cc.flete || 0));
   let sinCosto = 0;
@@ -1374,14 +1374,14 @@ function vUtilidad(){
   return `
   <h1>Utilidad</h1>
   ${resumenGeneral}
-  <h2>Repartos de facturas cobradas</h2><p class="sub">Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
+  <h2>Repartos de facturas cobradas</h2><p class="sub">Gastos asignados muestra el descuento automático de cada factura según su utilidad bruta, desde el módulo Gastos. Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
   <div class="pr-resumen"><div><small>${quien ? "Utilidad de " + quien + " · total" : "Mi utilidad · total"}</small><b>${L(R.t)}</b></div><div><small>${quien ? "Ya le pagaron" : "Ya me pagaron"}</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>${R.t - R.p < 0 ? "Diferencia a compensar" : quien ? "Le falta recibir" : "Me falta recibir"}</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
   <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
   ${sel.size ? `<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px"><b>${sel.size} ${sel.size === 1 ? "seleccionada" : "seleccionadas"}</b><button class="btn pri sm" data-a="utRepSel">Repartir</button><button class="btn sm" data-a="utPagarSel">Marcar pagadas</button><button class="btn sm" data-a="utSelNada">Quitar selección</button></div>` : ""}
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos de factura</th><th class="num">Gastos generales</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos asignados</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
     ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, bloqueada = cer || !!gastosUI.factura(c.id)?.cerrada, m = miParte(x), suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
       return `<tr${cer ? ' style="opacity:.75"' : ""}>
       <td>${cer ? "" : `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSel" data-v="${esc(c.id)}" ${sel.has(c.id) ? "checked" : ""} aria-label="Seleccionar ${esc(c.numero)}">`}</td>
@@ -1389,13 +1389,12 @@ function vUtilidad(){
       <td><span class="badge" title="${x.o.tag.endsWith("W") ? "Venta del agente de WhatsApp" : ""}">${esc(x.o.tag)}</span></td>
       <td class="num">${L(d.venta)}</td>
       <td class="num">${L(d.costo)}${d.sinCosto ? `<br><small style="color:var(--warn)">${d.sinCosto} sin costo</small>` : ""}</td>
-      <td class="num">${bloqueada ? L(d.gastos) : `<input class="pin" style="max-width:110px" type="number" min="0" step="0.01" inputmode="decimal" data-gasto="${esc(c.id)}" value="${d.gastos || ""}" placeholder="0.00" aria-label="Gastos de ${esc(c.numero)}">`}</td>
-      <td class="num">${L(d.gastosGenerales)}</td>
+      <td class="num">${L(d.gastos + d.gastosGenerales)}${d.gastos ? `<br><small>Incluye ${L(d.gastos)} del cierre anterior</small>` : ""}</td>
       <td class="num"><b style="color:${d.neta < 0 ? "var(--bad)" : "var(--ok)"}">${L(d.neta)}</b></td>
       <td>${bloqueada ? `<small>${repTxt(d.u.reparto) || "—"}</small>` : `<button class="btn sm" data-a="repAbrir" data-v="${esc(c.id)}">${repTxt(d.u.reparto) || "Asignar"}</button>${(d.u.reparto || []).length && Math.abs(suma - 100) > 0.05 ? `<br><small style="color:var(--bad)">Suma ${r2(suma)}%</small>` : ""}`}</td>
       <td class="num">${m ? `${L(m.monto)}<br><small class="muted">${r2(m.pct)}%</small>` : '<span class="muted">—</span>'}</td>
       <td>${cer ? `<span class="badge b-ok">☑ Pagado</span><br><small class="muted">${d.u.pagadoEn ? fdate(ymd(new Date(d.u.pagadoEn))) : ""}</small>` : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:20px;min-height:20px" data-a="utPagar" data-v="${esc(c.id)}"> Pagado</label>`}</td></tr>`; }).join("")}
-  </tbody><tfoot><tr class="tfoot"><td colspan="3"><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos)}</td><td class="num">${L(T.generales)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td><td class="num"><b>${L(T.mia)}</b></td><td></td></tr></tfoot></table>` : `<p class="empty">${vacio}</p>`}
+  </tbody><tfoot><tr class="tfoot"><td colspan="3"><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos + T.generales)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td><td class="num"><b>${L(T.mia)}</b></td><td></td></tr></tfoot></table>` : `<p class="empty">${vacio}</p>`}
   </div></div>
   <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen del período incluye a todas las personas; "Mi utilidad" y "Mi parte" corresponden a tu usuario. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
 }
@@ -1421,6 +1420,7 @@ function mRep(){
 // Guarda la fila de utilidad y la parte de cada persona (los vendedores solo ven su parte)
 async function utilGuardar(c, cambios, liquidacion){
   const prev = (S.util || {})[c.id] || {};
+  if (Object.prototype.hasOwnProperty.call(cambios, "gastos")) { toast("Registre el gasto en la pestaña Gastos; se distribuirá automáticamente."); return false; }
   if (!cambios.pagado && gastosUI.factura(c.id)?.cerrada) { toast("Esta quincena está cerrada. No cambie el reparto ni sus gastos; registre un ajuste en una abierta."); return false; }
   if (prev.pagado) { toast("Esta factura ya está pagada y cerrada."); return false; }
   const nuevo = Object.assign({}, prev, cambios);
@@ -1429,9 +1429,9 @@ async function utilGuardar(c, cambios, liquidacion){
   if (nuevo.pagado && (!liquidacion || liquidacion.neta < 0)) { toast("Revise el cálculo y cualquier saldo negativo antes de marcar pagado."); return false; }
   const d = utilDe(c, nuevo.gastos);
   const b = writeBatch(db), ahora = Date.now();
-  const fila = {numero: c.numero, factura: (c.factura && c.factura.numero) || "", gastos: d.gastos, reparto: nuevo.reparto || [], pagado: !!nuevo.pagado, actualizado: ahora, por: S.me.uid,
+  const fila = {numero: c.numero, factura: (c.factura && c.factura.numero) || "", reparto: nuevo.reparto || [], pagado: !!nuevo.pagado, actualizado: ahora, por: S.me.uid,
     participantes: (nuevo.reparto || []).map(r => r.uid)};
-  if (nuevo.pagado) Object.assign(fila, {pagadoEn: ahora, pagadoPor: S.me.uid, gastosGeneralesAlPagar: liquidacion.generales / 100, netoPagado: liquidacion.neta / 100, pagadoPartes: liquidacion.partes.map(p => ({uid: p.uid, monto: p.neta / 100})), gastos: liquidacion.directos / 100, snap: {venta: liquidacion.venta / 100, costo: liquidacion.costo / 100}});
+  if (nuevo.pagado) Object.assign(fila, {pagadoEn: ahora, pagadoPor: S.me.uid, gastosGeneralesAlPagar: liquidacion.generales / 100, netoPagado: liquidacion.neta / 100, pagadoPartes: liquidacion.partes.map(p => ({uid: p.uid, monto: p.neta / 100})), gastos: liquidacion.directos / 100, ...(Number(prev.gastos) > 0 ? {gastosManualesAnteriores: prev.gastos} : {}), snap: {venta: liquidacion.venta / 100, costo: liquidacion.costo / 100}});
   b.set(doc(db, "utilidad", c.id), fila, {merge: true});
   const quedan = new Set(fila.participantes);
   (fila.reparto).forEach(r => b.set(doc(db, "utilidad_partes", c.id + "__" + r.uid), {cot: c.id, numero: c.numero, factura: fila.factura, cliente: (c.cliente && c.cliente.nombre) || "",
@@ -3453,7 +3453,6 @@ document.addEventListener("change", e => {
     if (i && t.dataset.cd != null) { const l = calc([i]).lines[0]; i.desc = l.descX; t.value = l.descIsv || ""; }
     refrescarCarrito(); return;
   }
-  if (t.dataset.gasto != null) { const c = S.cot.find(x => x.id === t.dataset.gasto); if (c) utilGuardar(c, {gastos: Math.max(0, r2(Number(t.value) || 0))}).then(ok => { if (ok) toast("Gasto guardado"); }); return; }
   if (t.dataset.k === "fac_fp") delete S.f.fac_pagado;
   if (t.dataset.redraw || t.dataset.k === "fac_fp") draw();
 });
@@ -3463,7 +3462,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-25b";
+const APP_VER = "2026-10-25c";
 function algoSinGuardar(){
   if (S.cart && S.cart.length) return true;
   if (S.compraForm || (S.compraCart && S.compraCart.length) || S.gastoForm) return true;
