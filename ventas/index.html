@@ -1374,7 +1374,7 @@ function vUtilidad(){
   return `
   <h1>Utilidad</h1>
   ${resumenGeneral}
-  <h2>Repartos de facturas cobradas</h2><p class="sub">El costo y los pagos anteriores se conservan. La utilidad neta visible descuenta los gastos generales del período; si se registran más gastos, el saldo se recalcula.</p>
+  <h2>Repartos de facturas cobradas</h2><p class="sub">Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
   <div class="pr-resumen"><div><small>${quien ? "Utilidad de " + quien + " · total" : "Mi utilidad · total"}</small><b>${L(R.t)}</b></div><div><small>${quien ? "Ya le pagaron" : "Ya me pagaron"}</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>${R.t - R.p < 0 ? "Diferencia a compensar" : quien ? "Le falta recibir" : "Me falta recibir"}</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
   <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
@@ -1397,7 +1397,7 @@ function vUtilidad(){
       <td>${cer ? `<span class="badge b-ok">☑ Pagado</span><br><small class="muted">${d.u.pagadoEn ? fdate(ymd(new Date(d.u.pagadoEn))) : ""}</small>` : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:20px;min-height:20px" data-a="utPagar" data-v="${esc(c.id)}"> Pagado</label>`}</td></tr>`; }).join("")}
   </tbody><tfoot><tr class="tfoot"><td colspan="3"><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos)}</td><td class="num">${L(T.generales)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td><td class="num"><b>${L(T.mia)}</b></td><td></td></tr></tfoot></table>` : `<p class="empty">${vacio}</p>`}
   </div></div>
-  <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen de arriba y "Mi parte" son solo tuyos. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
+  <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen del período incluye a todas las personas; "Mi utilidad" y "Mi parte" corresponden a tu usuario. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
 }
 function utilidadConGenerales(c){ const d = utilDe(c), g = gastosUI.factura(c.id); return {...d, neta: g ? g.neta / 100 : d.neta}; }
 function mRep(){
