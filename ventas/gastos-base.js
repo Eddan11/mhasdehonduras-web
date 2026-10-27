@@ -52,7 +52,7 @@
          partes.push({uid:r.uid,pct:r.pct,bruta:br[r.uid],directos:di[r.uid],generales:ge[r.uid],neta:n,pagado});
        });
      }
-     porFactura[f.id]={id:f.id,numero:f.numero,factura:f.factura,fecha:f.fecha,fechaFactura:f.fechaFactura||f.fecha,ajuste:!!f.ajuste,vendedor:f.vendedor,venta:f.venta,costo:f.costo,bruta:f.bruta,directos:f.directos,generales,neta,pagado:!!f.pagado,partes};
+     porFactura[f.id]={id:f.id,numero:f.numero,factura:f.factura,sinComprobante:!!f.sinComprobante,fiscalPendiente:!!f.fiscalPendiente,fecha:f.fecha,fechaFactura:f.fechaFactura||f.fecha,ajuste:!!f.ajuste,vendedor:f.vendedor,venta:f.venta,costo:f.costo,bruta:f.bruta,directos:f.directos,generales,neta,pagado:!!f.pagado,partes};
    });
    const total=filas.reduce((a,f)=>{a.venta+=f.venta;a.costo+=f.costo;a.bruta+=f.bruta;a.directos+=f.directos;return a;},{venta:0,costo:0,bruta:0,directos:0});
    return {periodo:p,totales:{...total,gastos:gastosCentavos,asignado:gastosCentavos-reparto.pendiente,pendiente:reparto.pendiente,neta:total.bruta-total.directos-gastosCentavos},porFactura,personas:[...porPersona.values()],sinReparto,sinCosto,gastosRegistrados:gastosPeriodo.length};
