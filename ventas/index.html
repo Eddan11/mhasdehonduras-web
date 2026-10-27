@@ -246,6 +246,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-25c";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
+import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27a";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -268,6 +269,7 @@ auth.languageCode = "es";
 const db = getFirestore(fbApp);
 const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {timeout: 60000});
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
+const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
 const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
 
 /* ---------- utilidades ---------- */
@@ -290,13 +292,13 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false, facturas: [], talForm: false, talFile: null, talProg: "", chatF: "todos"
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil", "ajustes"],
+  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "prospectos", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil", "ajustes"],
   facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
 // Todas las pestañas en la barra (se desliza). Para agrupar algunas en un botón "Más", ponerlas aquí. Compras y Por pagar están vinculados al inventario.
 const TABS_MAS = {};
-const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -412,7 +414,7 @@ function draw0(){
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, facturas: vFacturas, cobros: vCobros, pagar: vPagar, compras: () => comprasUI.vista(), gastos: () => gastosUI.vista(), perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
+  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, prospectos: () => prospectosUI.vista(), cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, facturas: vFacturas, cobros: vCobros, pagar: vPagar, compras: () => comprasUI.vista(), gastos: () => gastosUI.vista(), perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -2277,7 +2279,7 @@ function startData(){
   const r = rol(), key = S.me.uid + ":" + r;
   if (subKey === key) return;
   stopData(); subKey = key;
-  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = []; S.convs = []; gastosUI.reiniciar(); S.gastosGenerales = []; S.gastoForm = null; S.compras = []; S.proveedores = []; S.compraForm = false; S.compraCart = []; S.compraIntento = null;
+  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = []; S.convs = []; gastosUI.reiniciar(); prospectosUI.reiniciar(); S.gastosGenerales = []; S.gastoForm = null; S.compras = []; S.proveedores = []; S.compraForm = false; S.compraCart = []; S.compraIntento = null;
   if (!r) return;
   const fact = r === "admin" || r === "facturador";
   dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
@@ -3419,6 +3421,9 @@ Object.assign(A, gastosUI.acciones);
 document.addEventListener("change", e => { if (["gg_mes", "gg_periodo"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; gastosUI.cambioPeriodo(); } });
 const comprasUI = crearCompras({S,esc,L,fdate,today,r2,draw,toast,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm,call: d => fnCompras(d)});
 Object.assign(A, comprasUI.acciones);
+const prospectosUI = crearProspectos({S,esc,draw,toast,fallo,call: d => fnProspectos(d)});
+Object.assign(A, prospectosUI.acciones);
+document.addEventListener("change", e => { if (e.target.dataset.ppestado) prospectosUI.acciones.ppEstado(e.target.dataset.ppestado, e.target.value); });
 document.addEventListener("change", e => { if (["cp_cargos", "cp_abono"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; draw(); } });
 
 /* ---------- eventos ---------- */
@@ -3494,8 +3499,9 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-26a";
+const APP_VER = "2026-10-27a";
 function algoSinGuardar(){
+  if (S.prospectoForm) return true;
   if (S.cart && S.cart.length) return true;
   if (S.compraForm || (S.compraCart && S.compraCart.length) || S.gastoForm) return true;
   if (S.m) return true;
