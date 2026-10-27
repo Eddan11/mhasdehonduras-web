@@ -246,7 +246,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-25c";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
-import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27b";
+import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27c";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -3499,9 +3499,9 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27b";
+const APP_VER = "2026-10-27c";
 function algoSinGuardar(){
-  if (S.prospectoForm) return true;
+  if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
   if (S.compraForm || (S.compraCart && S.compraCart.length) || S.gastoForm) return true;
   if (S.m) return true;
