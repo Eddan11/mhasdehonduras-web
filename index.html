@@ -416,16 +416,16 @@ var CATS=[
 ];
 // versión de fotos: cuando cambies fotos de productos, sube este número (2, 3, 4...)
 var IMGV='2';
-// El mensaje conserva el producto elegido y el origen comercial, sin agregar preguntas.
+// El mensaje conserva el producto elegido; el seguimiento queda fuera del texto del cliente.
 function origenConsulta(){
   var q=new URLSearchParams(location.search),o={canal:'web'};
   ['utm_source','utm_medium','utm_campaign','utm_content'].forEach(function(k){var v=(q.get(k)||'').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ _.-]/g,'').slice(0,80);if(v)o[k]=v;});
   return o;
 }
 function waUrl(item){
-  var o=origenConsulta(),producto=(item||'').trim();
-  var t='Hola MHAS, vi su página web y quiero cotizar'+(producto&&producto!=='Consulta general'?' '+producto:'')+'.';
-  t+=' [Origen: web'+(o.utm_source?'; fuente: '+o.utm_source:'')+(o.utm_campaign?'; campaña: '+o.utm_campaign:'')+']';
+  var producto=(item||'').trim();
+  var general=['Consulta general','Cotización','Contacto','Producto especial'].indexOf(producto)!==-1;
+  var t='Hola MHAS, vi su página web y quiero cotizar'+(producto&&!general?' '+producto:'')+'.';
   return 'https://wa.me/'+WA+'?text='+encodeURIComponent(t);
 }
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
@@ -439,7 +439,7 @@ CATS.forEach(function(c){
 });
 document.getElementById('cats').innerHTML=html;
 
-// Enlaces de WhatsApp con producto y origen comercial.
+// Enlaces de WhatsApp con el producto elegido y un mensaje sencillo.
 document.querySelectorAll('.js-wa').forEach(function(a){a.href=waUrl(a.getAttribute('data-item')||'Consulta general');});
 
 // eventos del píxel
