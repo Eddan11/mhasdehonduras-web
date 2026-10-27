@@ -1631,6 +1631,7 @@ function mCot(){
   else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Cerrar</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
   else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Emitir factura</button>`].concat(S.admin ? [`<button class="btn" data-a="modeFacHist">Ya se facturó</button>`] : []).concat([`<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`]);
   else if (["facturada","vendida"].includes(c.estado) && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
+  if(fact&&c.estado==="facturada"&&!c.eliminada&&c.factura&&!facDeCot(c))abajo.push(`<button class="btn danger" data-a="facAnularAnterior">Anular factura</button>`);
   if (S.admin && !c.eliminada) abajo.push(`<button class="btn" data-a="modeFechas">Cambiar fechas</button>`, `<button class="btn danger" data-a="eliminar">Eliminar</button>`);
   // El primer botón queda a la vista; los demás van en "Opciones"
   const opc = abajo.slice(1);
@@ -1839,7 +1840,7 @@ const facNum = (rangoIni, n) => String(rangoIni || CAI_DEF.rangoIni).split("-").
 const facBlancos = () => (S.facturas || []).filter(f => f.estado === "blanco").sort((a, b) => a.n - b.n);
 const facSiguiente = () => facBlancos()[0] || null;
 const facUltima = () => (S.facturas || []).filter(f => f.estado === "emitida").sort((a, b) => b.n - a.n)[0] || null;
-const facDeCot = c => c && c.factura && c.factura.n != null ? (S.facturas || []).find(f => f.n === c.factura.n) : null;
+const facDeCot = c => { const numero=c?.factura?.numero, n=c?.factura?.n??Number(String(numero||" ").split("-").at(-1)); return c?.factura?(S.facturas||[]).find(f=>f.cotId===c.id&&f.n===n)||null:null; };
 function datosFactura(c, cli, fecha, fp){
   const cc = calcCot(c);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
@@ -2647,6 +2648,11 @@ const A = {
   },
   facCot(v){ A.open(v); },
   flEst(v){ S.f.fl_est = v; draw(); },
+  async facAnularAnterior(){
+    const c=S.cot.find(x=>x.id===S.m?.id);if(!c||!puede("admin","facturador")||S.busy)return;
+    const motivo=clean(prompt("Anular factura "+c.factura.numero+" de "+c.numero+" por "+L(c.total)+".\nEl número se conservará anulado y la cotización volverá a Por facturar.\n\nEscriba el motivo:")||"");if(!motivo)return;
+    S.busy=true;draw();try{await fnVentasDirectas({accion:"anularFacturaAnterior",id:c.id,numero:c.factura.numero,motivo});toast("Factura anulada. La cotización queda pendiente de facturar o cancelar.");}catch(e){toast(e.message||"No se confirmó la anulación. Actualice y vuelva a intentar.");}finally{S.busy=false;draw();}
+  },
   async facAnular(v){
     const f = (S.facturas || []).find(x => String(x.n) === String(v)); if (!f) return;
     if (f.estado === "blanco" && !S.admin) return;
@@ -3528,7 +3534,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27g";
+const APP_VER = "2026-10-27h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
