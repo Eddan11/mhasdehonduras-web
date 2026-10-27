@@ -34,17 +34,17 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Archivo,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
 button,input,select,textarea{font:inherit;color:inherit}
 header{background:var(--navy);color:#fff;border-bottom:4px solid var(--gold)}
-.hwrap{max-width:1400px;margin:0 auto;padding:14px 18px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.hwrap{max-width:none;margin:0 auto;padding:14px 12px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
 .brand{font-weight:800;font-size:20px;letter-spacing:-.01em;margin-right:auto}
 .brand span{color:var(--gold);font-weight:600}
 .who{display:flex;align-items:center;gap:8px;font-size:13px;opacity:.92}
 .who img{width:26px;height:26px;border-radius:50%}
-nav{max-width:1400px;margin:0 auto;padding:10px 12px 0;display:flex;flex-wrap:wrap;gap:2px}
+nav{max-width:none;margin:0 auto;padding:10px 6px 0;display:flex;flex-wrap:wrap;gap:2px}
 @media (max-width:760px){nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{scroll-snap-align:start}}
 nav button{background:none;border:0;color:#C9D3E6;padding:10px 14px 12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;white-space:nowrap}
 nav button[aria-current="page"]{background:var(--paper);color:var(--ink)}
 nav button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
-main{max-width:1400px;margin:0 auto;padding:22px 18px 80px}
+main{max-width:none;margin:0 auto;padding:22px 12px 80px}
 h1{font-size:24px;line-height:1.2;margin:0 0 4px;font-weight:800;letter-spacing:-.015em}
 h2{font-size:17px;margin:0 0 12px;font-weight:700}
 .sub{color:var(--muted);margin:0 0 20px}
@@ -66,7 +66,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .btn:disabled{opacity:.5;cursor:default}
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.scroll{overflow-x:auto}
+.scroll{overflow-x:auto;max-width:100%;min-width:0}.cot-doc-fila{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -246,9 +246,10 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-27e";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
 import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27g";
-import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27d";
+import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27j";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -1637,6 +1638,7 @@ function mCot(){
   if (S.admin && !c.eliminada) abajo.push(`<button class="btn" data-a="modeFechas">Cambiar fechas</button>`, `<button class="btn danger" data-a="eliminar">Eliminar</button>`);
   // El primer botón queda a la vista; los demás van en "Opciones"
   const opc = abajo.slice(1);
+  if(full&&window.jspdf)opc.push(`<button class="btn" data-a="pdfInterno" title="Copia interna con precios antes de descuento y su desglose">PDF interno</button>`);
   abajo = abajo.slice(0, 1).concat(opc.length ? [`<button class="btn" data-a="mas" aria-expanded="${!!S.m.mas}">Opciones ${S.m.mas ? "▴" : "▾"}</button>`] : []);
   const opcHtml = opc.length && S.m.mas ? `<div class="panel" style="padding:8px;display:flex;flex-direction:column;gap:6px;margin-top:6px">${opc.map(b => b.replace('class="btn', 'style="width:100%;justify-content:flex-start" class="btn')).join("")}</div>` : "";
   return `
@@ -1669,12 +1671,13 @@ function mCot(){
   ${c.notas ? `<p class="note">${esc(c.notas)}</p>` : ""}
   ${pagosHtml(c)}
   ${extra}
-  ${mode === "ver" ? `<div class="actions">
-    ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="shGenerarCorreo">Generar correo</button><button class="btn" data-a="shGenerarMensaje">Generar mensaje</button><button class="btn" data-a="pdf">Descargar PDF</button><button class="btn" data-a="guia">Guía de envío</button>` : ""}
-    ${S.f.guiaOpc && window.jspdf ? `<div class="chips" role="group" aria-label="Tamaño de la guía" style="width:100%">${Object.entries(GUIA_FMT).map(([k, f]) => `<button data-a="guia" data-v="${k}">${f.n}</button>`).join("")}</div>` : ""}
+  ${mode === "ver" ? `<div class="cot-doc-fila" role="group" aria-label="Documento">
+    ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Ver PDF</button>` : ""}
     ${abierta ? `<button class="btn" data-a="editar">Editar</button>` : ""}
-    ${full && window.jspdf ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}
+  </div><div class="cot-doc-fila" role="group" aria-label="Enviar">
+    ${window.jspdf ? `<button class="btn" data-a="shGenerarCorreo">Correo</button><button class="btn" data-a="shGenerarMensaje">Mensaje</button><button class="btn" data-a="guia">Guía de envío</button>` : ""}
   </div>
+  ${S.f.guiaOpc && window.jspdf ? `<div class="chips" role="group" aria-label="Tamaño de la guía" style="margin-top:8px">${Object.entries(GUIA_FMT).map(([k, f]) => `<button data-a="guia" data-v="${k}">${f.n}</button>`).join("")}</div>` : ""}
   ${abajo.length ? `<div class="actions">${abajo.join("")}</div>${opcHtml}` : ""}` : ""}`;
 }
 function mProd(){
@@ -2235,45 +2238,8 @@ function armarPdf(c, interno){
 }
 // Guía de envío: el mismo diseño (90 x 60) en etiqueta térmica 90 x 60, etiqueta 4x6 o carta/A4 (se escala y se centra)
 const TEL_PEDIDOS = "+504 9468-9500";
-const GUIA_FMT = {eti: {n: "Etiqueta 90 x 60", page: [90, 60], o: "landscape"}, "4x6": {n: "Etiqueta 4 x 6", page: [152.4, 101.6], o: "landscape"}, carta: {n: "Carta / A4", page: "letter", o: "portrait"}};
-function armarGuia(c, fmt){
-  const F = GUIA_FMT[fmt] || GUIA_FMT.eti, {jsPDF} = window.jspdf, d = new jsPDF({unit: "mm", format: F.page, orientation: F.o});
-  const PW = d.internal.pageSize.getWidth(), PH = d.internal.pageSize.getHeight();
-  // Diseño en un área de 90 x 60 (las posiciones verticales se escriben en una escala de 63 y se comprimen a 60);
-  // en carta va arriba con 10 mm de margen (A4 también entra)
-  const BH = 60, sy = BH / 63;
-  const k = fmt === "carta" ? Math.min((PW - 20) / 90, 2.2) : Math.min(PW / 90, PH / BH);
-  const ox = (PW - 90 * k) / 2, oy = fmt === "carta" ? 10 : (PH - BH * k) / 2;
-  const X = v => ox + v * k, Y = v => oy + v * sy * k, fsz = n => d.setFontSize(n * k);
-  const W = 90, cx = 45, cl = c.cliente || {}, up = s => String(s || "").toUpperCase().trim();
-  const txt = (s, x, y, o) => d.text(s, X(x), Y(y), o || {align: "center"});
-  const ancho = s => d.getTextWidth(s) / k, partir = (s, w) => d.splitTextToSize(s, w * k);
-  if (fmt === "carta") { d.setDrawColor(150, 150, 150); d.setLineDashPattern([2, 2], 0); d.setLineWidth(0.2); d.rect(X(0), Y(0), 90 * k, BH * k); d.setLineDashPattern([], 0); }
-  try { d.addImage(LOGO, "JPEG", X(cx - 10), Y(2.6), 20.3 * k, 10 * k); } catch (_) {}
-  d.setTextColor(0, 0, 0);
-  let fs = 14; d.setFont("helvetica", "bold"); fsz(fs);
-  while (fs > 9 && ancho(up(cl.nombre)) > W - 8) fsz(--fs);
-  const nom = partir(up(cl.nombre), W - 8)[0] || "";
-  txt(nom, cx, 19);
-  const wn = Math.min(W - 8, ancho(nom)); d.setLineWidth(0.3 * k); d.line(X(cx - wn / 2 - 1), Y(20.1), X(cx + wn / 2 + 1), Y(20.1));
-  d.setFont("helvetica", "bold"); fsz(8.5);
-  const dir = [cl.contacto ? "ATE: " + up(cl.contacto) + "." : "", cl.direccion ? "DIRECCIÓN: " + up(cl.direccion) : ""].filter(Boolean).join(" ");
-  const ld = partir(dir || "DIRECCIÓN:", W - 8).slice(0, 3);
-  ld.forEach((x, n) => txt(x, cx, 24.8 + n * 3.8));
-  let y = 24.8 + ld.length * 3.8 + 2;
-  if (cl.tel) { fsz(10.5); txt("CEL: " + cl.tel, cx, y + 1.2); y += 6; }
-  const prods = (c.items || []).map(i => `${qV(i)} ${up(vuDe(i).n)} ${up(i.nombre)}`).join(" · ");
-  fsz(7.5);
-  partir("CONTENIDO: " + prods, W - 8).slice(0, 2).forEach((x, n) => txt(x, cx, y + n * 3.3));
-  const tv = String((c.vendedorInfo && c.vendedorInfo.tel) || "").trim(), dg = tv.replace(/\D/g, "");
-  const telV = dg.length === 8 ? "+504 " + dg.slice(0, 4) + "-" + dg.slice(4) : dg.length === 11 && dg.startsWith("504") ? "+504 " + dg.slice(3, 7) + "-" + dg.slice(7) : (tv || TEL_PEDIDOS);
-  const tp = "PARA PEDIDOS: " + telV;
-  d.setFillColor(0, 0, 0); d.setFont("helvetica", "bold"); fsz(7.5);
-  const wt = ancho(tp) + 4;
-  d.rect(X(cx - wt / 2), Y(54.6), wt * k, 4.6 * sy * k, "F"); d.setTextColor(255, 255, 255); txt(tp, cx, 57.9);
-  d.setTextColor(120, 120, 120); d.setFont("helvetica", "normal"); fsz(5.5); txt(c.numero || "", W - 3, 61.4, {align: "right"});
-  return d;
-}
+const GUIA_FMT = FORMATOS_GUIA;
+function armarGuia(c,fmt){return crearGuia(c,fmt,{jsPDF:window.jspdf.jsPDF,logo:LOGO,qV,vuDe,telPedidos:TEL_PEDIDOS});}
 function nombrePdf(c){ return "Cotizacion " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"; }
 function descargarPdf(c){ if (!window.jspdf) return; armarPdf(c).save(nombrePdf(c)); }
 async function compartirPdf(c){
@@ -2777,7 +2743,7 @@ const A = {
     if (ok) { S.m.mode = "ver"; clearForm(); draw(); }
   },
   async delCxp(){ if ((S.cxp.find(x => x.id === S.m.id) || {}).compraId) return toast("Esta cuenta se administra desde su compra."); if (!confirm("¿Borrar esta cuenta por pagar?")) return; try { await deleteDoc(doc(db, "cxp", S.m.id)); S.m = null; toast("Borrada"); } catch (e) { fallo(e, "borrar"); } draw(); },
-  pdf(){ const c = S.cot.find(x => x.id === S.m.id); if (c) { descargarPdf(c); marcarEnviada(); } },
+  pdf(){ const c=S.cot.find(x=>x.id===S.m.id);if(!c||!window.jspdf)return;const u=URL.createObjectURL(armarPdf(c).output("blob"));window.open(u,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(u),120000); },
   async saveRoles(){
     S.busy = true; draw(); let n = 0;
     try {
@@ -3538,7 +3504,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27i";
+const APP_VER = "2026-10-27j";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
