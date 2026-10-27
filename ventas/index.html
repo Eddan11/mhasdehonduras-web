@@ -246,6 +246,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-27e";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
+import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
 import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27g";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
@@ -1548,6 +1549,7 @@ function mCot(){
   const abierta = c.estado === "cotizada" && !c.eliminada && (fact || mio);
   const mode = S.m.mode, cc = calcCot(c), full = fact;
   if(mode==="ventaDirecta")return ventasDirectasUI.formulario(c);
+  if(mode==="compartirCorreo"||mode==="compartirMensaje")return compartirClienteUI.vista(c,mode==="compartirCorreo"?"correo":"mensaje");
   let extra = "";
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
@@ -1668,7 +1670,7 @@ function mCot(){
   ${pagosHtml(c)}
   ${extra}
   ${mode === "ver" ? `<div class="actions">
-    ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="pdf">Descargar PDF</button><button class="btn" data-a="guia">Guía de envío</button>` : ""}
+    ${window.jspdf ? `<button class="btn" data-a="share">Compartir PDF</button><button class="btn" data-a="shGenerarCorreo">Generar correo</button><button class="btn" data-a="shGenerarMensaje">Generar mensaje</button><button class="btn" data-a="pdf">Descargar PDF</button><button class="btn" data-a="guia">Guía de envío</button>` : ""}
     ${S.f.guiaOpc && window.jspdf ? `<div class="chips" role="group" aria-label="Tamaño de la guía" style="width:100%">${Object.entries(GUIA_FMT).map(([k, f]) => `<button data-a="guia" data-v="${k}">${f.n}</button>`).join("")}</div>` : ""}
     ${abierta ? `<button class="btn" data-a="editar">Editar</button>` : ""}
     ${full && window.jspdf ? `<button class="btn" data-a="pdfInterno">PDF interno</button>` : ""}
@@ -3447,6 +3449,8 @@ function leerCarrito(t){
   return i;
 }
 
+const compartirClienteUI=crearCompartirCliente({S,esc,L,draw,toast,emp,clienteDe:id=>S.cli.find(c=>c.id===id),pdf:c=>armarPdf(c).output("arraybuffer"),nombrePdf});
+Object.assign(A,compartirClienteUI.acciones);
 const ventasDirectasUI=crearVentasDirectas({S,esc,L,today,draw,toast,fallo,call:d=>fnVentasDirectas(d),esFact:()=>puede("admin","facturador")});
 Object.assign(A,ventasDirectasUI.acciones);
 const gastosUI = crearGastos({S,esc,L,fdate,today,draw,toast,fallo,unif,call: d => fnGastos(d)});
@@ -3534,7 +3538,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27h";
+const APP_VER = "2026-10-27i";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
