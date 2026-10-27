@@ -244,8 +244,9 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { crearGastos } from "./gastos-ui.js?v=2026-10-25c";
+import { crearGastos } from "./gastos-ui.js?v=2026-10-27e";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27e";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
@@ -267,6 +268,7 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 auth.languageCode = "es";
 const db = getFirestore(fbApp);
+const fnVentasDirectas = httpsCallable(getFunctions(fbApp, "us-central1"), "ventasDirectas", {timeout: 60000});
 const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {timeout: 60000});
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
 const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
@@ -300,7 +302,7 @@ const TABS = {
 const TABS_MAS = {};
 const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
-const ESTADO = {cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
+const ESTADO = {vendida: ["Vendida sin comprobante", "b-warn"],cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
 function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
 const puede = (...roles) => roles.includes(rol());
@@ -364,6 +366,7 @@ function calc(items, flete){
   return {lines, sub, desc, base, isv: r2(total - base - fleteB), total, flete: fleteB, fleteIsv, unidades, n: lines.length};
 }
 const pctTxt = p => (Number.isInteger(p) ? p : p.toFixed(1)) + "%";
+const calcCot = c => calcularDocumento(c, calc);
 const pagado = c => r2((c.pagos || []).reduce((a, p) => a + (Number(p.monto) || 0), 0));
 const saldo = c => r2((Number(c.total ?? c.monto) || 0) - pagado(c));
 function estadoPago(x, cobro){
@@ -458,10 +461,10 @@ function vCotizar(){
   const sel = S.f.cli_sel || "";
   const nuevo = sel === "__nuevo";
   const cliSel = S.cli.find(c => c.id === sel);
-  const cc = calc(S.cart, S.f.flete);
+  const cc = calcularDocumento({items:S.cart,flete:S.f.flete,sinComprobante:S.f.sin_comprobante===true},calc);
   const edPrecio = true; // precios variables: todos (vendedores incluidos) pueden cambiar el precio de cada línea
   const cats = [];
-  S.prod.filter(p => p.activo !== false).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
+  S.prod.filter(p => p.activo !== false && Number(p.precio)>0).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const psel = S.prod.find(p => p.id === S.f.psel);
   const ctcs = contactosDe(cliSel), ctcSel = S.f.cli_ctc ?? (ctcs.length ? "0" : "");
   const dirCot = nuevo ? S.f.cli_dir : (cliSel || {}).direccion, fueraCot = esFueraSPS(dirCot), ns = notasForm();
@@ -506,6 +509,7 @@ function vCotizar(){
     <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${esc(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
+    <label class="check"><input type="checkbox" data-k="sin_comprobante" data-redraw="1" ${S.f.sin_comprobante===true?"checked":""}> Venta sin comprobante · cobrar precio base</label><p class="note">Ejemplo: precio de lista L 115 → importe a cobrar L 100. No se registra una deuda por la diferencia ni se declara una exención fiscal.</p>
     <div class="field"><label for="coc">Orden de compra del cliente (opcional)</label><input id="coc" data-k="cot_oc" value="${fv("cot_oc")}" placeholder="Número de O/C que dio el cliente" autocomplete="off"></div>
   </div>
   <div class="panel">
@@ -521,6 +525,7 @@ function vCotizar(){
     <div style="display:flex;gap:12px;flex-wrap:wrap">
     <div class="field" style="max-width:180px"><label for="gen_unidad">Unidad</label><input id="gen_unidad" list="gen_unidades" data-k="gen_unidad" value="${fv("gen_unidad")}" placeholder="unidad" autocomplete="off"><datalist id="gen_unidades">${["unidad", "caja", "rollo", "millar", "bolsa", "fardo", "libra", "paquete", "resma"].map(u => `<option value="${u}">`).join("")}</datalist></div>
     <div class="field" style="max-width:220px"><label for="gen_precio">Precio por unidad sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
+    <div class="field" style="max-width:220px"><label for="gen_costo">Precio de compra por unidad sin ISV (L.)</label><input id="gen_costo" data-k="gen_costo" type="number" min="0.000001" step="any" inputmode="decimal" value="${fv("gen_costo")}"></div>
     </div>
     <p class="note" style="margin:-4px 0 12px">Solo queda en esta cotización; no se agrega al catálogo.</p>` : ""}
     ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
@@ -542,9 +547,10 @@ function vCotizar(){
         <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(vuDe(i).n)}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
         <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
       </div>
+      ${i.generico?`<div class="field"><label class="mini">Compra por ${esc(vuDe(i).n)} sin ISV (uso interno)</label><input class="pin" data-ccosto="${n}" type="number" min="0.000001" step="any" value="${i.costoU!=null?Number(i.costoU)*vuDe(i).f:""}"></div>`:""}
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
-        <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${L(l.conIsv)} con ISV</small></div>
+        <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${cc.sinComprobante?L(l.imp)+" a cobrar":L(l.conIsv)+" con ISV"}</small></div>
       </div></div>`; }).join("") + `<p class="note">Precios sin ISV. Para cambiar el precio escriba el nuevo precio, el % rebajado de la lista o una cantidad a rebajar del total con ISV; las demás casillas y el importe se recalculan solos.</p>
     <div class="field" style="max-width:220px;margin:6px 0 4px"><label for="flete">Flete L. con ISV (opcional)</label><input id="flete" type="number" min="0" step="0.01" inputmode="decimal" data-k="flete" value="${fv("flete")}" placeholder="0.00"></div>
     <div class="totals" id="ctot">${totalsHtml(cc)}</div>`
@@ -602,6 +608,7 @@ function cliListHtml(){
     (lista.length ? "" : `<p class="empty" style="padding:10px">Ningún cliente coincide${qv ? ": se tomará como cliente nuevo." : "."}</p>`);
 }
 function totalsHtml(cc, simple){
+  if(cc.sinComprobante)return `<div><span>Productos</span><span>${L(cc.base)}</span></div>${cc.flete?`<div><span>Flete</span><span>${L(cc.flete)}</span></div>`:""}<div class="t"><span>Importe a cobrar</span><span>${L(cc.total)}</span></div><small class="muted">Registro sin comprobante. Tratamiento fiscal por revisar.</small>`;
   if (simple) return `<div><span class="muted">Subtotal</span><span>${L(cc.base)}</span></div>
     ${cc.flete ? `<div><span class="muted">Flete</span><span>${L(cc.flete)}</span></div>` : ""}
     <div><span class="muted">ISV 15%</span><span>${L(cc.isv)}</span></div>
@@ -617,7 +624,7 @@ function totalsHtml(cc, simple){
 
 /* ---------- vista: cotizaciones ---------- */
 function vCotizaciones(){
-  const F = {cotizada: "Abiertas", aprobada: "Por facturar", debe: "Espera de pago", fin: "Finalizadas", perdida: "No concretadas", anulada: "Anuladas", todas: "Todas"};
+  const F = {sincomprobante:"Sin comprobante",cotizada: "Abiertas", aprobada: "Por facturar", debe: "Espera de pago", fin: "Finalizadas", perdida: "No concretadas", anulada: "Anuladas", todas: "Todas"};
   if (S.admin) F.eliminadas = "Eliminadas";
   if (!F[S.filtro]) S.filtro = puede("admin", "facturador") ? "aprobada" : "cotizada";
   const q = clean(S.f.bq).toLowerCase();
@@ -630,7 +637,8 @@ function vCotizaciones(){
     switch (S.filtro) {
       case "debe": return c.estado === "facturada" && saldo(c) > 0.005;
       case "fin": return c.estado === "facturada" && saldo(c) <= 0.005;
-      case "todas": return true;
+      case "sincomprobante": return c.sinComprobante===true;
+      case "todas": return c.estado!=="vendida";
       default: return c.estado === S.filtro;
     }
   });
@@ -643,13 +651,13 @@ function vCotizaciones(){
   S._listaCot = list;
   const esVend = rol() === "vendedor";
   const vendedores = [...new Map(S.cot.filter(c => c.vendedor).map(c => { const k = unif(c.vendedor), u = (S.usuarios || []).find(x => x.id === k); return [k, (k !== c.vendedor && u && (u.nombre || u.email)) || c.vendedorNombre || "Sin nombre"]; })).entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  const tot = list.reduce((a, c) => { const cc = calc(c.items, c.flete); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
+  const tot = list.filter(c=>!c.sinComprobante).reduce((a, c) => { const cc = calcCot(c); a.total += Number(c.total) || 0; a.sub += cc.base; a.isv += cc.isv; a.desc += cc.desc; if (c.estado === "facturada") { a.pag += pagado(c); a.sal += Math.max(0, saldo(c)); } return a; }, {total: 0, sub: 0, isv: 0, desc: 0, pag: 0, sal: 0});
   const hoyS = today(), mes = hoyS.slice(0, 7);
   const mesAnt = (() => { const d = new Date(hoyS + "T12:00:00"); d.setDate(1); d.setMonth(d.getMonth() - 1); return ymd(d).slice(0, 7); })();
   const finMes = m => { const d = new Date(m + "-01T12:00:00"); d.setMonth(d.getMonth() + 1); d.setDate(0); return ymd(d); };
   const presets = [["hoy", "Hoy", hoyS, hoyS], ["mes", "Este mes", mes + "-01", finMes(mes)], ["mesant", "Mes pasado", mesAnt + "-01", finMes(mesAnt)], ["todo", "Todo", "", ""]];
   return `
-  <h1>Cotizaciones</h1>
+  <h1>Cotizaciones</h1>${S.filtro==="sincomprobante"?`<p class="note">Registro separado · importe de ventas realizadas ${L(list.filter(c=>c.estado==="vendida").reduce((n,c)=>n+(Number(c.total)||0),0))}. Tratamiento fiscal pendiente de revisión. Las cotizaciones abiertas aún no son ventas.</p>`:""}
   <div class="actions" style="margin:0 0 10px"><button class="btn" data-a="cotCsv">Descargar (Excel)</button></div>
   <p class="sub">${esVend ? "Tus cotizaciones y en qué quedó cada una." : "Aprueba, factura y registra pagos desde aquí."}</p>
   <div class="chips" role="group" aria-label="Filtrar">${Object.entries(F).map(([k, t]) => `<button data-a="filtro" data-v="${k}" aria-pressed="${S.filtro === k}">${t}${cuenta[k] ? ` <span class="cnt${k === "aprobada" && puede("admin", "facturador") ? " hot" : ""}">${cuenta[k]}</span>` : ""}</button>`).join("")}</div>
@@ -664,13 +672,13 @@ function vCotizaciones(){
   </div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th>${esVend ? "" : "<th>Vendedor</th>"}<th class="num">Total</th><th>Estado</th></tr></thead><tbody>
-  ${list.map(c => { const [et, ec] = ESTADO[c.estado] || [c.estado, ""]; const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
+  ${list.map(c => { const [et, ec] = ESTADO[c.estado] || [c.estado, ""]; const ep = ["facturada","vendida"].includes(c.estado) ? estadoPago(c, true) : null;
     return `<tr class="click" data-a="open" data-v="${esc(c.id)}" tabindex="0">
       <td><span class="stub">${esc(c.numero)}</span></td><td>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.tel ? `<br><small class="muted">${esc(c.cliente.tel)}</small>` : ""}${c.estado === "perdida" && c.motivoPerdida ? `<br><small class="muted">Motivo: ${esc(c.motivoPerdida)}</small>` : ""}</td><td>${fdate(c.fecha)}</td>
       ${esVend ? "" : `<td>${esc(c.vendedorNombre || "")}</td>`}<td class="num">${L(c.total)}</td>
       <td><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${!esVend && descTxt(c) ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ' <span class="badge">Enviada</span>' : ""}</td></tr>`; }).join("")}
   </tbody>
-  <tfoot><tr class="tfoot"><td colspan="${esVend ? 3 : 4}"><b>${list.length} ${list.length === 1 ? "cotización" : "cotizaciones"}</b><br><small class="muted">Subtotal ${L(tot.sub)} · ISV ${L(tot.isv)}${!esVend && tot.desc > 0 ? " · descuentos " + L(tot.desc) : ""}${tot.pag > 0 || tot.sal > 0 ? " · cobrado " + L(tot.pag) + " · por cobrar " + L(tot.sal) : ""}</small></td><td class="num"><b>${L(tot.total)}</b></td><td></td></tr></tfoot>
+  <tfoot><tr class="tfoot"><td colspan="${esVend ? 3 : 4}"><b>${list.length} ${list.length === 1 ? "cotización" : "cotizaciones"}</b><br><small class="muted">${S.filtro==="sincomprobante"?"Registro separado; importes sin determinación fiscal":"Totales del grupo con ISV"}</small><br>${S.filtro==="sincomprobante"?"":`<small class="muted">Subtotal ${L(tot.sub)} · ISV ${L(tot.isv)}${!esVend && tot.desc > 0 ? " · descuentos " + L(tot.desc) : ""}${tot.pag > 0 || tot.sal > 0 ? " · cobrado " + L(tot.pag) + " · por cobrar " + L(tot.sal) : ""}</small>`}</td><td class="num"><b>${S.filtro==="sincomprobante"?L(list.reduce((n,c)=>n+(Number(c.total)||0),0)):L(tot.total)}</b></td><td></td></tr></tfoot>
   </table>` : `<p class="empty">No hay cotizaciones con estos filtros.</p>`}
   </div></div>`;
 }
@@ -679,7 +687,7 @@ function descTxt(c){ const cc = calc(c.items); return cc.desc > 0 ? "Con descuen
 
 /* ---------- vista: por cobrar ---------- */
 function vCobros(){
-  const fac = S.cot.filter(c => c.estado === "facturada" && !c.eliminada);
+  const fac = S.cot.filter(c => ["facturada","vendida"].includes(c.estado) && !c.eliminada);
   const pend = fac.filter(c => saldo(c) > 0.005).sort((a, b) => (a.vence || "").localeCompare(b.vence || ""));
   const porCobrar = r2(pend.reduce((a, c) => a + saldo(c), 0));
   const vencido = r2(pend.filter(c => c.vence && diffDays(today(), c.vence) > 0).reduce((a, c) => a + saldo(c), 0)); // vence = fecha máx. de crédito, o 3 días después de la factura
@@ -690,7 +698,7 @@ function vCobros(){
   const cli = Object.entries(porCli).sort((a, b) => b[1].s - a[1].s);
   return `
   <h1>Por cobrar</h1>
-  <p class="sub">Facturas con saldo pendiente, de la más antigua a la más reciente.</p>
+  <p class="sub">Ventas con saldo pendiente, incluidas las registradas sin comprobante.</p>
   <div class="stats">
     <div class="stat"><b>${L(porCobrar)}</b><span>Pendiente de cobro</span></div>
     <div class="stat ${vencido > 0 ? "alert" : ""}"><b>${L(vencido)}</b><span>Vencido</span></div>
@@ -699,10 +707,10 @@ function vCobros(){
   ${cli.length ? `<div class="panel"><h2>Quién debe</h2><div class="scroll"><table><thead><tr><th>Cliente</th><th class="num">Facturas</th><th class="num">Saldo</th><th>Situación</th></tr></thead><tbody>
     ${cli.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num">${L(v.s)}</td><td>${v.max > 0 ? `<span class="badge b-bad">Vencido hace ${v.max} ${v.max === 1 ? "día" : "días"}</span>` : `<span class="badge b-warn">Por cobrar</span>`}</td></tr>`).join("")}
   </tbody></table></div></div>` : ""}
-  <div class="panel"><h2>Facturas pendientes</h2><div class="scroll">
+  <div class="panel"><h2>Ventas pendientes de cobro</h2><div class="scroll">
   ${pend.length ? `<table><thead><tr><th>Factura</th><th>Cliente</th><th>Fecha</th><th class="num">Saldo</th><th>Situación</th><th></th></tr></thead><tbody>
     ${pend.map(c => { const ep = estadoPago(c, true); return `<tr>
-      <td>${esc(c.factura && c.factura.numero)}<br><small class="muted">${esc(c.numero)}</small></td><td>${esc(c.cliente && c.cliente.nombre)}</td>
+      <td>${esc(c.factura?.numero||(c.sinComprobante?"Sin comprobante":""))}<br><small class="muted">${esc(c.numero)}</small></td><td>${esc(c.cliente && c.cliente.nombre)}</td>
       <td>${fdate(c.vence)}</td><td class="num">${L(saldo(c))}</td><td><span class="badge ${ep[1]}">${ep[0]}</span></td>
       <td><button class="btn sm" data-a="cobrar" data-v="${esc(c.id)}">Registrar pago</button></td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">No hay nada pendiente de cobro.</p>`}
@@ -1225,8 +1233,8 @@ function vProductos(){
 
 function igualar(R){ const n = R.length; if (!n) return; const b = Math.floor(10000 / n) / 100; R.forEach((r, i) => { r.pct = i === n - 1 ? r2(100 - b * (n - 1)) : b; }); }
 /* ---------- inventario ---------- */
-// Existencia = último conteo + entradas/ajustes posteriores − lo facturado después del conteo (se calcula solo con las facturas)
-const invTs = c => Number(c.facturadaEn) || (c.factura && c.factura.fecha ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : 0);
+// Existencia = último conteo + entradas/ajustes posteriores − facturas y ventas confirmadas posteriores al conteo.
+const invTs = c => Number(c.ventaSinComprobante?.confirmadaEn) || (c.factura?.historica ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : Number(c.facturadaEn)) || (c.factura && c.factura.fecha ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : 0);
 const presPal = p => ((presDe(p) || "presentación").split(/\s+/)[0] || "presentación").toLowerCase();
 const plu = (n, w) => n === 1 ? w : (/[aeiou]$/.test(w) ? w + "s" : w + "es");
 function cantTxt(p, n){
@@ -1247,12 +1255,12 @@ function invDatos(){
   });
   S.cot.forEach(c => {
     if (c.eliminada) return;
-    if (c.estado === "aprobada") (c.items || []).forEach(i => { const x = X[i.id]; if (x) x.comp += Number(i.cant) || 0; });
-    if (c.estado !== "facturada") return;
+    if (["cotizada","aprobada"].includes(c.estado)) (c.items || []).forEach(i => { const x = X[i.id]; if (x) x.comp += Number(i.cant) || 0; });
+    if (!["facturada","vendida"].includes(c.estado)) return;
     const ts = invTs(c);
     (c.items || []).forEach(i => {
       const x = X[i.id]; if (!x) return; const n = Number(i.cant) || 0;
-      if (x.t0 != null && ts >= x.t0) x.sal += n;
+      if (x.t0 != null && ts >= x.t0 && !(Number(c.ventaSinComprobante?.inventarioIncluidoEnConteo?.[i.id]) >= x.t0)) x.sal += n;
       if (ahora - ts <= 30 * 864e5) x.v30 += n;
       if (ahora - ts <= 90 * 864e5) x.v90 += n;
     });
@@ -1261,7 +1269,7 @@ function invDatos(){
     const p = x.p, u = uni(p), exist = x.t0 == null ? null : x.base + x.mov - x.sal;
     const diaria = x.v90 / 90, sug = diaria > 0 ? Math.ceil(diaria * 10 / u) * u : 0; // 7 días de venta + 3 de margen, en presentaciones completas
     const guardado = (S.inv || {})[p.id], reorden = guardado && guardado.reorden != null ? Number(guardado.reorden) : sug;
-    const disp = exist == null ? null : exist - x.comp;
+    const disp = exist; // Cotizaciones estimadas: no reservan ni descuentan existencias.
     const estado = exist == null ? ["Sin conteo", ""] : exist <= 0 ? ["Agotado", "b-bad"] : disp <= reorden ? ["Pedir", "b-warn"] : ["OK", "b-ok"];
     return {p, exist, comp: x.comp, disp, reorden, sug, manual: !!(guardado && guardado.reorden != null), estado, v30: x.v30, v90: x.v90, dias: exist != null && diaria > 0 ? Math.max(0, Math.floor(exist / diaria)) : null};
   });
@@ -1274,7 +1282,7 @@ function vInventario(){
   if (fil !== "todos") list = list.filter(d => d.estado[0] === fil);
   return `
   <h1>Inventario</h1><div class="actions"><button class="btn pri" data-a="cpNueva">Registrar compra</button></div>
-  <p class="sub">Se descuenta solo al facturar. "Comprometido" es lo que está por facturar. Ordenado por lo que más se vende (90 días).</p>
+  <p class="sub">Las facturas descuentan al emitirse y las ventas sin comprobante al confirmarse. Las cotizaciones abiertas son una estimación y no descuentan ni reservan. Las ventas sin comprobante descuentan al confirmarlas. Ordenado por lo que más se vende (90 días).</p>
   <div class="pr-resumen">
     <div><small>Pedir</small><b style="color:${n("Pedir") ? "var(--warn)" : "var(--ink)"}">${n("Pedir")}</b></div>
     <div><small>Agotados</small><b style="color:${n("Agotado") ? "var(--bad)" : "var(--ink)"}">${n("Agotado")}</b></div>
@@ -1283,7 +1291,7 @@ function vInventario(){
   <div class="chips" role="group" aria-label="Estado">${[["todos", "Todos"], ["Pedir", "Pedir"], ["Agotado", "Agotados"], ["Sin conteo", "Sin conteo"], ["OK", "OK"]].map(([v, t]) => `<button data-a="invFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="invq">Buscar por código o nombre</label><input id="invq" data-k="invq" value="${fv("invq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th class="num">Existencia</th><th class="num">Comprometido</th><th class="num">Disponible</th><th class="num">Por recibir</th><th class="num">Reorden</th><th>Estado</th><th class="num">Vendido 30 d</th><th class="num">Vendido 90 d</th><th class="num">Días de inventario</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th class="num">Existencia</th><th class="num">Estimado en cotizaciones</th><th class="num">Disponible</th><th class="num">Por recibir</th><th class="num">Reorden</th><th>Estado</th><th class="num">Vendido 30 d</th><th class="num">Vendido 90 d</th><th class="num">Días de inventario</th></tr></thead><tbody>
     ${list.map(d => `<tr class="click" data-a="invAbrir" data-v="${esc(d.p.id)}" tabindex="0">
       <td><span class="stub">${esc(codDe(d.p) || "—")}</span></td><td>${esc(d.p.nombre)}</td>
       <td class="num">${cantTxt(d.p, d.exist)}</td><td class="num">${d.comp ? cantTxt(d.p, d.comp) : '<span class="muted">—</span>'}</td>
@@ -1301,11 +1309,11 @@ function mInv(){
   const d = invDatos().find(x => x.p.id === S.m.id); if (!d) return "";
   const p = d.p, u = uni(p), modo = S.f.inv_modo || (u > 1 ? "p" : "u");
   const ent = (S.invMov || []).filter(m => m.prod === p.id).map(m => ({ts: m.ts, tipo: {conteo: "Conteo", entrada: "Entrada", ajuste: "Ajuste"}[m.tipo] || m.tipo, cant: m.cant, quien: m.porNombre || "", nota: m.nota || ""}));
-  const sal = S.cot.filter(c => !c.eliminada && c.estado === "facturada").flatMap(c => (c.items || []).filter(i => i.id === p.id).map(i => ({ts: invTs(c), tipo: "Factura", cant: -(Number(i.cant) || 0), quien: c.vendedorNombre || "", nota: c.numero + (c.factura && c.factura.numero ? " · " + c.factura.numero : "")})));
+  const sal = S.cot.filter(c => !c.eliminada && ["facturada","vendida"].includes(c.estado)).flatMap(c => (c.items || []).filter(i => i.id === p.id).map(i => ({ts: invTs(c), tipo: c.estado==="vendida"?"Venta sin comprobante":"Factura", cant: -(Number(i.cant) || 0), quien: c.vendedorNombre || "", nota: c.numero + (c.factura && c.factura.numero ? " · " + c.factura.numero : "")})));
   const hist = ent.concat(sal).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 30);
   return `
   <div class="bigstub">${esc(codDe(p))}</div><h2 style="margin-top:6px">${esc(p.nombre)}</h2>
-  <dl class="kv"><dt>Existencia</dt><dd>${cantTxt(p, d.exist)}</dd><dt>Comprometido</dt><dd>${cantTxt(p, d.comp)}</dd><dt>Por recibir de compras</dt><dd>${cantTxt(p, porRecibir(p.id))}</dd><dt>Disponible</dt><dd>${cantTxt(p, d.disp)}</dd><dt>Estado</dt><dd><span class="badge ${d.estado[1]}">${d.estado[0]}</span></dd></dl>
+  <dl class="kv"><dt>Existencia</dt><dd>${cantTxt(p, d.exist)}</dd><dt>Estimado en cotizaciones</dt><dd>${cantTxt(p, d.comp)}</dd><dt>Por recibir de compras</dt><dd>${cantTxt(p, porRecibir(p.id))}</dd><dt>Disponible</dt><dd>${cantTxt(p, d.disp)}</dd><dt>Estado</dt><dd><span class="badge ${d.estado[1]}">${d.estado[0]}</span></dd></dl>
   <div class="actions"><button class="btn pri" data-a="cpNueva">Compra de este producto</button></div><p class="note">Las compras registran su entrada automáticamente al recibirlas. No vuelva a ingresar esa misma mercadería como entrada manual.</p><hr class="sep"><h2>Registrar movimiento manual</h2>
   <div class="chips" role="group" aria-label="Tipo">${[["entrada", "Entrada manual (sin compra)"], ["conteo", "Conteo físico"], ["ajuste", "Ajuste (merma, error)"]].map(([v, t]) => `<button data-a="invTipo" data-v="${v}" aria-pressed="${(S.f.inv_tipo || "entrada") === v}">${t}</button>`).join("")}</div>
   ${u > 1 ? `<div class="chips" role="group" aria-label="Cantidad en"><button data-a="invModo" data-v="p" aria-pressed="${modo === "p"}">En ${plu(2, presPal(p))} (${u} c/u)</button><button data-a="invModo" data-v="u" aria-pressed="${modo === "u"}">En ${plu(2, unidadDe(p))}</button></div>` : ""}
@@ -1338,12 +1346,12 @@ function personas(){
   return S.usuarios.filter(u => (["vendedor", "facturador"].includes(u.rol) || String(u.email || "").toLowerCase() === ADMIN) && !(adm && com && u.id === adm.id))
     .map(u => ({uid: u.id, ini: iniDe(u), nombre: u.nombre || u.email || ""})).sort((a, b) => a.ini.localeCompare(b.ini));
 }
-const pagadaCot = c => c.estado === "facturada" && !c.eliminada && saldo(c) <= 0.005;
+const pagadaCot = c => ["facturada","vendida"].includes(c.estado) && !c.eliminada && saldo(c) <= 0.005;
 function utilDe(c, g){
   const u = (S.util || {})[c.id] || {};
   const gastos = 0; // Los descuentos nuevos provienen exclusivamente de Gastos.
   if (u.pagado && u.snap) return Object.assign({}, u.snap, {gastos: Number(u.gastos) || 0, neta: r2(u.snap.venta - u.snap.costo - (Number(u.gastos) || 0)), u, sinCosto: 0});
-  const cc = calc(c.items, c.flete), venta = r2(cc.base + (cc.flete || 0));
+  const cc = calcCot(c), venta = c.sinComprobante?Number(c.ventaSinComprobante?.importe??c.total)||0:r2(cc.base + (cc.flete || 0));
   let sinCosto = 0;
   const costo = r2((c.items || []).reduce((a, i) => { const cu = i.costoU != null ? Number(i.costoU) : costoUnit(i.id); if (!(cu > 0)) sinCosto++; return a + (cu || 0) * (Number(i.cant) || 0); }, 0));
   return {venta, costo, gastos, neta: r2(venta - costo - gastos), u, sinCosto};
@@ -1373,6 +1381,7 @@ function vUtilidad(){
   const quien = pSel && pSel.uid !== yo ? esc(pSel.ini) : "";
   let list = todas;
   if (ven) list = list.filter(x => x.o.grupo === ven);
+  const tipo=S.f.ut_tipo||"facturadas";if(tipo==="facturadas")list=list.filter(x=>!x.c.sinComprobante);if(tipo==="sincomprobante")list=list.filter(x=>x.c.sinComprobante);
   if (q) list = list.filter(x => [x.c.numero, x.c.factura && x.c.factura.numero, x.c.cliente && x.c.cliente.nombre].join(" ").toLowerCase().includes(q));
   if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado); else if (fil === "sin") list = list.filter(x => !(x.d.u.reparto || []).length);
   list.sort((a, b) => String((b.c.factura || {}).fecha || b.c.fecha || "").localeCompare(String((a.c.factura || {}).fecha || a.c.fecha || "")));
@@ -1384,18 +1393,18 @@ function vUtilidad(){
   return `
   <h1>Utilidad</h1>
   ${resumenGeneral}
-  <h2>Repartos de facturas cobradas</h2><p class="sub">Gastos asignados muestra el descuento automático de cada factura según su utilidad bruta, desde el módulo Gastos. Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
+  <h2>Repartos de ventas cobradas</h2><div class="chips">${[["facturadas","Con factura"],["sincomprobante","Sin comprobante"],["todas","Todas · control interno"]].map(([v,n])=>`<button data-a="utTipo" data-v="${v}" aria-pressed="${tipo===v}">${n}</button>`).join("")}</div><p class="sub">Gastos asignados muestra el descuento automático de cada factura según su utilidad bruta, desde el módulo Gastos. Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
   <div class="pr-resumen"><div><small>${quien ? "Utilidad de " + quien + " · total" : "Mi utilidad · total"}</small><b>${L(R.t)}</b></div><div><small>${quien ? "Ya le pagaron" : "Ya me pagaron"}</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>${R.t - R.p < 0 ? "Diferencia a compensar" : quien ? "Le falta recibir" : "Me falta recibir"}</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
   <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
   ${sel.size ? `<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px"><b>${sel.size} ${sel.size === 1 ? "seleccionada" : "seleccionadas"}</b><button class="btn pri sm" data-a="utRepSel">Repartir</button><button class="btn sm" data-a="utPagarSel">Marcar pagadas</button><button class="btn sm" data-a="utSelNada">Quitar selección</button></div>` : ""}
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">Total sin ISV</th><th class="num">Costo sin ISV</th><th class="num">Gastos asignados</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">${tipo==="sincomprobante"?"Importe comercial":tipo==="todas"?"Venta base / importe comercial":"Total sin ISV"}</th><th class="num">Costo sin ISV</th><th class="num">Gastos asignados</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
     ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, bloqueada = cer || !!gastosUI.factura(c.id)?.cerrada, m = miParte(x), suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
       return `<tr${cer ? ' style="opacity:.75"' : ""}>
       <td>${cer ? "" : `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSel" data-v="${esc(c.id)}" ${sel.has(c.id) ? "checked" : ""} aria-label="Seleccionar ${esc(c.numero)}">`}</td>
-      <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b><br><small class="muted">${esc(c.numero)} · ${esc((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
+      <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b>${c.sinComprobante?`<br><span class="badge b-warn">Sin comprobante · margen provisional</span>`:""}<br><small class="muted">${esc(c.numero)} · ${esc((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
       <td><span class="badge" title="${x.o.tag.endsWith("W") ? "Venta del agente de WhatsApp" : ""}">${esc(x.o.tag)}</span></td>
       <td class="num">${L(d.venta)}</td>
       <td class="num">${L(d.costo)}${d.sinCosto ? `<br><small style="color:var(--warn)">${d.sinCosto} sin costo</small>` : ""}</td>
@@ -1537,7 +1546,8 @@ function mCot(){
   const [et, ec] = ESTADO[c.estado] || [c.estado, ""];
   const r = rol(), mio = c.vendedor === S.me.uid, fact = puede("admin", "facturador");
   const abierta = c.estado === "cotizada" && !c.eliminada && (fact || mio);
-  const mode = S.m.mode, cc = calc(c.items, c.flete), full = fact;
+  const mode = S.m.mode, cc = calcCot(c), full = fact;
+  if(mode==="ventaDirecta")return ventasDirectasUI.formulario(c);
   let extra = "";
   if (mode === "factura") {
     const fp = S.f.fac_fp || c.formaPago || "Efectivo";
@@ -1615,10 +1625,11 @@ function mCot(){
   else if (c.estado === "aprobada") estadoNota = r === "vendedor" ? "Enviada a facturar" + (c.aprobada ? " el " + fdate(ymd(new Date(c.aprobada))) : "") + ". Ya no se puede editar." : "El cliente confirmó. Pendiente de facturar.";
   // botones de abajo según estado y rol
   let abajo = [];
-  if (abierta) abajo = [`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  if (abierta) abajo = [c.sinComprobante?(fact?`<button class="btn pri" data-a="vdAbrir">Confirmar venta sin comprobante</button>`:`<button class="btn pri" data-a="aprobar">Enviar a revisión</button>`):`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "perdida" && !c.eliminada && (fact || mio)) abajo = [`<button class="btn" data-a="reabrir">Reabrir cotización</button>`];
+  else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Confirmar venta sin comprobante</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
   else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Emitir factura</button>`].concat(S.admin ? [`<button class="btn" data-a="modeFacHist">Ya se facturó</button>`] : []).concat([`<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`]);
-  else if (c.estado === "facturada" && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
+  else if (["facturada","vendida"].includes(c.estado) && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
   if (S.admin && !c.eliminada) abajo.push(`<button class="btn" data-a="modeFechas">Cambiar fechas</button>`, `<button class="btn danger" data-a="eliminar">Eliminar</button>`);
   // El primer botón queda a la vista; los demás van en "Opciones"
   const opc = abajo.slice(1);
@@ -1649,8 +1660,8 @@ function mCot(){
   : `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Total</th></tr></thead><tbody>
     ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(vuDe(i).n)}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`}
-  <p class="note">Precios sin ISV.</p>
-  <div class="totals">${totalsHtml(cc, !full)}${c.estado === "facturada" ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
+  <p class="note">${c.sinComprobante?"Importes comerciales finales. Registro sin comprobante.":"Precios sin ISV."}</p>
+  <div class="totals">${totalsHtml(cc, !full)}${["facturada","vendida"].includes(c.estado) ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
   ${c.notas ? `<p class="note">${esc(c.notas)}</p>` : ""}
   ${pagosHtml(c)}
   ${extra}
@@ -1829,7 +1840,7 @@ const facSiguiente = () => facBlancos()[0] || null;
 const facUltima = () => (S.facturas || []).filter(f => f.estado === "emitida").sort((a, b) => b.n - a.n)[0] || null;
 const facDeCot = c => c && c.factura && c.factura.n != null ? (S.facturas || []).find(f => f.n === c.factura.n) : null;
 function datosFactura(c, cli, fecha, fp){
-  const cc = calc(c.items, c.flete);
+  const cc = calcCot(c);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
   const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: vuDe(i).n.toUpperCase(), desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
   if (cc.flete) lineas.push({cant: 1, unidad: "SERVICIO", desc: "FLETE DE ENTREGA", pu: cc.flete, imp: cc.flete});
@@ -1958,6 +1969,7 @@ const facLimiteHist = () => { const t = (S.facturas || []).filter(f => !f.histor
 // Arma los datos de la factura desde la cotización (no guarda nada). Devuelve null si falta algo.
 function facArmar(){
   const c = S.cot.find(x => x.id === S.m.id); if (!c) return null;
+  if(c.sinComprobante){toast("Esta venta está en el registro sin comprobante. Devuélvala y cambie la modalidad antes de facturar.");return null;}
   if (c.estado !== "aprobada") { toast("La cotización ya no está por facturar."); return null; }
   const sig = facSiguiente(); if (!sig) { toast("No hay facturas en blanco."); return null; }
   const fecha = S.f.fac_fecha || today();
@@ -1971,7 +1983,7 @@ function facArmar(){
                  : {nombre: clean(S.f.fac_nom ?? cl.nombre), rtn: clean(S.f.fac_rtn ?? cl.rtn), direccion: clean(S.f.fac_dir ?? cl.direccion)};
   if (!cli.nombre) { toast("Escribe el nombre del cliente o marca Consumidor final."); return null; }
   if (cli.rtn && !/^\d{14}$/.test(cli.rtn.replace(/\D/g, "")) && !confirm("El RTN no tiene 14 dígitos. ¿Seguir?")) return null;
-  const tot = calc(c.items, c.flete).total;
+  const tot = calcCot(c).total;
   if (!cli.rtn && tot > 10000 && !confirm("La venta pasa de L. 10,000 y va sin RTN. El SAR pide los datos del cliente en esos casos. ¿Seguir de todos modos?")) return null;
   const fp = S.f.fac_fp || c.formaPago || "Efectivo";
   const yaPago = S.f.fac_pagado === true;
@@ -2082,9 +2094,9 @@ function vTalonario(all){
 /* ---------- WhatsApp y PDF ---------- */
 function waLink(c){
   const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
-  const cc = calc(c.items, c.flete);
+  const cc = calcCot(c);
   (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${vuDe(i).n} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
-  lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), `ISV 15%: ${L(cc.isv)}`, `*Total: ${L(cc.total)}*`);
+  lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), ...(c.sinComprobante?["Registro comercial sin comprobante fiscal"]:[`ISV 15%: ${L(cc.isv)}`]), `*Total: ${L(cc.total)}*`);
   lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
   let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
   if (tel.length === 8) tel = "504" + tel;
@@ -2114,12 +2126,13 @@ function marcaAgua(d){
   try { d.setGState(new d.GState({opacity: 0.07})); d.addImage(LOGO_MARCA.src, "PNG", (215.9 - w) / 2, (279.4 - h) / 2 - 8, w, h, "marca", "FAST"); d.setGState(new d.GState({opacity: 1})); } catch (_) {}
 }
 function armarPdf(c, interno){
+  if(c.sinComprobante)return pdfInterno(c,window.jspdf.jsPDF,calc);
   const e = emp(), {jsPDF} = window.jspdf;
   const d = new jsPDF({unit: "mm", format: "letter"});
   const W = 215.9, M = 18, cx = W / 2, IW = W - 2 * M;
   const NAVY = [31, 56, 100], INK = [30, 30, 30], GRAY = [105, 110, 120], LINE = [205, 210, 220], YEL = [255, 248, 222], LAB = [232, 235, 242];
   const tc = a => d.setTextColor(a[0], a[1], a[2]), fc = a => d.setFillColor(a[0], a[1], a[2]), dc = a => d.setDrawColor(a[0], a[1], a[2]);
-  const cc = calc(c.items, c.flete), hasD = !!interno && cc.desc > 0;
+  const cc = calcCot(c), hasD = !!interno && cc.desc > 0;
   const v = c.vendedorInfo || {nombre: c.vendedorNombre || ""};
   try { d.addImage(LOGO, "JPEG", M, 20, 30, 14.8); } catch (_) {}
   if (interno) { d.setFont("helvetica", "bold"); d.setFontSize(8.5); d.setTextColor(180, 35, 24); d.text("COPIA INTERNA", W - M, 14, {align: "right"}); }
@@ -2374,16 +2387,20 @@ const A = {
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
     if (S.f.psel === "__gen") {
-      const desc = clean(S.f.gen_desc), pr = Number(S.f.gen_precio);
+      const desc = clean(S.f.gen_desc), pr = Number(S.f.gen_precio), costo = Number(S.f.gen_costo);
+      if(S.f.gen_costo==null||S.f.gen_costo===""||!Number.isFinite(costo)||costo<=0)return toast("Escriba el precio de compra unitario sin ISV.");
       if (!desc) return toast("Escribe la descripción del producto.");
       if (!(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
       const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
       const n = S.cart.filter(x => x.generico).length + 1;
       const unidad = clean(S.f.gen_unidad).toLowerCase() || "unidad";
-      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad, cant, generico: true});
-      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio", "gen_unidad"].forEach(k => delete S.f[k]); draw(); return;
+      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad, cant, generico: true, costoU:Math.round(costo*1e6)/1e6});
+      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio", "gen_unidad", "gen_costo"].forEach(k => delete S.f[k]); draw(); return;
     }
     const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
+    if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
+    if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
+    if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     const q = Math.max(1, Math.round(Number(S.f.pcant) || 1));
     const otra = S.f.pmodo === "o" && clean(S.f.pvu);
     const vu = S.f.pmodo === "p" && uni(p) > 1 ? {n: presPal(p), f: uni(p)} : otra ? {n: otra.toLowerCase(), f: 1} : {n: unidadDe(p), f: 1};
@@ -2407,6 +2424,7 @@ const A = {
   rmp(v){ S.cart.splice(Number(v), 1); draw(); },
   vaciar(){ S.cart = []; draw(); },
   async saveCot(v){
+    if(S.cart.some(i=>i.generico&&!(Number.isFinite(Number(i.costoU))&&Number(i.costoU)>0)))return toast("Complete el precio de compra de cada producto genérico.");
     const conPdf = v !== "g";
     if (!S.f.cli_sel && clean(S.f.cli_q) && !cliFiltrados().length) { pasarBusquedaANuevo(); S.f.cli_sel = "__nuevo"; delete S.f.cli_q; draw(); return toast("Se tomó como cliente nuevo: revise los datos y vuelva a guardar."); }
     const sel = S.f.cli_sel || "";
@@ -2437,17 +2455,19 @@ const A = {
         delete S.f.cli_ctc; ["ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]);
       }
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", contactos: cliente.contacto || cliente.tel || cliente.email ? [{nombre: cliente.contacto || "", cargo: cliente.cargo || "", tel: cliente.tel || "", correo: cliente.email || ""}] : [], direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: V.id}); cliente.id = ref.id; }
-      const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}, i.vu ? {vu: {n: vuDe(i).n, f: vuDe(i).f}} : {}));
+      const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: {n: vuDe(i).n, f: vuDe(i).f}} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
       const flete = Math.max(0, r2(Number(S.f.flete) || 0));
-      const total = calc(items, flete).total;
+      const sinComprobante=S.f.sin_comprobante===true;
+      if(items.some(i=>i.generico&&!(Number.isFinite(i.costoU)&&i.costoU>0)))throw new Error("Complete el precio de compra de cada producto genérico.");
+      const total = calcularDocumento({items,flete,sinComprobante},calc).total;
       const e = emp();
       let numero, cot;
       if (S.editId) {
         const prev = S.cot.find(x => x.id === S.editId);
         if (!prev || prev.estado !== "cotizada") throw {code: "cerrada"};
         numero = prev.id;
-        const ch = {cliente, items, total, flete, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
+        const ch = {cliente, items, total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
         await updateDoc(doc(db, "cotizaciones", numero), ch);
         cot = Object.assign({}, prev, ch);
       } else {
@@ -2457,7 +2477,7 @@ const A = {
           if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
         } else numero = await siguienteNumero(iniciales(V));
-        cot = {numero, cliente, items, total, flete, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
+        cot = {numero, cliente, items, total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", estado: "cotizada",
           vendedor: V.id, vendedorNombre: V.nombre || V.email,
           vendedorInfo: {nombre: V.nombre || V.email, cargo: V.cargo || "Ventas", tel: V.tel || e.whatsapp, correo: V.correo || V.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
@@ -2482,10 +2502,10 @@ const A = {
   cotCsv(){
     const lista = S._listaCot || [];
     if (!lista.length) return toast("No hay cotizaciones en esta vista.");
-    const rows = [["Número", "Fecha", "Estado", "Cliente", "Teléfono", "Vendedor", "Forma de pago", "Factura", "Código", "Producto", "Cantidad", "Precio unit. con ISV", "Precio unit. sin ISV", "Descuento con ISV", "Descuento %", "Total línea con ISV", "Total cotización"]];
+    const rows = [["Número", "Fecha", "Estado", "Cliente", "Teléfono", "Vendedor", "Forma de pago", "Factura", "Código", "Producto", "Cantidad", "Precio unit. con ISV", "Precio unit. sin ISV", "Descuento con ISV", "Descuento %", "Total línea con ISV", "Total cotización", "Modalidad", "Importe comercial línea"]];
     lista.forEach(c => { const cc = calc(c.items); (c.items || []).forEach((i, n) => { const l = cc.lines[n];
       rows.push([c.numero, fdate(c.fecha), (ESTADO[c.estado] || [c.estado])[0], c.cliente && c.cliente.nombre, c.cliente && c.cliente.tel, c.vendedorNombre || "", c.formaPago || "", c.factura ? c.factura.numero : "",
-        i.generico ? i.id : ((S.prod.find(p => p.id === i.id) || {}).codigo || i.id || ""), i.nombre, i.cant, (Number(i.precio) || 0).toFixed(4), l.u.toFixed(4), l.descIsv.toFixed(2), l.descX ? pctTxt(l.pct) : "", l.conIsv.toFixed(2), (Number(c.total) || 0).toFixed(2)]); }); });
+        i.generico ? i.id : ((S.prod.find(p => p.id === i.id) || {}).codigo || i.id || ""), i.nombre, i.cant, c.sinComprobante?"":(Number(i.precio) || 0).toFixed(4), l.u.toFixed(4), c.sinComprobante?"":l.descIsv.toFixed(2), l.descX ? pctTxt(l.pct) : "", c.sinComprobante?"":l.conIsv.toFixed(2), (Number(c.total) || 0).toFixed(2),c.sinComprobante?"Sin comprobante · revisión fiscal pendiente":"Con facturación e ISV",c.sinComprobante?l.imp.toFixed(2):""]); }); });
     const q = v => { v = v == null ? "" : String(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}));
     a.download = "cotizaciones-mhas-" + today() + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -2540,6 +2560,7 @@ const A = {
   },
   modeFacHist(){ S.m.mode = "fachist"; clearForm(); draw(); },
   async saveFacHist(){
+    if(S.cot.find(x=>x.id===S.m?.id)?.sinComprobante)return toast("Cambie la modalidad de venta antes de emitir una factura.");
     if (!S.admin) return;
     const c = S.cot.find(x => x.id === S.m.id); if (!c || c.estado !== "aprobada") return toast("La cotización ya no está por facturar.");
     // Acepta el correlativo completo (000-001-01-00001392) o solo el número (1392)
@@ -2581,6 +2602,7 @@ const A = {
   },
   facModificar(){ if (S.m) { S.m.mode = "factura"; S.m.prev = null; } draw(); },
   async saveFac(){
+    if(S.cot.find(x=>x.id===S.m?.id)?.sinComprobante)return toast("Cambie la modalidad de venta antes de emitir una factura.");
     const P = S.m && S.m.prev; if (!P) return;
     const c = S.cot.find(x => x.id === S.m.id); if (!c) return;
     const sig = facSiguiente();
@@ -2787,7 +2809,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num", "sin_comprobante", "gen_costo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -2802,8 +2824,9 @@ const A = {
       else S.f.cli_ctc = "";
     }
     else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
+    S.f.sin_comprobante=c.sinComprobante===true;
     S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.cot_oc = c.ordenCompra || ""; if (c.notasSel) S.f.nsel = Object.assign({}, c.notasSel); S.f.flete = Number(c.flete) ? String(c.flete) : ""; S.f.cot_fecha = c.fecha || today();
-    S.cart = (c.items || []).map(i => Object.assign({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0, generico: !!i.generico}, i.vu ? {vu: i.vu} : {}));
+    S.cart = (c.items || []).map(i => Object.assign({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0, generico: !!i.generico}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: i.vu} : {}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
   mas(){ S.m.mas = !S.m.mas; draw(); },
@@ -3205,6 +3228,7 @@ const A = {
   },
   async invReorden(){ const v = Number(S.f.inv_ro); if (S.f.inv_ro == null || S.f.inv_ro === "" || !(v >= 0)) return toast("Escribe un número válido."); if (await upd(doc(db, "inventario", S.m.id), {reorden: Math.round(v), actualizado: Date.now(), por: S.me.uid}, "Reorden guardado", true)) { delete S.f.inv_ro; draw(); } },
   async invReordenSug(){ if (await upd(doc(db, "inventario", S.m.id), {reorden: null, actualizado: Date.now(), por: S.me.uid}, "Se usará el reorden sugerido", true)) { delete S.f.inv_ro; draw(); } },
+  utTipo(v){S.f.ut_tipo=v;draw();},
   utFil(v){ S.f.ut_fil = v; draw(); },
   utVen(v){ S.f.ut_ven = v; draw(); },
   repAbrir(v){ if (gastosUI.factura(v)?.cerrada) return toast("Esta quincena ya tiene un reparto fijo."); S.m = {type: "rep", id: v}; draw(); },
@@ -3384,11 +3408,11 @@ function listaDe(i){ if (!i || i.generico) return 0; const p = S.prod.find(x => 
 // % rebajado respecto a la lista: positivo = más barato que la lista, negativo = más caro
 function pctLista(i, l){ const li = listaDe(i) / 1.15; return li > 0 ? Math.round((1 - l.un / li) * 1000) / 10 : null; }
 function refrescarCarrito(){
-  const cc = calc(S.cart, S.f.flete);
+  const cc = calcularDocumento({items:S.cart,flete:S.f.flete,sinComprobante:S.f.sin_comprobante===true},calc);
   cc.lines.forEach((l, n) => {
     const a = document.getElementById("imp" + n); if (a) a.textContent = L(l.imp);
     const p = document.getElementById("pct" + n); if (p) p.textContent = l.descX ? "Queda a " + LU(l.un) + " c/u" : "";
-    const ci = document.getElementById("cisv" + n); if (ci) ci.textContent = L(l.conIsv) + " con ISV";
+    const ci = document.getElementById("cisv" + n); if (ci) ci.textContent = cc.sinComprobante?L(l.imp)+" a cobrar":L(l.conIsv)+" con ISV";
     const i = S.cart[n], act = document.activeElement;
     const pr = document.querySelector(`[data-cpr="${n}"]`); if (pr && pr !== act && i) pr.value = Math.round(l.u * vuDe(i).f * 100) / 100;
     const pc = document.querySelector(`[data-cpct="${n}"]`); if (pc && pc !== act && i) { const v = pctLista(i, l); pc.value = v == null ? "" : v; }
@@ -3416,6 +3440,8 @@ function leerCarrito(t){
   return i;
 }
 
+const ventasDirectasUI=crearVentasDirectas({S,esc,L,today,draw,toast,fallo,call:d=>fnVentasDirectas(d),esFact:()=>puede("admin","facturador")});
+Object.assign(A,ventasDirectasUI.acciones);
 const gastosUI = crearGastos({S,esc,L,fdate,today,draw,toast,fallo,unif,call: d => fnGastos(d)});
 Object.assign(A, gastosUI.acciones);
 document.addEventListener("change", e => { if (["gg_mes", "gg_periodo"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; gastosUI.cambioPeriodo(); } });
@@ -3445,6 +3471,7 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("input", e => {
   const t = e.target, k = t.dataset.k;
+  if(t.dataset.ccosto!=null){const i=S.cart[Number(t.dataset.ccosto)],v=Number(t.value);if(i?.generico){if(t.value!==""&&Number.isFinite(v)&&v>0)i.costoU=v/vuDe(i).f;else delete i.costoU;}return;}
   if (t.dataset.pc != null) { S.pcEdit[t.dataset.pc] = t.value; return; }
   if (t.dataset.ctc) { const [n, campo] = t.dataset.ctc.split(":"), L1 = S.f.ce_ctcs || []; if (L1[Number(n)]) L1[Number(n)][campo] = t.value; return; }
   if (k === "pz_txt" && !S.f.pz_tipoManual) { const sel = $("#pz_tipo"); S.f.pz_tipo = tipoAuto(t.value); if (sel) sel.value = S.f.pz_tipo; }
@@ -3499,7 +3526,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27d";
+const APP_VER = "2026-10-27e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
