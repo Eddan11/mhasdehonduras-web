@@ -246,7 +246,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-27e";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27f";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27g";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
@@ -1626,9 +1626,9 @@ function mCot(){
   else if (c.estado === "aprobada") estadoNota = r === "vendedor" ? "Enviada a facturar" + (c.aprobada ? " el " + fdate(ymd(new Date(c.aprobada))) : "") + ". Ya no se puede editar." : "El cliente confirmó. Pendiente de facturar.";
   // botones de abajo según estado y rol
   let abajo = [];
-  if (abierta) abajo = [c.sinComprobante?(fact?`<button class="btn pri" data-a="vdAbrir">Cerrar sin factura</button>`:`<button class="btn pri" data-a="aprobar">Enviar a cerrar</button>`):`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  if (abierta) abajo = [c.sinComprobante?(fact?`<button class="btn pri" data-a="vdAbrir">Cerrar</button>`:`<button class="btn pri" data-a="aprobar">Enviar a cerrar</button>`):`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "perdida" && !c.eliminada && (fact || mio)) abajo = [`<button class="btn" data-a="reabrir">Reabrir cotización</button>`];
-  else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Cerrar sin factura</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
+  else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Cerrar</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
   else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Emitir factura</button>`].concat(S.admin ? [`<button class="btn" data-a="modeFacHist">Ya se facturó</button>`] : []).concat([`<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`]);
   else if (["facturada","vendida"].includes(c.estado) && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
   if (S.admin && !c.eliminada) abajo.push(`<button class="btn" data-a="modeFechas">Cambiar fechas</button>`, `<button class="btn danger" data-a="eliminar">Eliminar</button>`);
@@ -3528,7 +3528,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27f";
+const APP_VER = "2026-10-27g";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
