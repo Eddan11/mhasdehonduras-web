@@ -246,7 +246,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-10-27e";
 import { crearCompras } from "./compras-ui.js?v=2026-10-25c";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27e";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-10-27f";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-10-27d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
@@ -302,7 +302,7 @@ const TABS = {
 const TABS_MAS = {};
 const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
-const ESTADO = {vendida: ["Vendida sin comprobante", "b-warn"],cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
+const ESTADO = {vendida: ["Finalizada sin factura", "b-ok"],cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
 function rol(){ if (S.admin) return "admin"; return TABS[S.me.rol] && S.me.rol !== "admin" ? S.me.rol : null; }
 const puede = (...roles) => roles.includes(rol());
@@ -509,7 +509,7 @@ function vCotizar(){
     <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${esc(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
-    <label class="check"><input type="checkbox" data-k="sin_comprobante" data-redraw="1" ${S.f.sin_comprobante===true?"checked":""}> Venta sin comprobante · cobrar precio base</label><p class="note">Ejemplo: precio de lista L 115 → importe a cobrar L 100. No se registra una deuda por la diferencia ni se declara una exención fiscal.</p>
+    <label for="cot_factura" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;margin:6px 0"><input id="cot_factura" type="checkbox" data-k="cot_factura" data-redraw="1" style="width:16px;height:16px;min-height:16px;margin:0;flex:0 0 16px" ${S.f.sin_comprobante!==true?"checked":""}>Factura</label>
     <div class="field"><label for="coc">Orden de compra del cliente (opcional)</label><input id="coc" data-k="cot_oc" value="${fv("cot_oc")}" placeholder="Número de O/C que dio el cliente" autocomplete="off"></div>
   </div>
   <div class="panel">
@@ -635,8 +635,8 @@ function vCotizaciones(){
     if (S.filtro === "eliminadas") return !!c.eliminada;
     if (c.eliminada) return false;
     switch (S.filtro) {
-      case "debe": return c.estado === "facturada" && saldo(c) > 0.005;
-      case "fin": return c.estado === "facturada" && saldo(c) <= 0.005;
+      case "debe": return ["facturada","vendida"].includes(c.estado) && saldo(c) > 0.005;
+      case "fin": return c.estado === "vendida" || c.estado === "facturada" && saldo(c) <= 0.005;
       case "sincomprobante": return c.sinComprobante===true;
       case "todas": return c.estado!=="vendida";
       default: return c.estado === S.filtro;
@@ -1381,7 +1381,7 @@ function vUtilidad(){
   const quien = pSel && pSel.uid !== yo ? esc(pSel.ini) : "";
   let list = todas;
   if (ven) list = list.filter(x => x.o.grupo === ven);
-  const tipo=S.f.ut_tipo||"facturadas";if(tipo==="facturadas")list=list.filter(x=>!x.c.sinComprobante);if(tipo==="sincomprobante")list=list.filter(x=>x.c.sinComprobante);
+  const tipo=S.f.ut_tipo||"todas";if(tipo==="facturadas")list=list.filter(x=>!x.c.sinComprobante);if(tipo==="sincomprobante")list=list.filter(x=>x.c.sinComprobante);
   if (q) list = list.filter(x => [x.c.numero, x.c.factura && x.c.factura.numero, x.c.cliente && x.c.cliente.nombre].join(" ").toLowerCase().includes(q));
   if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado); else if (fil === "sin") list = list.filter(x => !(x.d.u.reparto || []).length);
   list.sort((a, b) => String((b.c.factura || {}).fecha || b.c.fecha || "").localeCompare(String((a.c.factura || {}).fecha || a.c.fecha || "")));
@@ -1622,12 +1622,13 @@ function mCot(){
   const ep = c.estado === "facturada" ? estadoPago(c, true) : null;
   let estadoNota = "";
   if (c.estado === "perdida") estadoNota = "No se concretó" + (c.perdida ? " (" + fdate(ymd(new Date(c.perdida))) + ")" : "") + (c.motivoPerdida ? ". Motivo: " + c.motivoPerdida : "") + (c.notaPerdida ? ". " + c.notaPerdida : "");
+  else if(c.sinComprobante&&c.estado==="aprobada")estadoNota="Pendiente de cerrar sin factura.";
   else if (c.estado === "aprobada") estadoNota = r === "vendedor" ? "Enviada a facturar" + (c.aprobada ? " el " + fdate(ymd(new Date(c.aprobada))) : "") + ". Ya no se puede editar." : "El cliente confirmó. Pendiente de facturar.";
   // botones de abajo según estado y rol
   let abajo = [];
-  if (abierta) abajo = [c.sinComprobante?(fact?`<button class="btn pri" data-a="vdAbrir">Confirmar venta sin comprobante</button>`:`<button class="btn pri" data-a="aprobar">Enviar a revisión</button>`):`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
+  if (abierta) abajo = [c.sinComprobante?(fact?`<button class="btn pri" data-a="vdAbrir">Cerrar sin factura</button>`:`<button class="btn pri" data-a="aprobar">Enviar a cerrar</button>`):`<button class="btn pri" data-a="aprobar">Enviar a facturar</button>`, `<button class="btn" data-a="modePerdida">No se concretó</button>`, `<button class="btn danger" data-a="anular">Anular</button>`];
   else if (c.estado === "perdida" && !c.eliminada && (fact || mio)) abajo = [`<button class="btn" data-a="reabrir">Reabrir cotización</button>`];
-  else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Confirmar venta sin comprobante</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
+  else if(c.sinComprobante&&c.estado==="aprobada"&&fact&&!c.eliminada)abajo=[`<button class="btn pri" data-a="vdAbrir">Cerrar sin factura</button>`,`<button class="btn" data-a="devolver">Devolver al vendedor</button>`];
   else if (c.estado === "aprobada" && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modeFac">Emitir factura</button>`].concat(S.admin ? [`<button class="btn" data-a="modeFacHist">Ya se facturó</button>`] : []).concat([`<button class="btn" data-a="devolver">Devolver al vendedor</button>`, `<button class="btn danger" data-a="anular">Anular</button>`]);
   else if (["facturada","vendida"].includes(c.estado) && saldo(c) > 0.005 && fact && !c.eliminada) abajo = [`<button class="btn pri" data-a="modePag">Registrar pago</button>`];
   if (S.admin && !c.eliminada) abajo.push(`<button class="btn" data-a="modeFechas">Cambiar fechas</button>`, `<button class="btn danger" data-a="eliminar">Eliminar</button>`);
@@ -2809,7 +2810,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num", "sin_comprobante", "gen_costo"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -3509,6 +3510,7 @@ document.addEventListener("change", e => {
   if (t.id === "tal_file") { S.talFile = (t.files && t.files[0]) || null; draw(); return; }
   if (t.id === "cli_q") { S.f.cli_q = t.value; cliResolver(); return; }
   if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
+  if(t.dataset.k==="cot_factura")S.f.sin_comprobante=!t.checked;
   if (t.dataset.k === "pz_tipo") { S.f.pz_tipoManual = true; const f = $("#pz_fecha"); if (f && !S.f.pz_fecha) f.value = t.value === "entregas" ? proxRuta() : today(); }
   if (t.dataset.k === "tz_tipo" && t.value === "entregas" && !S.f.tz_fecha) { const f = $("#tz_fecha"); if (f) { f.value = proxRuta(); S.f.tz_fecha = f.value; } }
   if (t.dataset.cq != null || t.dataset.cd != null || t.dataset.cpr != null || t.dataset.cpct != null) {
@@ -3526,7 +3528,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-27e";
+const APP_VER = "2026-10-27f";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
