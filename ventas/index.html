@@ -1236,7 +1236,7 @@ function igualar(R){ const n = R.length; if (!n) return; const b = Math.floor(10
 // Existencia = último conteo + entradas/ajustes posteriores − facturas y ventas confirmadas posteriores al conteo.
 const invTs = c => Number(c.ventaSinComprobante?.confirmadaEn) || (c.factura?.historica ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : Number(c.facturadaEn)) || (c.factura && c.factura.fecha ? Date.parse(c.factura.fecha + "T12:00:00-06:00") : 0);
 const presPal = p => ((presDe(p) || "presentación").split(/\s+/)[0] || "presentación").toLowerCase();
-const plu = (n, w) => n === 1 ? w : (/[aeiou]$/.test(w) ? w + "s" : w + "es");
+const plu = (n, w) => { const u=String(w||"unidad").toLowerCase(), base=({etiquetas:"etiqueta",rollos:"rollo",hojas:"hoja",unidades:"unidad",und:"unidad",lb:"libra",lbs:"libra",clises:"clisé"})[u]||u; return Math.abs(n)===1?base:/s$/.test(base)?base:/[aeioué]$/.test(base)?base+"s":base+"es"; };
 function cantTxt(p, n){
   if (n == null) return "—";
   const u = uni(p), un = Number(n) || 0, base = un.toLocaleString("en-US") + " " + plu(Math.abs(un), unidadDe(p));
@@ -1282,7 +1282,7 @@ function vInventario(){
   if (fil !== "todos") list = list.filter(d => d.estado[0] === fil);
   return `
   <h1>Inventario</h1><div class="actions"><button class="btn pri" data-a="cpNueva">Registrar compra</button></div>
-  <p class="sub">Las facturas descuentan al emitirse y las ventas sin comprobante al confirmarse. Las cotizaciones abiertas son una estimación y no descuentan ni reservan. Las ventas sin comprobante descuentan al confirmarlas. Ordenado por lo que más se vende (90 días).</p>
+  <p class="sub">Las facturas descuentan al emitirse y las ventas sin comprobante al confirmarse. Las cotizaciones abiertas son una estimación y no descuentan ni reservan. Ordenado por lo que más se vende (90 días).</p>
   <div class="pr-resumen">
     <div><small>Pedir</small><b style="color:${n("Pedir") ? "var(--warn)" : "var(--ink)"}">${n("Pedir")}</b></div>
     <div><small>Agotados</small><b style="color:${n("Agotado") ? "var(--bad)" : "var(--ink)"}">${n("Agotado")}</b></div>
