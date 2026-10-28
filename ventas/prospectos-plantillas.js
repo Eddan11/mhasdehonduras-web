@@ -1,4 +1,4 @@
-import {MENSAJES_DEF} from './prospectos-correo.js?v=2026-10-28h';
+import {MENSAJES_DEF} from './prospectos-correo.js?v=2026-10-28i';
 export function crearPlantillasProspectos({S,esc,draw,toast,cargar,guardar}){
  const M={datos:{...MENSAJES_DEF,revision:0},cargada:false,cargando:false,editando:false,guardando:false,error:'',sesion:0};
  const claves=['pm_asunto','pm_correo','pm_whatsapp'];
