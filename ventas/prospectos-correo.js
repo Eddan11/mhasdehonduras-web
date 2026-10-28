@@ -1,6 +1,6 @@
 import {crearBorrador} from './correo-eml.js?v=2026-10-27i';
 export const REMITENTE='eduardo.maradiaga@mhasdehonduras.com';
-export function mensajeProspecto(p,c={}){return `Buen día, ${c.nombre||'equipo de '+p.nombre}. Soy Eduardo Maradiaga, de MHAS de Honduras.\n\nOfrecemos rollos térmicos, etiquetas y film estirable para impresión y empaque.\n\nLes comparto nuestro catálogo para que puedan conocer los productos. Si alguno les interesa, con gusto les preparo una cotización.\n\nTambién pueden visitarnos en:\nhttps://www.mhasdehonduras.com\n\nEduardo Maradiaga\nMHAS de Honduras\n${REMITENTE}`;}
+export function mensajeProspecto(p){return `Buen día, equipo de ${p.nombre}:\n\nMi nombre es Eduardo Maradiaga, de ventas corporativas de MHAS de Honduras. Somos distribuidores de rollos térmicos, etiquetas y film estirable para impresión y empaque.\n\nLes comparto nuestro catálogo adjunto. Si alguno de los productos les sirve, con gusto les preparo una cotización sin compromiso.\n\nSaludos cordiales,\n\nEduardo Maradiaga\nVentas corporativas · MHAS de Honduras\n${REMITENTE}\n+504 3166-6059 · www.mhasdehonduras.com`;}
 export function crearContactoProspecto({S,esc,draw,toast,call,contactos,lista}){
  const M={ficha:null,canal:'correo',ocupado:false,catalogo:null};
  const bajar=(blob,n)=>{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);};
