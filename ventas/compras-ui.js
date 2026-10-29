@@ -10,7 +10,8 @@ export function crearCompras(ctx) {
   const total=()=>r2(cart().reduce((s,i)=>s+r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100),0)+Number(S.f.cp_cargos||0));
   const retirados=()=>S.compraEdit?(S.compraEdit.items||[]).filter(i=>Number(i.recibida)>0&&!cart().some(x=>x.prod===i.prod&&Number(x.recibida)>0)&&!S.compraEdit.costosAnteriores?.[i.prod]):[];
   function limpiarLinea(){delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec'].forEach(k=>delete S.f[k]);}
-  function limpiarCompra(){S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
+  function limpiarCompra(){S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;S.compraError=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
+  const avisoError=()=>S.compraError?`<p role="alert" style="color:#ff9898">${esc(S.compraError)}</p>`:'';
   const input=(k,label,type='text',valor=null,extra='')=>`<div class="field"><label for="${k}">${label}</label><input id="${k}" data-k="${k}" type="${type}" value="${valor==null?v(k):esc(valor)}" ${extra}></div>`;
   const chk=(k,label)=>`<label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input style="width:20px;min-height:20px" data-k="${k}" type="checkbox" ${S.f[k]?'checked':''}>${label}</label>`;
   function vista() {
@@ -42,22 +43,25 @@ export function crearCompras(ctx) {
       ${S.compraEdit?'<p class="note">Revise lo comprado y lo recibido en cada producto. Se corregirán las entradas existentes y se conservarán los pagos.</p>':chk('cp_recibida','Ya recibí toda la mercadería (registrar entrada de inventario)')}
       ${retirados().map(i=>input('cp_rest_'+i.prod,'Costo correcto actual sin ISV de '+esc(i.nombre)+' (producto retirado)','number',null,'min="0.0001" step="0.0001"')).join('')}
       <p class="note">Al recibir la mercadería se actualiza automáticamente el último costo de compra en Productos; el precio de venta se conserva. Otros cargos no se reparten en ese costo. Las facturas sin costo guardado aún usan el costo de referencia actual.</p>
-      <div class="actions"><button class="btn pri" data-a="cpGuardar" ${S.busy?'disabled':''}>${S.compraEdit?'Guardar cambios':'Guardar compra'}</button><button class="btn" data-a="cpCancelar" ${S.busy?'disabled':''}>Cancelar</button></div></section>`;
+      ${avisoError()}<div class="actions"><button class="btn pri" data-a="cpGuardar" ${S.busy?'disabled':''}>${S.compraEdit?'Guardar cambios':'Guardar compra'}</button><button class="btn" data-a="cpCancelar" ${S.busy?'disabled':''}>Cancelar</button></div></section>`;
   }
   function modal() {
     const c=compras().find(x=>x.id===S.m.id);if(!c)return '<p>Cargando compra…</p>';
     const x=cuenta(c),recibir=S.m.mode==='recibir';
-    return `<h1>${esc(c.proveedor)}</h1><p>${esc(c.factura)} · ${fdate(c.fecha)} · ${esc(estado(c))}</p>${c.cotizacionId?`<button class="btn" data-a="cpVenta" data-v="${esc(c.cotizacionId)}">Ver venta ${esc(c.cotizacionNumero||'')}</button>`:''}
+    return `<h1>${esc(c.proveedor)}</h1><p>${esc(c.factura)} · ${fdate(c.fecha)} · ${esc(estado(c))}</p>${avisoError()}${c.cotizacionId?`<button class="btn" data-a="cpVenta" data-v="${esc(c.cotizacionId)}">Ver venta ${esc(c.cotizacionNumero||'')}</button>`:''}
       <div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Comprado</th><th class="num">Recibido</th>${recibir?'<th>Recibir ahora</th>':''}</tr></thead><tbody>${c.items.map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>${esc(i.presentacion)} · ${i.unidades} unidades · costo sin ISV ${L(i.costo)}</small></td><td class="num">${i.cantidad}</td><td class="num">${i.recibida||0}</td>${recibir?`<td><input aria-label="Recibir ${esc(i.nombre)}" data-k="cp_rec_${n}" type="number" min="0" max="${r2(i.cantidad-(i.recibida||0))}" step="0.001" value="${esc(S.f['cp_rec_'+n]??0)}"></td>`:''}</tr>`).join('')}</tbody></table></div>
       <dl class="kv"><dt>Subtotal sin ISV</dt><dd>${L(c.base)}</dd><dt>ISV</dt><dd>${L(c.isv)}</dd><dt>Otros cargos</dt><dd>${L(c.cargos)}</dd><dt>Total</dt><dd>${L(c.total)}</dd><dt>Saldo</dt><dd>${x?L(saldo(x)):'Cargando…'}</dd><dt>Vence</dt><dd>${fdate(c.vence)}</dd></dl>
       ${c.nota?`<p>${esc(c.nota)}</p>`:''}
       ${recibir?`<p class="note">Indique solo lo que recibió físicamente. El resto queda pendiente.</p><div class="actions"><button class="btn" data-a="cpRecTodo">Completar lo pendiente</button><button class="btn pri" data-a="cpRecGuardar" ${S.busy?'disabled':''}>Confirmar recepción</button><button class="btn" data-a="cpVolver">Volver</button></div>`:`<div class="actions">${c.estado!=='anulada'?'<button class="btn" data-a="cpModificar">Modificar compra</button>':''}${!['recibida','anulada'].includes(c.estado)?'<button class="btn pri" data-a="cpRecibir">Recibir mercadería</button>':''}${x&&!x.anulada?`<button class="btn" data-a="cpCuenta" data-v="${esc(x.id)}">Ver cuenta / registrar pago</button>`:''}<button class="btn" data-a="cpInvTab">Ver inventario</button>${S.admin&&c.estado==='pendiente'&&x&&!(x.pagos||[]).length?'<button class="btn danger" data-a="cpAnular">Anular compra</button>':''}</div>`}`;
   }
   async function enviar(payload,exito) {
-    if(S.busy)return false;S.busy=true;draw();
+    if(S.busy)return false;S.busy=true;S.compraError=null;draw();
     try {await call(payload);exito();return true;}catch(e){
       if(/failed-precondition|invalid-argument/.test(e.code||'')){S.compraIntento=null;if(S.m){delete S.m.intento;delete S.m.intentoPago;}}
-      fallo(e,'guardar la compra');return false;
+      if(/failed-precondition|invalid-argument/.test(e.code||'')){
+        S.compraError=String(e.message||'Revise los datos de la compra.').replace(/^FirebaseError:\s*/,'').slice(0,500);toast(S.compraError);
+      }else {S.compraError=/unavailable/.test(e.code||'')?'No se confirmó la operación. Intente guardar de nuevo; se conservará la misma referencia para evitar duplicados.':'No se pudo guardar. Sus cambios siguen en el formulario.';fallo(e,'guardar la compra');}
+      return false;
     }finally{S.busy=false;draw();}
   }
   const acciones={
