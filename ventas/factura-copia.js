@@ -20,10 +20,10 @@ export async function facturaConCopia(PDFLib, bytes, pdfjs, crearCanvas = () => 
     const imagen = await pdf.embedPng(canvas.toDataURL("image/png"));
     const copia = pdf.addPage([width, height]);
     copia.drawImage(imagen, {x: 0, y: 0, width, height});
-    const font = await pdf.embedFont(PDFLib.StandardFonts.HelveticaBold), size = 14;
+    const font = await pdf.embedFont(PDFLib.StandardFonts.HelveticaBold), size = 16;
     copia.drawText("COPIA", {
       x: (width - font.widthOfTextAtSize("COPIA", size)) / 2,
-      y: height * 0.37, size, font, color: PDFLib.rgb(0, 0, 0), opacity: 0.2
+      y: height * 0.32, size, font, color: PDFLib.rgb(0, 0, 0), opacity: 0.2
     });
     return await pdf.save();
   } finally {
