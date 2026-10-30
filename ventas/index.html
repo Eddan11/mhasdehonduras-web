@@ -463,6 +463,7 @@ function vVerificar(){
 }
 
 /* ---------- vista: nueva cotización ---------- */
+function esEtiquetaPersonalizada(p){ return !!p && (p.id === "etq-impresa" || p.codigo === "ETQ-002"); }
 function vCotizar(){
   const sel = S.f.cli_sel || "";
   const nuevo = sel === "__nuevo";
@@ -470,8 +471,9 @@ function vCotizar(){
   const cc = calcularDocumento({items:S.cart,flete:S.f.flete,sinComprobante:S.f.sin_comprobante===true},calc);
   const edPrecio = true; // precios variables: todos (vendedores incluidos) pueden cambiar el precio de cada línea
   const cats = [];
-  S.prod.filter(p => p.activo !== false && Number(p.precio)>0).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
-  const psel = S.prod.find(p => p.id === S.f.psel);
+  S.prod.filter(p => p.activo !== false && (Number(p.precio)>0 || esEtiquetaPersonalizada(p))).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
+  const personalizado = esEtiquetaPersonalizada(S.prod.find(p => p.id === S.f.psel));
+  const psel = personalizado ? null : S.prod.find(p => p.id === S.f.psel);
   const ctcs = contactosDe(cliSel), ctcSel = S.f.cli_ctc ?? (ctcs.length ? "0" : "");
   const dirCot = nuevo ? S.f.cli_dir : (cliSel || {}).direccion, fueraCot = esFueraSPS(dirCot), ns = notasForm();
   return `<div class="narrow">
@@ -524,10 +526,11 @@ function vCotizar(){
     <div class="field"><label for="psel">Producto</label>
       <select id="psel" data-k="psel" data-redraw="1"><option value="">Elige un producto…</option>
       <option value="__gen" ${S.f.psel === "__gen" ? "selected" : ""}>GEN-001 · Producto genérico (escribir descripción y precio)</option>
-      ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${codDe(p) ? esc(codDe(p)) + " · " : ""}${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(unidadDe(p))}</option>`).join("")}</optgroup>`).join("")}
+      ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${codDe(p) ? esc(codDe(p)) + " · " : ""}${esEtiquetaPersonalizada(p) ? "Etiqueta personalizada · escribir descripción y precio" : `${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(unidadDe(p))}`}</option>`).join("")}</optgroup>`).join("")}
       </select></div>
-    ${S.f.psel === "__gen" ? `
-    <div class="field"><label for="gen_desc">Descripción del producto</label><input id="gen_desc" data-k="gen_desc" value="${fv("gen_desc")}" placeholder="Ej. Rollo térmico 110 mm x 60 m" autocomplete="off"></div>
+    ${S.f.psel === "__gen" || personalizado ? `
+    ${personalizado ? '<p class="note"><b>Etiqueta personalizada</b></p>' : ""}
+    <div class="field"><label for="gen_desc">Descripción del producto</label><input id="gen_desc" data-k="gen_desc" value="${fv("gen_desc")}" placeholder="${personalizado ? "Medida, material, impresión y presentación acordados" : "Ej. Rollo térmico 110 mm x 60 m"}" autocomplete="off"></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap">
     <div class="field" style="max-width:180px"><label for="gen_unidad">Unidad</label><input id="gen_unidad" list="gen_unidades" data-k="gen_unidad" value="${fv("gen_unidad")}" placeholder="unidad" autocomplete="off"><datalist id="gen_unidades">${["unidad", "caja", "rollo", "millar", "bolsa", "fardo", "libra", "paquete", "resma"].map(u => `<option value="${u}">`).join("")}</datalist></div>
     <div class="field" style="max-width:220px"><label for="gen_precio">Precio por unidad sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
@@ -542,7 +545,7 @@ function vCotizar(){
     ${S.f.pmodo === "o" ? `<p class="note" style="margin:-6px 0 10px">Se cotiza por ${esc(clean(S.f.pvu) || "…")} al precio por ${esc(unidadDe(psel))}; si el precio es distinto, cámbielo en la línea.</p>` : ""}` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
-      <button class="btn pri grow" data-a="addSel" ${psel || S.f.psel === "__gen" ? "" : "disabled"}>Agregar</button>
+      <button class="btn pri grow" data-a="addSel" ${psel || personalizado || S.f.psel === "__gen" ? "" : "disabled"}>Agregar</button>
     </div>` : `<p class="empty">Todavía no hay productos cargados.${S.admin ? " Cárgalos en Ajustes." : ""}</p>`}
   </div>
   <div class="panel">
@@ -2370,15 +2373,16 @@ const A = {
   cliPick(v){ if (v === "__nuevo") pasarBusquedaANuevo(); S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
   addSel(){
-    if (S.f.psel === "__gen") {
+    const personalizado = esEtiquetaPersonalizada(S.prod.find(p => p.id === S.f.psel));
+    if (S.f.psel === "__gen" || personalizado) {
       const desc = clean(S.f.gen_desc), pr = Number(S.f.gen_precio), costo = Number(S.f.gen_costo);
       if(S.f.gen_costo==null||S.f.gen_costo===""||!Number.isFinite(costo)||costo<=0)return toast("Escriba el precio de compra unitario sin ISV.");
       if (!desc) return toast("Escribe la descripción del producto.");
-      if (!(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
+      if (!Number.isFinite(pr) || !(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
       const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
       const n = S.cart.filter(x => x.generico).length + 1;
       const unidad = clean(S.f.gen_unidad).toLowerCase() || "unidad";
-      S.cart.push({id: "GEN-" + String(n).padStart(3, "0"), nombre: desc, precio: pr * 1.15, unidad, cant, generico: true, costoU:Math.round(costo*1e6)/1e6});
+      S.cart.push({id: personalizado ? "ETQ-002" : "GEN-" + String(n).padStart(3, "0"), nombre: personalizado ? "Etiqueta personalizada · " + desc : desc, precio: pr * 1.15, unidad, cant, generico: true, costoU:Math.round(costo*1e6)/1e6});
       ["psel", "pcant", "pmodo", "gen_desc", "gen_precio", "gen_unidad", "gen_costo"].forEach(k => delete S.f[k]); draw(); return;
     }
     const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
@@ -3526,7 +3530,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-30a";
+const APP_VER = "2026-10-30b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
