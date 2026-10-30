@@ -419,7 +419,17 @@ var IMGV='2';
 // Referencia breve para vincular el origen web al chat, sin preguntas adicionales.
 function origenConsulta(){
   var q=new URLSearchParams(location.search),o={canal:'web'};
-  ['utm_source','utm_medium','utm_campaign','utm_content'].forEach(function(k){var v=(q.get(k)||'').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ _.-]/g,'').slice(0,80);if(v)o[k]=v;});
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_id'].forEach(function(k){var v=(q.get(k)||'').replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ _.-]/g,'').slice(0,80);if(v)o[k]=v;});
+  var clicGoogle=['gclid','gbraid','wbraid'].some(function(k){return !!q.get(k);});
+  if(clicGoogle){o.utm_source='google';o.utm_medium='cpc';}
+  if(!o.utm_source){
+    try{var ref=new URL(document.referrer).hostname;if(/(^|\.)google\.(com|hn|es|com\.hn|com\.gt|com\.sv|com\.mx|com\.ni|co\.cr)$/i.test(ref)){o.utm_source='google';o.utm_medium='organic';}}catch(e){}
+  }
+  // Sólo referencias de origen, sin identificadores de clic ni datos del visitante.
+  try{
+    if(o.utm_source)sessionStorage.setItem('mhas_origen',JSON.stringify({origen:o,ts:Date.now()}));
+    else{var previo=JSON.parse(sessionStorage.getItem('mhas_origen')||'null');if(previo&&Date.now()-previo.ts<1800000)o=previo.origen;}
+  }catch(e){}
   return o;
 }
 function waUrl(item){
@@ -429,7 +439,13 @@ function waUrl(item){
   var codigo=fuentes[fuente]||(fuente?'O':'N');
   var general=['Consulta general','Cotización','Contacto','Producto especial'].indexOf(producto)!==-1;
   var t='Hola MHAS, vi su página web y quiero cotizar'+(producto&&!general?' '+producto:'')+'.';
-  t+=' [O:W;F:'+codigo+']';
+  var medio=(origen.utm_medium||'').toLowerCase(),marca='';
+  if(codigo==='G'){
+    if(['cpc','ppc','paidsearch','paid_search','paid'].indexOf(medio)!==-1)marca=';M:P';
+    else if(medio==='organic')marca=';M:O';
+    var camp=origen.utm_id||origen.utm_campaign||'';if(marca===';M:P'&&/^\d{1,30}$/.test(camp))marca+=';C:'+camp;
+  }
+  t+=' [O:W;F:'+codigo+marca+']';
   return 'https://wa.me/'+WA+'?text='+encodeURIComponent(t);
 }
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
