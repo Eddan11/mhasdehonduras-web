@@ -1728,6 +1728,11 @@ function mProd(){
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
+function origenChat(c){
+  const o=c.origenWeb;if(!o)return "";
+  const fuente={google:o.medio==="pagado"?"Google Ads":o.medio==="organico"?"Google orgánico":"Google (medio no identificado)",instagram:"Instagram",facebook:"Facebook",linkedin:"LinkedIn",otra:"Otra fuente",no_identificada:"Fuente no identificada"}[o.fuente]||"Fuente no identificada";
+  return `<div class="panel" style="padding:10px 12px"><b>Origen:</b> Web · ${esc(fuente)}${o.campana?` · Campaña ${esc(o.campana)}`:""}<small class="muted" style="display:block">Según la referencia enviada por el cliente.</small></div>`;
+}
 function mChat(){
   const c = S.convs.find(x => x.id === S.m.id); if (!c) return "";
   const [et, ec] = ESTADO_CHAT(c);
@@ -1735,6 +1740,7 @@ function mChat(){
   const quien = {cliente: c.nombre || "Cliente", agente: "Agente", equipo: "Equipo"};
   return `<h1 style="padding-right:40px">${esc(nombreChat(c))}</h1>
   <p class="sub">${esc(c.tel || c.id)} · <span class="badge ${ec}">${et}</span>${c.vendedorNombre ? " · vendedor: " + esc(c.vendedorNombre) : ""}</p>
+  ${origenChat(c)}
   ${c.anuncio && (c.anuncio.titulo || c.anuncio.texto || c.anuncio.url) ? `<div class="panel" style="padding:10px 12px"><b>📣 Llegó desde un anuncio:</b> ${esc(c.anuncio.titulo || "")}${c.anuncio.texto ? `<br><small class="muted">${esc(String(c.anuncio.texto).slice(0, 160))}</small>` : ""}${c.anuncio.url ? ` · <a href="${esc(c.anuncio.url)}" target="_blank" rel="noopener">Ver anuncio</a>` : ""}</div>` : ""}
   ${c.consultaProduccion ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Consulta a producción:</b> ${esc(c.consultaProduccion)}
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="chatConsultaOk">Marcar como resuelta</button></div></div>` : ""}
@@ -3520,7 +3526,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-29g";
+const APP_VER = "2026-10-29h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
