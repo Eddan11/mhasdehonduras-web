@@ -474,7 +474,7 @@ function vCotizar(){
   S.prod.filter(p => p.activo !== false && (Number(p.precio)>0 || esEtiquetaPersonalizada(p))).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const personalizado = esEtiquetaPersonalizada(S.prod.find(p => p.id === S.f.psel));
   const psel = personalizado ? null : S.prod.find(p => p.id === S.f.psel);
-  const ctcs = contactosDe(cliSel), ctcSel = S.f.cli_ctc ?? (ctcs.length ? "0" : "");
+  const ctcs = contactosDe(cliSel), ctcSel = S.f.cli_ctc ?? "";
   const dirCot = nuevo ? S.f.cli_dir : (cliSel || {}).direccion, fueraCot = esFueraSPS(dirCot), ns = notasForm();
   return `<div class="narrow">
   <h1>${S.editId ? "Editar cotización" : "Nueva cotización"}</h1>
@@ -2426,7 +2426,7 @@ const A = {
       cliente = {nombre: nom, contacto: clean(S.f.cli_contacto), cargo: clean(S.f.cli_cargo), direccion: clean(S.f.cli_dir), rtn: clean(S.f.cli_rtn), tel: clean(S.f.cli_tel), email: clean(S.f.cli_email)};
     } else {
       const c = S.cli.find(x => x.id === sel); if (!c) return toast("Ese cliente ya no existe.");
-      const lista = contactosDe(c), cs = S.f.cli_ctc ?? (lista.length ? "0" : "");
+      const lista = contactosDe(c), cs = S.f.cli_ctc ?? "";
       let p = {};
       if (cs === "__nuevo") {
         p = {nombre: clean(S.f.ctc_nombre), cargo: clean(S.f.ctc_cargo), tel: clean(S.f.ctc_tel), correo: clean(S.f.ctc_correo)};
@@ -2819,7 +2819,7 @@ const A = {
     const cl = c.cliente || {};
     if (cl.id && S.cli.some(x => x.id === cl.id)) {
       S.f.cli_sel = cl.id;
-      const lista = contactosDe(S.cli.find(x => x.id === cl.id)), n = lista.findIndex(p => (p.nombre || "") === (cl.contacto || "") && (p.tel || "") === (cl.tel || ""));
+      const lista = contactosDe(S.cli.find(x => x.id === cl.id)), n = (cl.contacto || cl.tel || cl.email) ? lista.findIndex(p => (p.nombre || "") === (cl.contacto || "") && (p.tel || "") === (cl.tel || "") && (p.correo || "") === (cl.email || "")) : -1;
       if (n >= 0) S.f.cli_ctc = String(n);
       else if (cl.contacto) Object.assign(S.f, {cli_ctc: "__nuevo", ctc_nombre: cl.contacto, ctc_cargo: cl.cargo || "", ctc_tel: cl.tel || "", ctc_correo: cl.email || ""});
       else S.f.cli_ctc = "";
@@ -3530,7 +3530,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-30b";
+const APP_VER = "2026-10-31a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
