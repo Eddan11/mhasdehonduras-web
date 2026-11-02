@@ -2150,13 +2150,12 @@ function marcaAgua(d){
   try { d.setGState(new d.GState({opacity: 0.07})); d.addImage(LOGO_MARCA.src, "PNG", (215.9 - w) / 2, (279.4 - h) / 2 - 8, w, h, "marca", "FAST"); d.setGState(new d.GState({opacity: 1})); } catch (_) {}
 }
 function armarPdf(c, interno){
-  if(c.sinComprobante)return pdfInterno(c,window.jspdf.jsPDF,calc);
   const e = emp(), {jsPDF} = window.jspdf;
   const d = new jsPDF({unit: "mm", format: "letter"});
   const W = 215.9, M = 18, cx = W / 2, IW = W - 2 * M;
   const NAVY = [31, 56, 100], INK = [30, 30, 30], GRAY = [105, 110, 120], LINE = [205, 210, 220], YEL = [255, 248, 222], LAB = [232, 235, 242];
   const tc = a => d.setTextColor(a[0], a[1], a[2]), fc = a => d.setFillColor(a[0], a[1], a[2]), dc = a => d.setDrawColor(a[0], a[1], a[2]);
-  const cc = calcCot(c), hasD = !!interno && cc.desc > 0;
+  const cc = calcCot(c), hasD = !c.sinComprobante && !!interno && cc.desc > 0;
   const v = c.vendedorInfo || {nombre: c.vendedorNombre || ""};
   try { d.addImage(LOGO, "JPEG", M, 20, 30, 14.8); } catch (_) {}
   if (interno) { d.setFont("helvetica", "bold"); d.setFontSize(8.5); d.setTextColor(180, 35, 24); d.text("COPIA INTERNA", W - M, 14, {align: "right"}); }
@@ -2206,13 +2205,13 @@ function armarPdf(c, interno){
       const qt = qV(it) + " " + vuDe(it).n; let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
       d.setFontSize(fs); d.text(qt, M + wC / 2, y + 4.1, {align: "center"}); d.setFontSize(9.5);
       d.text(nl, M + wC + 1.5, y + 4.1);
-      d.text(LU((interno ? l.u : l.un) * vuDe(it).f), xs[2] + wP / 2, y + 4.1, {align: "center"});
+      d.text(LU((interno && !c.sinComprobante ? l.u : l.un) * vuDe(it).f), xs[2] + wP / 2, y + 4.1, {align: "center"});
       if (hasD) d.text(l.desc ? L(l.desc) + " (" + pctTxt(l.pct) + ")" : "", xs[3] + wD / 2, y + 4.1, {align: "center"});
       d.text(L(l.imp), M + IW - wT / 2, y + 4.1, {align: "center"});
     }
     y += h;
   }
-  const tot = [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat(cc.flete ? [["Flete", L(cc.flete)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
+  const tot = c.sinComprobante ? [] : [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat(cc.flete ? [["Flete", L(cc.flete)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
   if (y + tot.length * 6 + 70 > 270) { d.addPage(); y = 20; }
   tot.forEach(([k, val]) => {
     dc(LINE); d.rect(M, y, IW - wT, 6); d.rect(M + IW - wT, y, wT, 6);
@@ -3530,7 +3529,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-10-31b";
+const APP_VER = "2026-11-02a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
