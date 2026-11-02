@@ -244,7 +244,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { crearGastos } from "./gastos-ui.js?v=2026-11-02b";
+import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
 import { crearCompras } from "./compras-ui.js?v=2026-11-02c";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
 import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
@@ -2493,7 +2493,7 @@ const A = {
       rows.push([c.numero, fdate(c.fecha), (ESTADO[c.estado] || [c.estado])[0], c.cliente && c.cliente.nombre, c.cliente && c.cliente.tel, c.vendedorNombre || "", c.formaPago || "", c.factura ? c.factura.numero : "",
         i.generico ? i.id : ((S.prod.find(p => p.id === i.id) || {}).codigo || i.id || ""), i.nombre, i.cant, c.sinComprobante?"":(Number(i.precio) || 0).toFixed(4), l.u.toFixed(4), c.sinComprobante?"":l.descIsv.toFixed(2), l.descX ? pctTxt(l.pct) : "", c.sinComprobante?"":l.conIsv.toFixed(2), (Number(c.total) || 0).toFixed(2),c.sinComprobante?"Sin comprobante · revisión fiscal pendiente":"Con facturación e ISV",c.sinComprobante?l.imp.toFixed(2):""]); }); });
     const q = v => { v = v == null ? "" : String(v); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}));
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\n")], {type: "text/csv;charset=utf-8"}));
     a.download = "cotizaciones-mhas-" + today() + ".csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     toast(lista.length + " cotizaciones descargadas");
   },
@@ -3123,7 +3123,7 @@ const A = {
     if (!filas.length) return alert(resumen + "\n\nNo hay nada para subir a Meta en este periodo.");
     filas.sort((a, b) => Number(a[7]) - Number(b[7]));
     const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
-    const csv = [["phone", "email", "fn", "ln", "ct", "country", "event_name", "event_time", "value", "currency", "order_id"]].concat(filas).map(r => r.map(q).join(",")).join("\r\n");
+    const csv = [["phone", "email", "fn", "ln", "ct", "country", "event_name", "event_time", "value", "currency", "order_id"]].concat(filas).map(r => r.map(q).join(",")).join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"})); a.download = "meta-semanal-" + today() + ".csv";
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     alert(resumen + "\n\nArchivo descargado. Súbelo en Administrador de eventos → Agregar eventos → Subida de archivos.");
@@ -3134,7 +3134,7 @@ const A = {
       .concat(S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "")).map(c => { const st = statsCliente(c);
         return [c.nombre, c.contacto, c.rtn, c.direccion, c.tel, c.email, st.creadoPor, c.creado ? fdate(ymd(new Date(c.creado))) : "", st.pedidos, st.cotRec ? fdate(st.cotRec.fecha) : "", st.cotRec ? st.cotRec.numero : "", st.cotRec ? (ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0] : "", fdate(st.ultFecha), st.ultItems,
           st.ultFecha ? st.ciclo : "", fdate(st.prox), st.facturado.toFixed(2), st.saldo.toFixed(2)]; }));
-    const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"});
+    const blob = new Blob(["\ufeff" + rows.map(r => r.map(q).join(",")).join("\n")], {type: "text/csv;charset=utf-8"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "clientes-mhas-" + today() + ".csv";
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   },
@@ -3542,7 +3542,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-02d";
+const APP_VER = "2026-11-02e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
