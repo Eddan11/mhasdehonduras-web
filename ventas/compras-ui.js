@@ -2,6 +2,11 @@
 export function crearCompras(ctx) {
   const {S,esc,L,fdate,today,r2,draw,toast,call,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm}=ctx;
   const uid=()=>crypto.randomUUID();
+  const r6=n=>Math.round(Number(n)*1e6)/1e6;
+  const modoBase=i=>/^etiquetas?$/i.test(i.unidad||'')?'presentacion':'unidad';
+  const factor=(i,modo=modoBase(i))=>modo==='unidad'?Number(i.unidades)||1:1;
+  const unidad=(i,modo=modoBase(i))=>modo==='unidad'?(i.unidad||'unidad'):(i.presentacion||'presentación');
+  const cantidadVista=(i,n=i.cantidad)=>r6(n*factor(i));
   const v=k=>esc(S.f[k]??'');
   const cart=()=>S.compraCart||(S.compraCart=[]);
   const compras=()=>S.compras||[];
@@ -9,7 +14,7 @@ export function crearCompras(ctx) {
   const cuenta=c=>(S.cxp||[]).find(x=>x.id===c.cxpId);
   const total=()=>r2(cart().reduce((s,i)=>s+r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100),0)+Number(S.f.cp_cargos||0));
   const retirados=()=>S.compraEdit?(S.compraEdit.items||[]).filter(i=>Number(i.recibida)>0&&!cart().some(x=>x.prod===i.prod&&Number(x.recibida)>0)&&!S.compraEdit.costosAnteriores?.[i.prod]):[];
-  function limpiarLinea(){delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec'].forEach(k=>delete S.f[k]);}
+  function limpiarLinea(){delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec','cp_modo'].forEach(k=>delete S.f[k]);}
   function limpiarCompra(){S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;S.compraError=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
   const avisoError=()=>S.compraError?`<p role="alert" style="color:#ff9898">${esc(S.compraError)}</p>`:'';
   const input=(k,label,type='text',valor=null,extra='')=>`<div class="field"><label for="${k}">${label}</label><input id="${k}" data-k="${k}" type="${type}" value="${valor==null?v(k):esc(valor)}" ${extra}></div>`;
@@ -25,17 +30,20 @@ export function crearCompras(ctx) {
   }
   function formulario() {
     const ps=S.prod.filter(p=>p.activo!==false);
+    const elegida=S.prod.find(p=>p.id===S.f.cp_prod)||{},vieja=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
+    const p=vieja?.prod===elegida.id?{...elegida,...vieja}:elegida,modo=S.f.cp_modo||modoBase(p),f=factor(p,modo),un=unidad(p,modo);
     return `<section class="panel"><h2>${S.compraEdit?'Modificar compra':'Nueva compra'}</h2>
       <div class="row">${input('cp_prov','Proveedor','text',null,'list="cp_proveedores" autocomplete="off"')}${input('cp_rtn','RTN del proveedor (opcional)')}</div>
       <datalist id="cp_proveedores">${[...new Set([...(S.proveedores||[]).map(p=>p.nombre),...(S.cxp||[]).map(p=>p.proveedor)])].filter(Boolean).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       <div class="row">${input('cp_fact','Factura o referencia del proveedor')}${input('cp_fecha','Fecha','date',S.f.cp_fecha||today())}${input('cp_vence','Vence','date',S.f.cp_vence||today())}</div>
       <div class="field"><label for="cp_venta">Venta relacionada (opcional)</label><select id="cp_venta" data-k="cp_venta"><option value="">Para inventario, sin venta asociada</option>${(S.cot||[]).filter(c=>!c.eliminada&&!['anulada','perdida'].includes(c.estado)).slice(0,150).map(c=>`<option value="${esc(c.id)}" ${S.f.cp_venta===c.id?'selected':''}>${esc(c.numero)} · ${esc(c.cliente?.nombre||'')}</option>`).join('')}</select></div>
-      <h3>Productos</h3><p class="note">Cantidad en la presentación del panel (caja, rollo, libra…). El costo es de compra, sin ISV; no modifica el precio de venta.</p>
+      <h3>Productos</h3><p class="note">Ingrese lo comprado al proveedor, aunque venga a granel. El sistema convierte la cantidad a sus cajas de venta. El costo no cambia el precio de venta.</p>
       <div class="field"><label for="cp_prod">Producto</label><select id="cp_prod" data-k="cp_prod"><option value="">Seleccione</option>${ps.map(p=>`<option value="${esc(p.id)}" ${S.f.cp_prod===p.id?'selected':''}>${esc(p.codigo||p.id)} · ${esc(p.nombre)} · ${esc(p.presentacion||p.unidad||'Unidad')}</option>`).join('')}</select></div>
-      <div class="row">${input('cp_cant','Cantidad de presentaciones','number',null,'min="0.001" step="0.001"')}${input('cp_costo','Costo por presentación sin ISV (L)','number',null,'min="0.0001" step="0.0001"')}${input('cp_tasa','ISV (%)','number',S.f.cp_tasa??15,'min="0" max="100" step="0.01"')}</div>
-      ${S.compraEdit?input('cp_line_rec','Cantidad recibida de este producto','number',S.f.cp_line_rec??0,'min="0" step="0.001"'):''}
+      ${Number(p.unidades)>1?`<div class="field"><label for="cp_modo">Comprar por</label><select id="cp_modo" data-k="cp_modo"><option value="unidad" ${modo==='unidad'?'selected':''}>${esc(p.unidad||'Unidad')} · a granel</option><option value="presentacion" ${modo==='presentacion'?'selected':''}>${esc(p.presentacion||'Presentación completa')}</option></select></div>`:''}
+      <div class="row">${input('cp_cant','Cantidad · '+esc(un),'number',null,'min="0.001" step="0.001"')}${input('cp_costo','Costo por '+esc(un)+' sin ISV (L)','number',null,'min="0.0001" step="0.0001"')}${input('cp_tasa','ISV (%)','number',S.f.cp_tasa??15,'min="0" max="100" step="0.01"')}</div>
+      ${S.compraEdit?input('cp_line_rec','Cantidad recibida · '+esc(un),'number',S.f.cp_line_rec??0,'min="0" step="0.001"'):''}
       <button class="btn" data-a="cpAgregar">${S.compraLineaEdit!=null?'Guardar producto':'Agregar producto'}</button>
-      ${cart().length?`<div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Cantidad</th>${S.compraEdit?'<th class="num">Recibido</th>':''}<th class="num">Costo sin ISV</th><th class="num">Con ISV</th><th></th></tr></thead><tbody>${cart().map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>${esc(i.presentacion)} · ${i.unidades} ${esc(i.unidad)} por presentación</small></td><td class="num">${i.cantidad}</td>${S.compraEdit?`<td class="num">${i.recibida||0}</td>`:''}<td class="num">${L(i.costo)}</td><td class="num">${L(r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100))}</td><td><button class="btn sm" data-a="cpEditarLinea" data-v="${n}">Editar</button> <button class="btn sm" data-a="cpQuitar" data-v="${n}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:''}
+      ${cart().length?`<div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Cantidad</th>${S.compraEdit?'<th class="num">Recibido</th>':''}<th class="num">Costo sin ISV</th><th class="num">Con ISV</th><th></th></tr></thead><tbody>${cart().map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>Venta: ${esc(i.presentacion)} · ${i.unidades} ${esc(i.unidad)}</small></td><td class="num">${cantidadVista(i)} ${esc(unidad(i))}</td>${S.compraEdit?`<td class="num">${cantidadVista(i,i.recibida||0)}</td>`:''}<td class="num">${L(i.costo/factor(i))}</td><td class="num">${L(r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100))}</td><td><button class="btn sm" data-a="cpEditarLinea" data-v="${n}">Editar</button> <button class="btn sm" data-a="cpQuitar" data-v="${n}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:''}
       <div class="row">${input('cp_cargos','Otros cargos: total con ISV (L)','number',S.f.cp_cargos??0,'min="0" step="0.01"')}${S.compraEdit?'':input('cp_abono','Pago inicial (L)','number',S.f.cp_abono??0,'min="0" step="0.01"')}</div>
       ${!S.compraEdit&&Number(S.f.cp_abono)>0?`<div class="row"><div class="field"><label for="cp_metodo">Medio del pago inicial</label><select id="cp_metodo" data-k="cp_metodo">${['Transferencia','Efectivo','Depósito','Cheque'].map(m=>`<option ${S.f.cp_metodo===m?'selected':''}>${m}</option>`).join('')}</select></div>${input('cp_ref','Referencia del pago (opcional)')}</div>`:''}
       <p><b>Total de compra: ${L(total())}</b> ${S.compraEdit?`<span class="note">Pagos registrados: ${L(S.compraEdit.pagado)} · Saldo resultante: ${L(r2(total()-S.compraEdit.pagado))}. Los pagos se conservan.</span>`:'<button class="btn sm" data-a="cpContado">Marcar pagada completa</button>'}</p>
@@ -49,7 +57,7 @@ export function crearCompras(ctx) {
     const c=compras().find(x=>x.id===S.m.id);if(!c)return '<p>Cargando compra…</p>';
     const x=cuenta(c),recibir=S.m.mode==='recibir';
     return `<h1>${esc(c.proveedor)}</h1><p>${esc(c.factura)} · ${fdate(c.fecha)} · ${esc(estado(c))}</p>${avisoError()}${c.cotizacionId?`<button class="btn" data-a="cpVenta" data-v="${esc(c.cotizacionId)}">Ver venta ${esc(c.cotizacionNumero||'')}</button>`:''}
-      <div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Comprado</th><th class="num">Recibido</th>${recibir?'<th>Recibir ahora</th>':''}</tr></thead><tbody>${c.items.map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>${esc(i.presentacion)} · ${i.unidades} unidades · costo sin ISV ${L(i.costo)}</small></td><td class="num">${i.cantidad}</td><td class="num">${i.recibida||0}</td>${recibir?`<td><input aria-label="Recibir ${esc(i.nombre)}" data-k="cp_rec_${n}" type="number" min="0" max="${r2(i.cantidad-(i.recibida||0))}" step="0.001" value="${esc(S.f['cp_rec_'+n]??0)}"></td>`:''}</tr>`).join('')}</tbody></table></div>
+      <div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Comprado</th><th class="num">Recibido</th>${recibir?'<th>Recibir ahora</th>':''}</tr></thead><tbody>${c.items.map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>Venta: ${esc(i.presentacion)} · costo por ${esc(unidad(i))} sin ISV ${L(i.costo/factor(i))}</small></td><td class="num">${cantidadVista(i)} ${esc(unidad(i))}</td><td class="num">${cantidadVista(i,i.recibida||0)}</td>${recibir?`<td><input aria-label="Recibir ${esc(i.nombre)}" data-k="cp_rec_${n}" type="number" min="0" max="${cantidadVista(i,r6(i.cantidad-(i.recibida||0)))}" step="0.001" value="${esc(S.f['cp_rec_'+n]??0)}"></td>`:''}</tr>`).join('')}</tbody></table></div>
       <dl class="kv"><dt>Subtotal sin ISV</dt><dd>${L(c.base)}</dd><dt>ISV</dt><dd>${L(c.isv)}</dd><dt>Otros cargos</dt><dd>${L(c.cargos)}</dd><dt>Total</dt><dd>${L(c.total)}</dd><dt>Saldo</dt><dd>${x?L(saldo(x)):'Cargando…'}</dd><dt>Vence</dt><dd>${fdate(c.vence)}</dd></dl>
       ${c.nota?`<p>${esc(c.nota)}</p>`:''}
       ${recibir?`<p class="note">Indique solo lo que recibió físicamente. El resto queda pendiente.</p><div class="actions"><button class="btn" data-a="cpRecTodo">Completar lo pendiente</button><button class="btn pri" data-a="cpRecGuardar" ${S.busy?'disabled':''}>Confirmar recepción</button><button class="btn" data-a="cpVolver">Volver</button></div>`:`<div class="actions">${c.estado!=='anulada'?'<button class="btn" data-a="cpModificar">Modificar compra</button>':''}${!['recibida','anulada'].includes(c.estado)?'<button class="btn pri" data-a="cpRecibir">Recibir mercadería</button>':''}${x&&!x.anulada?`<button class="btn" data-a="cpCuenta" data-v="${esc(x.id)}">Ver cuenta / registrar pago</button>`:''}<button class="btn" data-a="cpInvTab">Ver inventario</button>${S.admin&&c.estado==='pendiente'&&x&&!(x.pagos||[]).length?'<button class="btn danger" data-a="cpAnular">Anular compra</button>':''}</div>`}`;
@@ -68,16 +76,21 @@ export function crearCompras(ctx) {
     cpNueva(){if(S.compraEdit){if(!confirm('¿Descartar los cambios de esta compra?'))return;limpiarCompra();}const prod=S.m&&S.m.type==='inv'?S.m.id:null;S.tab='compras';S.m=null;if(!S.compraForm){S.compraForm=true;S.compraId=uid();S.compraCart=[];}if(prod)S.f.cp_prod=prod;draw();},
     cpCancelar(){if(cart().length&&!confirm('¿Descartar esta compra sin guardar?'))return;const id=S.compraEdit?.id;limpiarCompra();if(id)S.m={type:'compra',id};draw();},
     cpAgregar(){
-      const p=S.prod.find(x=>x.id===S.f.cp_prod);const cantidad=Number(S.f.cp_cant),costo=Number(S.f.cp_costo),tasa=Number(S.f.cp_tasa??15);
+      const p=S.prod.find(x=>x.id===S.f.cp_prod),viejo=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
+      const f=factor(viejo?.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{}));
+      const cantidad=r6(Number(S.f.cp_cant)/f),costo=Number(S.f.cp_costo)*f,tasa=Number(S.f.cp_tasa??15);
+      if(Math.abs(cantidad*f-Number(S.f.cp_cant))>0.00001)return toast('Revise la cantidad; no se puede convertir exactamente a la unidad de inventario.');
       if(!p||!(cantidad>0)||!(costo>0)||!Number.isFinite(cantidad)||!Number.isFinite(costo)||!Number.isFinite(tasa)||tasa<0||tasa>100)return toast('Seleccione producto y revise cantidad, costo e ISV.');
       if(cart().some((i,n)=>i.prod===p.id&&n!==S.compraLineaEdit))return toast('Ese producto ya está agregado. Quite la línea para corregirla.');
       if(cart().length>=30&&S.compraLineaEdit==null)return toast('Máximo 30 productos por compra.');
-      const vieja=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null,recibida=S.compraEdit?Number(S.f.cp_line_rec??vieja?.recibida??0):0;
+      const vieja=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null,recibida=S.compraEdit?r6(Number(S.f.cp_line_rec??(vieja?.prod===p.id?(vieja.recibida||0)*f:0))/f):0;
       if(S.compraEdit&&(!Number.isFinite(recibida)||recibida<0||recibida>cantidad))return toast('La cantidad recibida debe estar entre cero y la cantidad comprada.');
       const linea={...(vieja||{}),prod:p.id,nombre:p.nombre,presentacion:vieja?.prod===p.id?vieja.presentacion:p.presentacion||p.unidad||'Unidad',unidades:vieja?.prod===p.id?vieja.unidades:Number(p.unidades)||1,unidad:p.unidad||'unidades',cantidad,costo,tasa,recibida};
       if(S.compraLineaEdit!=null)cart()[S.compraLineaEdit]=linea;else cart().push(linea);limpiarLinea();draw();
     },
-    cpEditarLinea(n){const i=cart()[Number(n)];if(!i)return;S.compraLineaEdit=Number(n);Object.assign(S.f,{cp_prod:i.prod,cp_cant:i.cantidad,cp_costo:i.costo,cp_tasa:i.tasa,cp_line_rec:i.recibida||0});draw();},
+    cpEditarLinea(n){const i=cart()[Number(n)];if(!i)return;S.compraLineaEdit=Number(n);Object.assign(S.f,{cp_prod:i.prod,cp_modo:modoBase(i),cp_cant:cantidadVista(i),cp_costo:i.costo/factor(i),cp_tasa:i.tasa,cp_line_rec:cantidadVista(i,i.recibida||0)});draw();},
+    cpCambioUnidad(){['cp_cant','cp_costo'].forEach(k=>delete S.f[k]);const i=cart()[S.compraLineaEdit];S.f.cp_line_rec=i?r6((i.recibida||0)*factor(i,S.f.cp_modo)):0;draw();},
+    cpCambioProducto(){delete S.f.cp_modo;['cp_cant','cp_costo'].forEach(k=>delete S.f[k]);S.f.cp_line_rec=0;draw();},
     cpQuitar(n){cart().splice(Number(n),1);limpiarLinea();draw();},
     cpContado(){S.f.cp_abono=total();draw();},
     cpGuardar(){
@@ -91,8 +104,8 @@ export function crearCompras(ctx) {
     cpAbrir(id){S.m={type:'compra',id};draw();},
     cpVenta(id){S.m={type:'cot',id,mode:'ver'};draw();},
     cpRecibir(){S.m.mode='recibir';S.m.operacion=uid();S.m.intento=null;Object.keys(S.f).filter(k=>k.startsWith('cp_rec_')).forEach(k=>delete S.f[k]);draw();},
-    cpRecTodo(){const c=compras().find(x=>x.id===S.m.id);c.items.forEach((i,n)=>S.f['cp_rec_'+n]=Math.round((i.cantidad-(i.recibida||0))*1000)/1000);draw();},
-    cpRecGuardar(){const c=compras().find(x=>x.id===S.m.id);const p=S.m.intento||(S.m.intento={accion:'recibir',id:c.id,operacion:S.m.operacion,cantidades:c.items.map((i,n)=>Number(S.f['cp_rec_'+n]||0))});return enviar(p,()=>{S.m={type:'compra',id:c.id};toast('Recepción registrada en Inventario.');});},
+    cpRecTodo(){const c=compras().find(x=>x.id===S.m.id);c.items.forEach((i,n)=>S.f['cp_rec_'+n]=cantidadVista(i,r6(i.cantidad-(i.recibida||0))));draw();},
+    cpRecGuardar(){const c=compras().find(x=>x.id===S.m.id);const p=S.m.intento||(S.m.intento={accion:'recibir',id:c.id,operacion:S.m.operacion,cantidades:c.items.map((i,n)=>r6(Number(S.f['cp_rec_'+n]||0)/factor(i)))});return enviar(p,()=>{S.m={type:'compra',id:c.id};toast('Recepción registrada en Inventario.');});},
     cpVolver(){S.m.mode='ver';S.m.intento=null;draw();},
     cpCuenta(id){S.m={type:'cxp',id,mode:'ver'};clearForm();draw();},
     cpPagarTab(){S.tab='pagar';S.m=null;draw();},
