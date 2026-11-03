@@ -1,6 +1,6 @@
 // Compras reutiliza Productos, Inventario y Por pagar. No contiene credenciales ni costos iniciales.
 export function crearCompras(ctx) {
-  const {S,esc,L,fdate,today,r2,draw,toast,call,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm}=ctx;
+  const {S,esc,empresa=v=>esc(String(v??"").toLocaleUpperCase("es-HN")),L,fdate,today,r2,draw,toast,call,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm}=ctx;
   const uid=()=>crypto.randomUUID();
   const r6=n=>Math.round(Number(n)*1e6)/1e6;
   const modoBase=i=>/^etiquetas?$/i.test(i.unidad||'')?'presentacion':'unidad';
@@ -26,7 +26,7 @@ export function crearCompras(ctx) {
       <div class="actions"><button class="btn pri" data-a="cpNueva">Nueva compra</button><button class="btn" data-a="cpPagarTab">Por pagar</button><button class="btn" data-a="cpInvTab">Inventario</button></div>
       ${S.compraForm?formulario():''}
       ${input('cpq','Buscar proveedor o referencia')}
-      <div class="panel"><div class="scroll">${list.length?`<table><thead><tr><th>Fecha</th><th>Proveedor / referencia</th><th>Recepción</th><th class="num">Total</th><th class="num">Saldo</th></tr></thead><tbody>${list.map(c=>`<tr class="click" tabindex="0" data-a="cpAbrir" data-v="${esc(c.id)}"><td>${fdate(c.fecha)}</td><td>${esc(c.proveedor)}<br><small>${esc(c.factura)}</small></td><td>${esc(estado(c))}</td><td class="num">${L(c.total)}</td><td class="num">${c.estado==='anulada'?'—':cuenta(c)?L(saldo(cuenta(c))):'Cargando…'}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">No hay compras registradas.</p>'}</div></div>`;
+      <div class="panel"><div class="scroll">${list.length?`<table><thead><tr><th>Fecha</th><th>Proveedor / referencia</th><th>Recepción</th><th class="num">Total</th><th class="num">Saldo</th></tr></thead><tbody>${list.map(c=>`<tr class="click" tabindex="0" data-a="cpAbrir" data-v="${esc(c.id)}"><td>${fdate(c.fecha)}</td><td>${empresa(c.proveedor)}<br><small>${esc(c.factura)}</small></td><td>${esc(estado(c))}</td><td class="num">${L(c.total)}</td><td class="num">${c.estado==='anulada'?'—':cuenta(c)?L(saldo(cuenta(c))):'Cargando…'}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">No hay compras registradas.</p>'}</div></div>`;
   }
   function formulario() {
     const ps=S.prod.filter(p=>p.activo!==false);
@@ -36,7 +36,7 @@ export function crearCompras(ctx) {
       <div class="row">${input('cp_prov','Proveedor','text',null,'list="cp_proveedores" autocomplete="off"')}${input('cp_rtn','RTN del proveedor (opcional)')}</div>
       <datalist id="cp_proveedores">${[...new Set([...(S.proveedores||[]).map(p=>p.nombre),...(S.cxp||[]).map(p=>p.proveedor)])].filter(Boolean).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       <div class="row">${input('cp_fact','Factura o referencia del proveedor')}${input('cp_fecha','Fecha','date',S.f.cp_fecha||today())}${input('cp_vence','Vence','date',S.f.cp_vence||today())}</div>
-      <div class="field"><label for="cp_venta">Venta relacionada (opcional)</label><select id="cp_venta" data-k="cp_venta"><option value="">Para inventario, sin venta asociada</option>${(S.cot||[]).filter(c=>!c.eliminada&&!['anulada','perdida'].includes(c.estado)).slice(0,150).map(c=>`<option value="${esc(c.id)}" ${S.f.cp_venta===c.id?'selected':''}>${esc(c.numero)} · ${esc(c.cliente?.nombre||'')}</option>`).join('')}</select></div>
+      <div class="field"><label for="cp_venta">Venta relacionada (opcional)</label><select id="cp_venta" data-k="cp_venta"><option value="">Para inventario, sin venta asociada</option>${(S.cot||[]).filter(c=>!c.eliminada&&!['anulada','perdida'].includes(c.estado)).slice(0,150).map(c=>`<option value="${esc(c.id)}" ${S.f.cp_venta===c.id?'selected':''}>${esc(c.numero)} · ${empresa(c.cliente?.nombre||'')}</option>`).join('')}</select></div>
       <h3>Productos</h3><p class="note">Ingrese lo comprado al proveedor, aunque venga a granel. El sistema convierte la cantidad a sus cajas de venta. El costo no cambia el precio de venta.</p>
       <div class="field"><label for="cp_prod">Producto</label><select id="cp_prod" data-k="cp_prod"><option value="">Seleccione</option>${ps.map(p=>`<option value="${esc(p.id)}" ${S.f.cp_prod===p.id?'selected':''}>${esc(p.codigo||p.id)} · ${esc(p.nombre)} · ${esc(p.presentacion||p.unidad||'Unidad')}</option>`).join('')}</select></div>
       ${Number(p.unidades)>1?`<div class="field"><label for="cp_modo">Comprar por</label><select id="cp_modo" data-k="cp_modo"><option value="unidad" ${modo==='unidad'?'selected':''}>${esc(p.unidad||'Unidad')} · a granel</option><option value="presentacion" ${modo==='presentacion'?'selected':''}>${esc(p.presentacion||'Presentación completa')}</option></select></div>`:''}
@@ -56,7 +56,7 @@ export function crearCompras(ctx) {
   function modal() {
     const c=compras().find(x=>x.id===S.m.id);if(!c)return '<p>Cargando compra…</p>';
     const x=cuenta(c),recibir=S.m.mode==='recibir';
-    return `<h1>${esc(c.proveedor)}</h1><p>${esc(c.factura)} · ${fdate(c.fecha)} · ${esc(estado(c))}</p>${avisoError()}${c.cotizacionId?`<button class="btn" data-a="cpVenta" data-v="${esc(c.cotizacionId)}">Ver venta ${esc(c.cotizacionNumero||'')}</button>`:''}
+    return `<h1>${empresa(c.proveedor)}</h1><p>${esc(c.factura)} · ${fdate(c.fecha)} · ${esc(estado(c))}</p>${avisoError()}${c.cotizacionId?`<button class="btn" data-a="cpVenta" data-v="${esc(c.cotizacionId)}">Ver venta ${esc(c.cotizacionNumero||'')}</button>`:''}
       <div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Comprado</th><th class="num">Recibido</th>${recibir?'<th>Recibir ahora</th>':''}</tr></thead><tbody>${c.items.map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>Venta: ${esc(i.presentacion)} · costo por ${esc(unidad(i))} sin ISV ${L(i.costo/factor(i))}</small></td><td class="num">${cantidadVista(i)} ${esc(unidad(i))}</td><td class="num">${cantidadVista(i,i.recibida||0)}</td>${recibir?`<td><input aria-label="Recibir ${esc(i.nombre)}" data-k="cp_rec_${n}" type="number" min="0" max="${cantidadVista(i,r6(i.cantidad-(i.recibida||0)))}" step="0.001" value="${esc(S.f['cp_rec_'+n]??0)}"></td>`:''}</tr>`).join('')}</tbody></table></div>
       <dl class="kv"><dt>Subtotal sin ISV</dt><dd>${L(c.base)}</dd><dt>ISV</dt><dd>${L(c.isv)}</dd><dt>Otros cargos</dt><dd>${L(c.cargos)}</dd><dt>Total</dt><dd>${L(c.total)}</dd><dt>Saldo</dt><dd>${x?L(saldo(x)):'Cargando…'}</dd><dt>Vence</dt><dd>${fdate(c.vence)}</dd></dl>
       ${c.nota?`<p>${esc(c.nota)}</p>`:''}
