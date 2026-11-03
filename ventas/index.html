@@ -287,7 +287,7 @@ import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
 import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-02f";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
-import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03c";
+import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -449,11 +449,12 @@ function draw(){
   const ppPos = S.tab === "prospectos" ? {x:window.scrollX,y:window.scrollY,tabla:document.querySelector('.prospectos-vista table')?.parentElement?.scrollLeft || 0} : null;
   const ae = document.activeElement, fid = ae && ae.id && ae.matches("input,textarea,select") ? ae.id : null;
   let ss = null, se = null; try { if (fid) { ss = ae.selectionStart; se = ae.selectionEnd; } } catch (_) {}
-  draw0();
+  if(S.tab === "prospectos" && S.m?.type === "prospecto" && document.querySelector('.prospectos-vista'))drawModal();else draw0();
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus({preventScroll:S.tab === "prospectos"}); try { if (ss != null) el.setSelectionRange(ss, se); } catch (_) {} } }
   if(ppPos && S.tab === "prospectos"){
     const tabla=document.querySelector('.prospectos-vista table')?.parentElement;if(tabla)tabla.scrollLeft=ppPos.tabla;
     window.scrollTo({left:ppPos.x,top:ppPos.y,behavior:"instant"});
+    requestAnimationFrame(()=>{if(S.tab==="prospectos")window.scrollTo({left:ppPos.x,top:ppPos.y,behavior:"instant"});});
   }
 }
 function draw0(){
@@ -3584,7 +3585,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-03c";
+const APP_VER = "2026-11-03d";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
