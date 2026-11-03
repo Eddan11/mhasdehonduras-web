@@ -9,7 +9,7 @@ export function crearProspectos({S,esc,empresa=v=>esc(String(v??"").toLocaleUppe
  const boton=(u,n)=>u?`<a class="btn sm" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n)}</a>`:'';
  const contactos=p=>(Array.isArray(p?.contactos)&&p.contactos.length?p.contactos:[{nombre:'',cargo:'Contacto comercial',tel:p?.whatsapp?.valor||'',correo:p?.correo?.valor||'',fuenteTelefono:p?.whatsapp?.fuente||'',fuenteCorreo:p?.correo?.fuente||''}]).map(c=>({...c,fuenteCorreo:c.fuenteCorreo||(c.correo===p?.correo?.valor?p.correo?.fuente:'')||'',fuenteTelefono:c.fuenteTelefono||(c.tel===p?.whatsapp?.valor?p.whatsapp?.fuente:'')||''}));
  const tipoContacto=c=>{const area=String(c.cargo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),buzon=String(c.correo||'').split('@')[0].toLowerCase();
-   if(/venta|comercial/.test(area)||/^(ventas?|sales|comercial|cotizaciones?)([._-]|$)/.test(buzon))return 'Ventas · solicitar contacto de compras';
+   if((area!=='contacto comercial'&&/venta|comercial/.test(area))||/^(ventas?|sales|comercial|cotizaciones?)([0-9._-]|$)/.test(buzon))return 'Ventas · solicitar contacto de compras';
    if(/compra|abastecimiento|adquisicion|procurement|purchasing/.test(area)||/^(compras?|abastecimiento|adquisiciones|procurement|purchasing)([._-]|$)/.test(buzon))return 'Compras';
    if(/administracion|operacion|gerencia/.test(area))return 'Administración / operaciones';
    return 'Área por confirmar';};
