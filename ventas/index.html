@@ -254,6 +254,8 @@ label{font-weight:500;line-height:1.5;margin-bottom:6px}
 .row{gap:12px}
 .narrow{width:100%;min-width:0}
 @media(max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}.panel,.sheet{padding:16px}.row>.field{flex-basis:100%}.pz-add{grid-template-columns:minmax(0,1fr)}.pz-add .pz-txtf{grid-column:auto}}
+/* Nombres comerciales: solo presentación; los contactos conservan su formato. */
+#cn,#ce_nombre,#cp_prov,#pp_nombre{ text-transform:uppercase; }
 </style>
 </head>
 <body>
@@ -525,7 +527,7 @@ function vCotizar(){
   </div>` : ""}
   <div class="panel">
     <h2>Cliente</h2>
-    ${sel ? `<div class="cli-elegido"><div><b>${nuevo ? "Cliente nuevo" : esc((cliSel || {}).nombre || "")}</b>${cliSel && cliSel.tel ? `<br><small class="muted">${esc(cliSel.tel)}</small>` : ""}</div><button class="btn sm" data-a="cliCambiar">Cambiar</button></div>`
+    ${sel ? `<div class="cli-elegido"><div><b>${nuevo ? "Cliente nuevo" : empresa((cliSel || {}).nombre || "")}</b>${cliSel && cliSel.tel ? `<br><small class="muted">${esc(cliSel.tel)}</small>` : ""}</div><button class="btn sm" data-a="cliCambiar">Cambiar</button></div>`
     : `<div class="field"><label for="cli_q">Buscar cliente (nombre, contacto, teléfono o RTN)</label><input id="cli_q" data-k="cli_q" value="${fv("cli_q")}" placeholder="Escriba para buscar…" autocomplete="off"></div>
     <div class="cli-lista" id="cli_list">${cliListHtml()}</div>`}
     ${nuevo ? `
@@ -548,7 +550,7 @@ function vCotizar(){
     <div class="row">
       <div class="field"><label for="ctc_tel">WhatsApp</label><input id="ctc_tel" data-k="ctc_tel" value="${fv("ctc_tel")}" inputmode="tel" placeholder="9999-9999"></div>
       <div class="field"><label for="ctc_correo">Correo (opcional)</label><input id="ctc_correo" type="email" data-k="ctc_correo" value="${fv("ctc_correo")}" inputmode="email" autocapitalize="off"></div></div>
-    <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${esc(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
+    <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${empresa(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
     <label for="cot_factura" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--ui-normal);font-weight:500;margin:6px 0"><input id="cot_factura" type="checkbox" data-k="cot_factura" data-redraw="1" style="width:16px;height:16px;min-height:16px;margin:0;flex:0 0 16px" ${S.f.sin_comprobante!==true?"checked":""}>Factura</label>
