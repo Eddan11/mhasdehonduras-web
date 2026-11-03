@@ -277,14 +277,14 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearCompras } from "./compras-ui.js?v=2026-11-02c";
+import { crearCompras } from "./compras-ui.js?v=2026-11-02h";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
 import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
 import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-02f";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-10-28i";
-import { crearProspectos } from "./prospectos-ui.js?v=2026-10-28g";
+import { crearProspectos } from "./prospectos-ui.js?v=2026-11-02h";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
@@ -315,6 +315,8 @@ const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente
 /* ---------- utilidades ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// Formato visual de empresas; conserva los datos originales.
+const empresa = s => esc(String(s ?? "").toLocaleUpperCase("es-HN"));
 const L = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 function ymd(d){ const z = new Date(d.getTime() - d.getTimezoneOffset() * 6e4); return z.toISOString().slice(0, 10); }
@@ -645,7 +647,7 @@ function cliResolver(){
 function cliListHtml(){
   const lista = cliFiltrados(), qv = clean(S.f.cli_q);
   return `<button class="cli-op nuevo" data-a="cliPick" data-v="__nuevo">+ Cliente nuevo${qv && !lista.length ? ": <b>" + esc(qv) + "</b>" : ""}</button>` +
-    lista.map(c => `<button class="cli-op" data-a="cliPick" data-v="${esc(c.id)}"><b>${esc(c.nombre)}</b>${c.contacto || c.tel ? `<small>${esc([c.contacto, c.tel].filter(Boolean).join(" · "))}</small>` : ""}</button>`).join("") +
+    lista.map(c => `<button class="cli-op" data-a="cliPick" data-v="${esc(c.id)}"><b>${empresa(c.nombre)}</b>${c.contacto || c.tel ? `<small>${esc([c.contacto, c.tel].filter(Boolean).join(" · "))}</small>` : ""}</button>`).join("") +
     (lista.length ? "" : `<p class="empty" style="padding:10px">Ningún cliente coincide${qv ? ": se tomará como cliente nuevo." : "."}</p>`);
 }
 function totalsHtml(cc, simple){
@@ -716,7 +718,7 @@ function vCotizaciones(){
   ${list.length ? `<table><thead><tr><th>Número</th><th>Cliente</th><th>Fecha</th>${esVend ? "" : "<th>Vendedor</th>"}<th class="num">Total</th><th>Estado</th></tr></thead><tbody>
   ${list.map(c => { const [et, ec] = ESTADO[c.estado] || [c.estado, ""]; const ep = ["facturada","vendida"].includes(c.estado) ? estadoPago(c, true) : null;
     return `<tr class="click" data-a="open" data-v="${esc(c.id)}" tabindex="0">
-      <td><span class="stub">${esc(c.numero)}</span></td><td>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.tel ? `<br><small class="muted">${esc(c.cliente.tel)}</small>` : ""}${c.estado === "perdida" && c.motivoPerdida ? `<br><small class="muted">Motivo: ${esc(c.motivoPerdida)}</small>` : ""}</td><td>${fdate(c.fecha)}</td>
+      <td><span class="stub">${esc(c.numero)}</span></td><td>${empresa(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.tel ? `<br><small class="muted">${esc(c.cliente.tel)}</small>` : ""}${c.estado === "perdida" && c.motivoPerdida ? `<br><small class="muted">Motivo: ${esc(c.motivoPerdida)}</small>` : ""}</td><td>${fdate(c.fecha)}</td>
       ${esVend ? "" : `<td>${esc(c.vendedorNombre || "")}</td>`}<td class="num">${L(c.total)}</td>
       <td><span class="badge ${ec}">${et}</span>${c.estado==="vendida" ? ` <span class="badge b-sf">Finalizada</span>` : ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${c.estado!=="vendida" && !esVend && descTxt(c) ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ' <span class="badge">Enviada</span>' : ""}</td></tr>`; }).join("")}
   </tbody>
@@ -752,7 +754,7 @@ function vCobros(){
   <div class="panel"><h2>Ventas pendientes de cobro</h2><div class="scroll">
   ${pend.length ? `<table><thead><tr><th>Factura</th><th>Cliente</th><th>Fecha</th><th class="num">Saldo</th><th>Situación</th><th></th></tr></thead><tbody>
     ${pend.map(c => { const ep = estadoPago(c, true); return `<tr>
-      <td>${esc(c.factura?.numero||(c.sinComprobante?"Sin comprobante":""))}<br><small class="muted">${esc(c.numero)}</small></td><td>${esc(c.cliente && c.cliente.nombre)}</td>
+      <td>${esc(c.factura?.numero||(c.sinComprobante?"Sin comprobante":""))}<br><small class="muted">${esc(c.numero)}</small></td><td>${empresa(c.cliente && c.cliente.nombre)}</td>
       <td>${fdate(c.vence)}</td><td class="num">${L(saldo(c))}</td><td><span class="badge ${ep[1]}">${ep[0]}</span></td>
       <td><button class="btn sm" data-a="cobrar" data-v="${esc(c.id)}">Registrar pago</button></td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">No hay nada pendiente de cobro.</p>`}
@@ -767,7 +769,7 @@ function vPagar(){
   const semana = r2(pend.filter(x => x.vence && diffDays(x.vence, today()) >= 0 && diffDays(x.vence, today()) <= 7).reduce((a, x) => a + saldo(x), 0));
   const vencido = r2(pend.filter(x => x.vence && diffDays(today(), x.vence) > 0).reduce((a, x) => a + saldo(x), 0));
   const fila = x => { const ep = estadoPago(x); return `<tr class="click" data-a="openCxp" data-v="${esc(x.id)}" tabindex="0">
-    <td>${esc(x.proveedor)}<br><small class="muted">${esc(x.concepto || "")}${x.factura ? " · Fact. " + esc(x.factura) : ""}</small></td>
+    <td>${empresa(x.proveedor)}<br><small class="muted">${esc(x.concepto || "")}${x.factura ? " · Fact. " + esc(x.factura) : ""}</small></td>
     <td>${fdate(x.vence)}</td><td class="num">${L(x.monto)}</td><td class="num">${L(saldo(x))}</td><td><span class="badge ${ep[1]}">${ep[0]}</span></td></tr>`; };
   return `
   <h1>Por pagar</h1>
@@ -1202,7 +1204,7 @@ function vClientes(){
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Cliente</th><th>Última cotización</th><th>Último pedido</th><th>Recordatorio</th><th class="num">Pedidos</th><th class="num">Saldo</th><th>Vendedor</th></tr></thead><tbody>
     ${list.map(({c, st}) => { const [rt, rc] = recordatorio(st); return `<tr class="click" data-a="cliEdit" data-v="${esc(c.id)}" tabindex="0">
-      <td><b>${esc(c.nombre)}</b>${c.contacto ? `<br><small>${esc(c.contacto)}</small>` : ""}<br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
+      <td><b>${empresa(c.nombre)}</b>${c.contacto ? `<br><small>${esc(c.contacto)}</small>` : ""}<br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
       <td>${st.cotRec ? `${fdate(st.cotRec.fecha)} <span class="stub">${esc(st.cotRec.numero)}</span><br><span class="badge ${(ESTADO[st.cotRec.estado] || ["", ""])[1]}">${(ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0]}</span> <small class="muted">${L(st.cotRec.total)}</small>` : '<span class="muted">—</span>'}</td>
       <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
       <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
@@ -1446,7 +1448,7 @@ function vUtilidad(){
     ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, bloqueada = cer || !!gastosUI.factura(c.id)?.cerrada, m = miParte(x), suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
       return `<tr${cer ? ' style="opacity:.75"' : ""}>
       <td>${cer ? "" : `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSel" data-v="${esc(c.id)}" ${sel.has(c.id) ? "checked" : ""} aria-label="Seleccionar ${esc(c.numero)}">`}</td>
-      <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b>${c.sinComprobante?`<br><span class="badge b-warn">Sin comprobante · margen provisional</span>`:""}<br><small class="muted">${esc(c.numero)} · ${esc((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
+      <td><b>${esc((c.factura && c.factura.numero) || c.numero)}</b>${c.sinComprobante?`<br><span class="badge b-warn">Sin comprobante · margen provisional</span>`:""}<br><small class="muted">${esc(c.numero)} · ${empresa((c.cliente && c.cliente.nombre) || "")} · ${fdate((c.factura && c.factura.fecha) || c.fecha)}</small></td>
       <td><span class="badge" title="${x.o.tag.endsWith("W") ? "Venta del agente de WhatsApp" : ""}">${esc(x.o.tag)}</span></td>
       <td class="num">${L(d.venta)}</td>
       <td class="num">${L(d.costo)}${d.sinCosto ? `<br><small style="color:var(--warn)">${d.sinCosto} sin costo</small>` : ""}</td>
@@ -1468,7 +1470,7 @@ function mRep(){
   const R = S.m.rep, suma = r2(R.reduce((a, r) => a + (Number(r.pct) || 0), 0));
   return `
   ${cs.length === 1 ? `<div class="bigstub">${esc((c.factura && c.factura.numero) || c.numero)}</div>
-  <p class="sub" style="margin-top:6px">${esc((c.cliente && c.cliente.nombre) || "")} · Utilidad neta <b>${L(d.neta)}</b></p>` : `<div class="bigstub">${cs.length} facturas</div>
+  <p class="sub" style="margin-top:6px">${empresa((c.cliente && c.cliente.nombre) || "")} · Utilidad neta <b>${L(d.neta)}</b></p>` : `<div class="bigstub">${cs.length} facturas</div>
   <p class="sub" style="margin-top:6px">El mismo reparto se aplica a cada una · Utilidad neta sumada <b>${L(d.neta)}</b></p>`}
   <h2>¿Entre quiénes se reparte?</h2>
   <div class="chips" role="group" aria-label="Personas">${P.map(x => `<button data-a="repToggle" data-v="${esc(x.uid)}" aria-pressed="${R.some(r => r.uid === x.uid)}" title="${esc(x.nombre)}">${esc(x.ini)}</button>`).join("")}</div>
@@ -1638,7 +1640,7 @@ function mCot(){
     ${P.img ? `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff"><img src="${P.img}" alt="Vista previa de la factura ${esc(f.numero || "")}" style="display:block;width:100%;height:auto"></div>` : `<p class="note">No se pudo dibujar la vista previa aquí; revisa los datos:</p>`}
     <dl class="kv" style="margin-top:10px">
       <dt>Factura</dt><dd>${esc(f.numero || "")}</dd>
-      <dt>Cliente</dt><dd>${esc((f.cliente || {}).nombre || "")}${(f.cliente || {}).rtn ? " · RTN " + esc(f.cliente.rtn) : ""}</dd>
+      <dt>Cliente</dt><dd>${empresa((f.cliente || {}).nombre || "")}${(f.cliente || {}).rtn ? " · RTN " + esc(f.cliente.rtn) : ""}</dd>
       <dt>Fecha</dt><dd>${fdate(f.fecha)} · ${esc(f.formaPago || "")}</dd>
       ${f.ordenCompra ? `<dt>Orden de compra</dt><dd>${esc(f.ordenCompra)}</dd>` : ""}
       <dt>Total</dt><dd><b>${L(f.total)}</b> · ${esc(f.letras || "")}</dd>
@@ -1689,8 +1691,8 @@ function mCot(){
   <div style="margin-top:8px"><span class="badge ${ec}">${et}</span>${ep ? ` <span class="badge ${ep[1]}">${ep[0]}</span>` : ""}${c.estado === "cotizada" && c.enviada ? ` <span class="badge">Enviada ${fdate(ymd(new Date(c.enviada)))}</span>` : ""}${full && cc.desc > 0 ? ` <span class="badge b-warn">${descTxt(c)}</span>` : ""}</div>
   ${estadoNota ? `<p class="note" style="margin-top:8px">${estadoNota}</p>` : ""}
   <dl class="kv">
-    ${fact && (S.compras || []).some(p => p.cotizacionId === c.id) ? `<dt>Compras vinculadas</dt><dd>${S.compras.filter(p => p.cotizacionId === c.id).map(p => `<button class="btn sm" data-a="cpAbrir" data-v="${esc(p.id)}">${esc(p.proveedor)} · ${esc(p.factura)}</button>`).join(" ")}</dd>` : ""}
-    <dt>Cliente</dt><dd>${esc(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
+    ${fact && (S.compras || []).some(p => p.cotizacionId === c.id) ? `<dt>Compras vinculadas</dt><dd>${S.compras.filter(p => p.cotizacionId === c.id).map(p => `<button class="btn sm" data-a="cpAbrir" data-v="${esc(p.id)}">${empresa(p.proveedor)} · ${esc(p.factura)}</button>`).join(" ")}</dd>` : ""}
+    <dt>Cliente</dt><dd>${empresa(c.cliente && c.cliente.nombre)}${c.cliente && c.cliente.rtn ? " · RTN " + esc(c.cliente.rtn) : ""}</dd>
     ${c.cliente && c.cliente.contacto ? `<dt>Atención</dt><dd>${esc([c.cliente.contacto, c.cliente.cargo].filter(Boolean).join(" · "))}</dd>` : ""}
     ${c.cliente && c.cliente.direccion ? `<dt>Dirección</dt><dd>${esc(c.cliente.direccion)}</dd>` : ""}
     ${c.cliente && c.cliente.tel ? `<dt>WhatsApp</dt><dd>${esc(c.cliente.tel)}</dd>` : ""}
@@ -1847,7 +1849,7 @@ function mCxp(){
   const x = S.cxp.find(y => y.id === S.m.id);
   if (!x) return "";
   const ep = estadoPago(x);
-  return `<h1 style="padding-right:40px">${esc(x.proveedor)}</h1>
+  return `<h1 style="padding-right:40px">${empresa(x.proveedor)}</h1>
   <span class="badge ${ep[1]}">${ep[0]}</span>
   <dl class="kv">
     ${x.concepto ? `<dt>Concepto</dt><dd>${esc(x.concepto)}</dd>` : ""}
@@ -2111,7 +2113,7 @@ function vFacturas(){
       ${list.map(f => { const [et, ec] = ESTADO_FAC[f.estado] || [f.estado, ""]; return `<tr>
         <td><b>${esc(f.numero)}</b></td>
         <td>${f.fecha ? fdate(f.fecha) : ""}</td>
-        <td>${esc((f.cliente && f.cliente.nombre) || "")}${f.cliente && f.cliente.rtn ? `<br><small class="muted">RTN ${esc(f.cliente.rtn)}</small>` : ""}</td>
+        <td>${empresa((f.cliente && f.cliente.nombre) || "")}${f.cliente && f.cliente.rtn ? `<br><small class="muted">RTN ${esc(f.cliente.rtn)}</small>` : ""}</td>
         <td>${f.cotId ? `<a href="#" data-a="facCot" data-v="${esc(f.cotId)}">${esc(f.cotNumero || "")}</a>` : ""}</td>
         <td>${f.estado === "blanco" ? "" : esc(vendFac(f))}${f.emitidaEn ? `<br><small class="muted">${unif(f.por) !== duenoFac(f) && f.por ? "Facturó " + esc(nomUid(unif(f.por)) || f.porNombre || "") + " · " : ""}${horaTxt(f.emitidaEn)}</small>` : ""}</td>
         <td class="num">${f.estado === "blanco" ? "" : L(f.total)}</td>
@@ -2119,7 +2121,7 @@ function vFacturas(){
         <td style="white-space:nowrap">${f.historica ? "" : `<button class="btn sm" data-a="facPdf" data-v="${f.n}" ${S.busy ? "disabled" : ""}>PDF</button>`}${(f.estado === "emitida" && fact) || (f.estado === "blanco" && S.admin) ? ` <button class="btn sm danger" data-a="facAnular" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Anular</button>` : ""}</td></tr>`; }).join("")}
     </tbody></table>` : `<p class="empty">${all.length ? "No hay facturas con ese filtro." : "Todavía no hay talonario cargado."}</p>`}
     </div>
-    ${ult ? `<p class="note">Última emitida: ${esc(ult.numero)} · ${fdate(ult.fecha)} · ${esc((ult.cliente && ult.cliente.nombre) || "")}${ult.porNombre ? " · " + esc(ult.porNombre) : ""}</p>` : ""}
+    ${ult ? `<p class="note">Última emitida: ${esc(ult.numero)} · ${fdate(ult.fecha)} · ${empresa((ult.cliente && ult.cliente.nombre) || "")}${ult.porNombre ? " · " + esc(ult.porNombre) : ""}</p>` : ""}
   </div>
   ${S.admin ? vTalonario(all) : ""}`;
 }
@@ -3483,9 +3485,9 @@ Object.assign(A,ventasDirectasUI.acciones);
 const gastosUI = crearGastos({S,esc,L,fdate,today,draw,toast,fallo,unif,call: d => fnGastos(d)});
 Object.assign(A, gastosUI.acciones);
 document.addEventListener("change", e => { if (["gg_mes", "gg_periodo"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; gastosUI.cambioPeriodo(); } });
-const comprasUI = crearCompras({S,esc,L,fdate,today,r2,draw,toast,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm,call: d => fnCompras(d)});
+const comprasUI = crearCompras({S,esc,empresa,L,fdate,today,r2,draw,toast,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm,call: d => fnCompras(d)});
 Object.assign(A, comprasUI.acciones);
-const prospectosUI = crearProspectos({S,esc,draw,toast,fallo,crearContacto:ctx=>crearContactoProspecto({...ctx,guardarCorreo:d=>fnCorreoProspecto(d)}),crearPlantillas:ctx=>crearPlantillasProspectos({...ctx,cargar:async()=>{if(!S.admin)throw Error("Solo administración.");const s=await getDoc(doc(db,"config","prospectos_mensajes"));return s.exists()?s.data():{revision:0};},guardar:async datos=>{if(!S.admin)throw Error("Solo administración.");if(!datos.asunto||datos.asunto.length>200||!datos.correo||datos.correo.length>5000||!datos.whatsapp||datos.whatsapp.length>5000)throw Error("Revise el asunto y los mensajes.");return runTransaction(db,async tx=>{const r=doc(db,"config","prospectos_mensajes"),s=await tx.get(r),revision=s.exists()?Number(s.data().revision)||0:0;if(revision!==Number(datos.revision))throw Error("Los mensajes cambiaron en otra ventana. Pulse Volver a cargar antes de guardar.");const nuevo={asunto:datos.asunto,correo:datos.correo,whatsapp:datos.whatsapp,revision:revision+1,actualizado:Date.now(),por:S.me.uid};tx.set(r,nuevo);return nuevo;});}}),call: d => fnProspectos(d)});
+const prospectosUI = crearProspectos({S,esc,empresa,draw,toast,fallo,crearContacto:ctx=>crearContactoProspecto({...ctx,guardarCorreo:d=>fnCorreoProspecto(d)}),crearPlantillas:ctx=>crearPlantillasProspectos({...ctx,cargar:async()=>{if(!S.admin)throw Error("Solo administración.");const s=await getDoc(doc(db,"config","prospectos_mensajes"));return s.exists()?s.data():{revision:0};},guardar:async datos=>{if(!S.admin)throw Error("Solo administración.");if(!datos.asunto||datos.asunto.length>200||!datos.correo||datos.correo.length>5000||!datos.whatsapp||datos.whatsapp.length>5000)throw Error("Revise el asunto y los mensajes.");return runTransaction(db,async tx=>{const r=doc(db,"config","prospectos_mensajes"),s=await tx.get(r),revision=s.exists()?Number(s.data().revision)||0:0;if(revision!==Number(datos.revision))throw Error("Los mensajes cambiaron en otra ventana. Pulse Volver a cargar antes de guardar.");const nuevo={asunto:datos.asunto,correo:datos.correo,whatsapp:datos.whatsapp,revision:revision+1,actualizado:Date.now(),por:S.me.uid};tx.set(r,nuevo);return nuevo;});}}),call: d => fnProspectos(d)});
 Object.assign(A, prospectosUI.acciones);
 document.addEventListener("change", e => { if (e.target.dataset.ppestado) prospectosUI.acciones.ppEstado(e.target.dataset.ppestado, e.target.value); });
 document.addEventListener("change", e => {const k=e.target.dataset.k;if(k==="cp_prod"||k==="cp_modo"){S.f[k]=e.target.value;comprasUI.acciones[k==="cp_prod"?"cpCambioProducto":"cpCambioUnidad"]();}});
@@ -3574,7 +3576,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-02g";
+const APP_VER = "2026-11-02h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
