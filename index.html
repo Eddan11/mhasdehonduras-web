@@ -539,6 +539,7 @@ function qmsg(t,ok){qm.className='qmsg '+(ok?'ok':'err');qm.textContent=t;}
 qf.addEventListener('input',function(){if(qm.className.indexOf('err')>-1)qm.className='qmsg';});
 qf.addEventListener('submit',function(e){
   e.preventDefault();
+  if(qb.disabled)return;
   var bad=[].slice.call(qf.querySelectorAll('[required]')).filter(function(i){return !i.value.trim()||(i.type==='email'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(i.value));});
   if(bad.length){qmsg('Por favor complete: '+bad.map(function(i){return qf.querySelector('label[for="'+i.id+'"]').textContent.replace(' *','');}).join(', ')+'.',false);bad[0].focus();return;}
   var d={},fd=new FormData(qf);fd.forEach(function(v,k){d[k]=v;});
@@ -551,10 +552,9 @@ qf.addEventListener('submit',function(e){
   d._autoresponse='Gracias por contactar a MHAS de Honduras. Recibimos su solicitud de cotización ('+ref+') de: '+d.Producto+' – '+d.Cantidad+'. Le enviaremos la cotización a este correo en horario hábil. Si es urgente, escríbanos al WhatsApp +504 3166-6059.';
   qb.disabled=true;qb.textContent='Enviando…';
   fetch('https://formsubmit.co/ajax/'+QMAIL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(d)})
-  .then(function(r){return r.json().then(function(j){if(!r.ok||String(j.success)==='false')throw new Error(j.message||'error');return j;});})
+  .then(function(r){return r.json().then(function(j){if(!r.ok||!j||String(j.success)!=='true')throw new Error(j&&j.message||'error');return j;});})
   .then(function(){
     qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
-    try{var ph=(d['Teléfono']||'').replace(/\D/g,'');if(ph.length===8)ph='504'+ph;fbq('init','28383545161288464',{em:(d.email||'').trim().toLowerCase(),ph:ph,fn:(d.Nombre||'').trim().split(' ')[0].toLowerCase(),ct:(d.Ciudad||'').trim().toLowerCase().replace(/\s/g,''),country:'hn'});}catch(x){}
     track('Lead',withIds({content_name:d.Producto,content_category:'Cotización por correo',method:'email'},pidOf(d.Producto)));
     trackGoogleQuote();
     qf.reset();
