@@ -2,6 +2,19 @@
 export function crearCompras(ctx) {
   const {S,esc,empresa=v=>esc(String(v??"").toLocaleUpperCase("es-HN")),L,fdate,today,r2,draw,toast,call,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm}=ctx;
   const uid=()=>crypto.randomUUID();
+  const claveProveedor=v=>String(v??'').trim().replace(/\s+/g,' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  let rtnAutomatico=null;
+  function completarProveedor(){
+    const clave=claveProveedor(S.f.cp_prov),fichas=(S.proveedores||[]).filter(p=>claveProveedor(p.nombre)===clave);
+    const anteriores=compras().filter(p=>p.estado!=='anulada'&&claveProveedor(p.proveedor)===clave).sort((a,b)=>(b.actualizado||b.creado||0)-(a.actualizado||a.creado||0));
+    const rt=[...new Set(fichas.map(p=>String(p.rtn||'').trim()).filter(Boolean))];
+    if(rt.length>1){toast('Hay proveedores con el mismo nombre y distinto RTN. Revise su ficha.');return;}
+    const rtn=rt[0]||anteriores.find(p=>p.rtn)?.rtn||'';
+    if(rtn){S.f.cp_rtn=String(rtn);rtnAutomatico=String(rtn);}
+    else if(rtnAutomatico!==null&&S.f.cp_rtn===rtnAutomatico){S.f.cp_rtn='';rtnAutomatico=null;}
+    const input=typeof document!=='undefined'&&document.getElementById('cp_rtn');if(input)input.value=S.f.cp_rtn||'';
+  }
+  if(typeof document!=='undefined')document.addEventListener('change',e=>{if(e.target.dataset?.k==='cp_prov'){S.f.cp_prov=e.target.value;completarProveedor();}});
   const r6=n=>Math.round(Number(n)*1e6)/1e6;
   const modoBase=i=>/^etiquetas?$/i.test(i.unidad||'')?'presentacion':'unidad';
   const factor=(i,modo=modoBase(i))=>modo==='unidad'?Number(i.unidades)||1:1;
@@ -15,7 +28,7 @@ export function crearCompras(ctx) {
   const total=()=>r2(cart().reduce((s,i)=>s+r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100),0)+Number(S.f.cp_cargos||0));
   const retirados=()=>S.compraEdit?(S.compraEdit.items||[]).filter(i=>Number(i.recibida)>0&&!cart().some(x=>x.prod===i.prod&&Number(x.recibida)>0)&&!S.compraEdit.costosAnteriores?.[i.prod]):[];
   function limpiarLinea(){delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec','cp_modo'].forEach(k=>delete S.f[k]);}
-  function limpiarCompra(){S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;S.compraError=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
+  function limpiarCompra(){rtnAutomatico=null;S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;S.compraError=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
   const avisoError=()=>S.compraError?`<p role="alert" style="color:#ff9898">${esc(S.compraError)}</p>`:'';
   const input=(k,label,type='text',valor=null,extra='')=>`<div class="field"><label for="${k}">${label}</label><input id="${k}" data-k="${k}" type="${type}" value="${valor==null?v(k):esc(valor)}" ${extra}></div>`;
   const chk=(k,label)=>`<label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input style="width:20px;min-height:20px" data-k="${k}" type="checkbox" ${S.f[k]?'checked':''}>${label}</label>`;
@@ -73,6 +86,7 @@ export function crearCompras(ctx) {
     }finally{S.busy=false;draw();}
   }
   const acciones={
+    cpCompletarProveedor:completarProveedor,
     cpNueva(){if(S.compraEdit){if(!confirm('¿Descartar los cambios de esta compra?'))return;limpiarCompra();}const prod=S.m&&S.m.type==='inv'?S.m.id:null;S.tab='compras';S.m=null;if(!S.compraForm){S.compraForm=true;S.compraId=uid();S.compraCart=[];}if(prod)S.f.cp_prod=prod;draw();},
     cpCancelar(){if(cart().length&&!confirm('¿Descartar esta compra sin guardar?'))return;const id=S.compraEdit?.id;limpiarCompra();if(id)S.m={type:'compra',id};draw();},
     cpAgregar(){
