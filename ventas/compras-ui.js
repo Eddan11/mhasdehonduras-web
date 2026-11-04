@@ -15,6 +15,7 @@ export function crearCompras(ctx) {
     const input=typeof document!=='undefined'&&document.getElementById('cp_rtn');if(input)input.value=S.f.cp_rtn||'';
   }
   if(typeof document!=='undefined')document.addEventListener('change',e=>{if(e.target.dataset?.k==='cp_prov'){S.f.cp_prov=e.target.value;completarProveedor();}});
+  if(typeof document!=='undefined')document.addEventListener('input',e=>{if(e.target.dataset?.k!=='cp_prov')return;const k=claveProveedor(e.target.value);if([...(S.proveedores||[]).map(p=>p.nombre),...compras().map(p=>p.proveedor)].some(n=>claveProveedor(n)===k)){S.f.cp_prov=e.target.value;completarProveedor();}});
   const r6=n=>Math.round(Number(n)*1e6)/1e6;
   const modoBase=i=>/^etiquetas?$/i.test(i.unidad||'')?'presentacion':'unidad';
   const factor=(i,modo=modoBase(i))=>modo==='unidad'?Number(i.unidades)||1:1;
