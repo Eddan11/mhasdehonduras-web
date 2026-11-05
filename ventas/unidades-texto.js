@@ -11,7 +11,13 @@ function unidadTexto(unidad,cantidad=1){
   return singular+(/[AEIOUÁÉÍÓÚ]$/.test(singular)?'S':'ES');
 }
 function abreviarTexto(texto){
-  return String(texto||'').replace(/\b(\d[\d,.]*)\s*(UNIDADES|UNIDAD|UNDS|UND|UNS|UN|ETIQUETAS|ETIQUETA|ETQS|ETQ|PAQUETES|PAQUETE|PAQS|PAQ)\b/gi,(_,n,unidad)=>n+' '+unidadTexto(unidad,Number(n.replace(/,/g,'')))).replace(/\bPAQUETES\b/gi,'PAQS').replace(/\bPAQUETE\b/gi,'PAQ');
+  const completo=expandirTexto(texto);
+  if(completo.length<=90)return completo;
+  return completo.replace(/\b(\d[\d,.]*)\s*(UNIDADES|UNIDAD|ETIQUETAS|ETIQUETA|PAQUETES|PAQUETE)\b/gi,(_,n,unidad)=>n+' '+unidadTexto(unidad,Number(n.replace(/,/g,''))));
+}
+function expandirTexto(texto){
+  const s=String(texto||''),mayusculas=s===s.toLocaleUpperCase('es-HN'),palabras={UND:'unidad',UNDS:'unidades',ETQ:'etiqueta',ETQS:'etiquetas',PAQ:'paquete',PAQS:'paquetes'};
+  return s.replace(/\b(UNDS?|ETQS?|PAQS?)\b/gi,x=>mayusculas?palabras[x.toUpperCase()].toUpperCase():palabras[x.toUpperCase()]);
 }
 function textoNormal(texto){
   const s=String(texto||'').trim();
@@ -20,4 +26,4 @@ function textoNormal(texto){
     .replace(/\b(pos|bopp|cai|isv|rtn|und|unds|etq|etqs|paq|paqs|mhas|sat|hd|ap)\b/gi,x=>x.toUpperCase())
     .replace(/\b(kleenex|lariansa|ferrecomsa|zebra|epson)\b/gi,x=>x[0].toUpperCase()+x.slice(1).toLowerCase());
 }
-export {unidadTexto,abreviarTexto,textoNormal};
+export {unidadTexto,abreviarTexto,textoNormal,expandirTexto};
