@@ -279,15 +279,15 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { unidadTexto } from "./unidades-texto.js?v=2026-11-05f";
+import { unidadTexto,abreviarTexto } from "./unidades-texto.js?v=2026-11-05g";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05f";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05f";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05g";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05g";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
-import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05f";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05g";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05f";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05g";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
@@ -396,19 +396,19 @@ function sugerirCodigo(cat){
 const presDe = p => p.presentacion || (SEEDMAP[p.id] || {}).presentacion || "";
 // El contenido de la presentación se fija en la nueva línea; no se recalculan documentos históricos.
 function tituloSinEmpaque(nombre){
-  return String(nombre||'').replace(/\s*\(\s*(?:(?:ROLLO|CAJA|FARDO|PAQUETE|BOLSA|RESMA|MILLAR)\b[^)]*\d[^)]*|\d[\d,.]*\s*(?:UNIDADES|UND|HOJAS|PAÑUELOS|ETIQUETAS|ROLLOS))\s*\)/gi,'').replace(/\s+/g,' ').trim();
+  return String(nombre||'').replace(/\s*\(\s*(?:(?:ROLLO|CAJA|FARDO|PAQUETE|PAQ|BOLSA|RESMA|MILLAR)\b[^)]*\d[^)]*|\d[\d,.]*\s*(?:UNIDADES|UND|HOJAS|PAÑUELOS|ETIQUETAS|ROLLOS))\s*\)/gi,'').replace(/\s+/g,' ').trim();
 }
 function descripcionProducto(p){
   const nombre=tituloSinEmpaque(p.nombre),pres=String(p.presentacion||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('es-HN');
-  if(!pres)return nombre;
+  if(!pres)return abreviarTexto(nombre);
   const numeros=[...pres.matchAll(/\d[\d,.]*/g)].map(m=>Number(m[0].replace(/,/g,'')));
-  const empaque=/^(?:ROLLOS?|CAJAS?|FARDOS?|PAQUETES?|BOLSAS?|RESMAS?|MILLAR(?:ES)?)\b/.test(pres);
+  const empaque=/^(?:ROLLOS?|CAJAS?|FARDOS?|PAQUETES?|PAQS?|BOLSAS?|RESMAS?|MILLAR(?:ES)?)\b/.test(pres);
   let contenido='';
   if(empaque&&numeros.some(n=>n>1))contenido=pres;
   else if(empaque&&!numeros.length&&Number(p.unidades)>1)contenido=pres.replace(/S$/,'')+' DE '+Number(p.unidades);
   else if(/^\d[\d,.]*$/.test(pres)&&numeros[0]>1)contenido=pres+' UNIDADES';
   else if(/^\d[\d,.]*\s+MILLAR(?:ES)?\b/.test(pres)&&numeros.some(n=>n>1))contenido=pres;
-  return contenido?nombre+' ('+contenido+')':nombre;
+  return abreviarTexto(contenido?nombre+' ('+contenido+')':nombre);
 }
 
 
@@ -617,7 +617,7 @@ function vCotizar(){
   <div class="panel">
     <h2>Productos de la cotización</h2>
     ${S.cart.length ? S.cart.map((i, n) => { const l = cc.lines[n]; return `<div class="item">
-      <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
+      <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(abreviarTexto(i.nombre))}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
         <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(unidadTexto(vuDe(i).n,qV(i)))}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
         <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(unidadTexto(vuDe(i).n,1))} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(unidadTexto(vuDe(i).n,1))}</span>`}</div>
@@ -1738,10 +1738,10 @@ function mCot(){
     ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}${full && facDeCot(c) && !facDeCot(c).historica ? ` <button class="btn sm" data-a="facPdfCot" ${S.busy ? "disabled" : ""}>Ver factura</button>` : ""}</dd>` : ""}${full && (c.facturasAnuladas || []).length ? `<dt>Anuladas</dt><dd>${c.facturasAnuladas.map(esc).join(", ")}</dd>` : ""}
   </dl>
   ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`
   : `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Total</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`}
   <p class="note">${c.sinComprobante?"Importes comerciales finales. Registro sin comprobante.":"Precios sin ISV."}</p>
   <div class="totals">${totalsHtml(cc, !full)}${(["facturada","vendida"].includes(c.estado) || pagado(c)>0) ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
@@ -1773,8 +1773,8 @@ function mProd(){
   <div class="field"><label for="pe_cat">Categoría</label><input id="pe_cat" data-k="pe_cat" list="cats" value="${esc(g("cat", p.categoria || ""))}">
     <datalist id="cats">${[...new Set(S.prod.map(x => x.categoria).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
   <div class="row">
-    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" style="text-transform:uppercase" data-k="pe_unidad" list="unids" value="${esc(g("unidad", p.id ? unidadDe(p) : "unidad"))}" placeholder="rollo, etiqueta, caja…">
-      <datalist id="unids">${["rollo", "etiqueta", "caja", "unidad", "clisé", "paquete"].map(u => `<option value="${u}">`).join("")}</datalist></div>
+    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" style="text-transform:uppercase" data-k="pe_unidad" list="unids" value="${esc(unidadTexto(g("unidad", p.id ? unidadDe(p) : "unidad"),1))}" placeholder="rollo, etiqueta, caja…">
+      <datalist id="unids">${["ROLLO", "ETQ", "CAJA", "UND", "CLISÉ", "PAQ", "FARDO", "BOLSA", "RESMA", "LIBRA"].map(u => `<option value="${u}">`).join("")}</datalist></div>
     <div class="field"><label for="pe_pres">Presentación</label><input id="pe_pres" data-k="pe_pres" value="${esc(g("pres", p.id ? presDe(p) : ""))}" placeholder="Caja de 50, Rollo de 500…"></div>
   </div>
   <div class="field"><label for="pe_unidades">Unidades por presentación</label><input id="pe_unidades" type="number" min="1" step="1" inputmode="numeric" data-k="pe_unidades" value="${esc(unidades)}"></div>
@@ -1937,7 +1937,7 @@ const facDeCot = c => { const numero=c?.factura?.numero, n=c?.factura?.n??Number
 function datosFactura(c, cli, fecha, fp){
   const cc = calcCot(c);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
-  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: unidadTexto(vuDe(i).n,qV(i)), desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
+  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: unidadTexto(vuDe(i).n,qV(i)), desc: abreviarTexto(i.nombre).toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
   if (cc.flete) lineas.push({cant: 1, unidad: "SERVICIO", desc: "FLETE DE ENTREGA", pu: cc.flete, imp: cc.flete});
   const sub = r2(cc.base + cc.flete), desc = 0;
   const cred = fp === "Crédito" ? {plazo: PLAZO_CRED, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha)} : {};
@@ -2192,7 +2192,7 @@ function vTalonario(all){
 function waLink(c){
   const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
   const cc = calcCot(c);
-  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${unidadTexto(vuDe(i).n,qV(i))} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
+  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${unidadTexto(vuDe(i).n,qV(i))} x ${abreviarTexto(i.nombre)} = ${L(cc.lines[n].imp)}`));
   lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), ...(c.sinComprobante?["Registro comercial sin comprobante fiscal"]:[`ISV 15%: ${L(cc.isv)}`]), `*Total: ${L(cc.total)}*`);
   lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
   let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
@@ -2267,7 +2267,7 @@ function armarPdf(c, interno){
   const filas = Math.max((c.items || []).length, 12);
   for (let r = 0; r < filas; r++) {
     const it = (c.items || [])[r], l = it ? cc.lines[r] : null;
-    const nl = it ? d.splitTextToSize(it.nombre, wN - 3) : [""];
+    const nl = it ? d.splitTextToSize(abreviarTexto(it.nombre), wN - 3) : [""];
     const h = Math.max(5.8, nl.length * 4.2 + 1.6);
     if (y + h > 240) { d.addPage(); y = 20; header(); d.setFont("helvetica", "normal"); d.setFontSize(9.5); }
     fc(YEL); d.rect(M, y, wC + wN, h, "F"); dc(LINE);
@@ -2514,7 +2514,7 @@ const A = {
         delete S.f.cli_ctc; ["ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]);
       }
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", contactos: cliente.contacto || cliente.tel || cliente.email ? [{nombre: cliente.contacto || "", cargo: cliente.cargo || "", tel: cliente.tel || "", correo: cliente.email || ""}] : [], direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: V.id}); cliente.id = ref.id; }
-      const items = S.cart.map(i => Object.assign({id: i.id, nombre: i.nombre, cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: {n: vuDe(i).n, f: vuDe(i).f}} : {}));
+      const items = S.cart.map(i => Object.assign({id: i.id, nombre: abreviarTexto(i.nombre), cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: {n: vuDe(i).n, f: vuDe(i).f}} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
       const flete = Math.max(0, r2(Number(S.f.flete) || 0));
       const sinComprobante=S.f.sin_comprobante===true;
@@ -3345,7 +3345,7 @@ const A = {
     if(S.busy||S.imagenSubiendo)return;
     const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : null;
     const g = (k, d) => S.f["pe_" + k] ?? d;
-    const nombre = clean(g("nombre", p ? p.nombre : ""));
+    const nombre = abreviarTexto(clean(g("nombre", p ? p.nombre : ""))).toUpperCase();
     const unidades = Number(g("unidades", p ? uni(p) : 1));
     if(!Number.isSafeInteger(unidades)||unidades<1||unidades>10000000)return toast("Escriba una cantidad entera de unidades por presentación.");
     const precio = r2(g("precio", p ? p.precio : 0));
@@ -3355,9 +3355,9 @@ const A = {
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const negociado=!!g("negociado",p?(p.precioNegociado===true||esEtiquetaPersonalizada(p)):false),publicar=!negociado&&!!g("meta",p?p.enCatalogo!==false:true);
     const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
-      presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
+      presentacion: abreviarTexto(clean(g("pres", p ? presDe(p) : ""))).toUpperCase(), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
-      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: publicar, descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
+      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: publicar, descripcionWeb: abreviarTexto(clean(g("desc", p ? p.descripcionWeb : ""))).toUpperCase(), foto: clean(g("foto", p ? p.foto : ""))};
     data.fotoMini=S.f.pe_fotoMini??(p&&data.foto===p.foto?p.fotoMini||"":"");if(S.f.pe_fotoArchivo)data.fotoArchivo=S.f.pe_fotoArchivo;
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
@@ -3624,7 +3624,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05f";
+const APP_VER = "2026-11-05g";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
