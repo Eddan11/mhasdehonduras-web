@@ -279,15 +279,15 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-05i";
+import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-05j";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05i";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05i";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05j";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05j";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
-import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05i";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05j";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05i";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05j";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
@@ -1787,18 +1787,18 @@ function mProd(){
     <div class="field"><label for="pe_costo">Precio de compra sin ISV (presentación)</label><input id="pe_costo" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_costo" value="${esc(costo)}"></div>
   </div>
   <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Ganancia sobre costo: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
-  <p class="note">Si cambias cualquiera de los precios de venta, los otros se calculan solos. El precio de compra solo lo ves tú.</p>
-  <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
+
+
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_agente" ${g("agente", p.enAgente !== false) ? "checked" : ""}> Ofrece el agente</label>
   <label><input type="checkbox" data-k="pe_negociado" data-redraw="1" ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"checked":""}> Precio negociado / producto especial (fuera del catálogo)</label>
   <h3 style="margin:18px 0 4px">Web y catálogo</h3>
-  <p class="note">La web consulta estos datos al abrirse. Meta los toma al actualizar su catálogo: nombre, descripción, presentación y foto se editan aquí. <a href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Ver qué entra al catálogo</a></p>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${!g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))&&g("meta",p.enCatalogo!==false)?"checked":""} ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"disabled":""}> Mostrar en catálogo (web y Meta)</label>
-  <label><input type="checkbox" data-k="pe_textoWeb" ${g("textoWeb",p.mostrarDescripcionWeb!==false)?"checked":""}> Mostrar descripción en web y catálogo</label>
-  <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción para web y catálogo (opcional)</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Este texto se usa en la web y el catálogo de Meta. No ponga precios: se toman del producto.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
-  <label><input type="checkbox" data-k="pe_fotoWeb" ${g("fotoWeb",p.mostrarFotoWeb!==false)?"checked":""}> Mostrar imagen en web y catálogo</label>
-  <div class="field"><label for="pe_foto">Imagen para web y catálogo (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
+
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${!g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))&&g("meta",p.enCatalogo!==false)?"checked":""} ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"disabled":""}> Mostrar</label>
+
+  <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Describa el uso y las características del producto.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
+
+
   ${S.admin?`<div class="panel"><label for="subir_foto_producto">Subir imagen del producto</label><input id="subir_foto_producto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-imagen="pe_foto" ${S.imagenSubiendo?"disabled":""}><p class="note">${S.imagenSubiendo?"Subiendo imagen…":"JPG, PNG, WebP o GIF, hasta 6 MB. Se conserva el original y se crea una miniatura."}</p>${g("foto",p.foto||"")?`<a href="${esc(g("foto",p.foto||""))}" target="_blank" rel="noopener"><img src="${esc(S.f.pe_fotoMini||g("foto",p.foto||""))}" alt="Imagen adjunta" style="max-width:160px;max-height:160px;object-fit:contain">Ver imagen original</a>`:""}</div>`:""}
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Guardar producto</button></div>`;
@@ -3356,8 +3356,8 @@ const A = {
     const negociado=!!g("negociado",p?(p.precioNegociado===true||esEtiquetaPersonalizada(p)):false),publicar=!negociado&&!!g("meta",p?p.enCatalogo!==false:true);
     const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: expandirTexto(clean(g("pres", p ? presDe(p) : ""))).toUpperCase(), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
-      soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: textoNormal(expandirTexto(clean(g("nota", p ? p.notaAgente : "")))),
-      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: publicar, descripcionWeb: textoNormal(expandirTexto(clean(g("desc", p ? p.descripcionWeb : "")))), foto: clean(g("foto", p ? p.foto : ""))};
+      soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: p ? String(p.notaAgente || "") : "",
+      mostrarDescripcionWeb:publicar,mostrarFotoWeb:publicar,enMeta: publicar, descripcionWeb: textoNormal(expandirTexto(clean(g("desc", p ? p.descripcionWeb : "")))), foto: clean(g("foto", p ? p.foto : ""))};
     data.fotoMini=S.f.pe_fotoMini??(p&&data.foto===p.foto?p.fotoMini||"":"");if(S.f.pe_fotoArchivo)data.fotoArchivo=S.f.pe_fotoArchivo;
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
@@ -3624,7 +3624,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05i";
+const APP_VER = "2026-11-05j";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
