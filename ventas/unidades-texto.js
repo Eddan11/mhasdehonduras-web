@@ -13,4 +13,11 @@ function unidadTexto(unidad,cantidad=1){
 function abreviarTexto(texto){
   return String(texto||'').replace(/\b(\d[\d,.]*)\s*(UNIDADES|UNIDAD|UNDS|UND|UNS|UN|ETIQUETAS|ETIQUETA|ETQS|ETQ|PAQUETES|PAQUETE|PAQS|PAQ)\b/gi,(_,n,unidad)=>n+' '+unidadTexto(unidad,Number(n.replace(/,/g,'')))).replace(/\bPAQUETES\b/gi,'PAQS').replace(/\bPAQUETE\b/gi,'PAQ');
 }
-export {unidadTexto,abreviarTexto};
+function textoNormal(texto){
+  const s=String(texto||'').trim();
+  if(!s||s!==s.toLocaleUpperCase('es-HN'))return s;
+  return s.toLocaleLowerCase('es-HN').replace(/(^|[.!?]\s+|\n\s*)(\p{L})/gu,(_,inicio,letra)=>inicio+letra.toLocaleUpperCase('es-HN'))
+    .replace(/\b(pos|bopp|cai|isv|rtn|und|unds|etq|etqs|paq|paqs|mhas|sat|hd|ap)\b/gi,x=>x.toUpperCase())
+    .replace(/\b(kleenex|lariansa|ferrecomsa|zebra|epson)\b/gi,x=>x[0].toUpperCase()+x.slice(1).toLowerCase());
+}
+export {unidadTexto,abreviarTexto,textoNormal};
