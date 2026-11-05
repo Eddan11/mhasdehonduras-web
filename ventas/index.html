@@ -280,7 +280,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05b";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05c";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05c";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
 import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
@@ -309,6 +310,7 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 auth.languageCode = "es";
 const db = getFirestore(fbApp);
+const fnSubirImagen=httpsCallable(getFunctions(fbApp,"us-central1"),"subirImagenCatalogo",{timeout:100000});
 const fnVentasDirectas = httpsCallable(getFunctions(fbApp, "us-central1"), "ventasDirectas", {timeout: 60000});
 const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {timeout: 60000});
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
@@ -1238,7 +1240,7 @@ function vProductos(){
   <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
   ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Con ISV</th><th class="num">Unitario sin ISV</th></tr></thead><tbody>
-    ${list.map(p => `<tr${p.activo === false ? ' style="opacity:.5"' : ""}><td><span class="stub">${esc(codDe(p) || "—")}</span></td><td>${esc(p.nombre)}</td>
+    ${list.map(p => `<tr${p.activo === false ? ' style="opacity:.5"' : ""}><td><span class="stub">${esc(codDe(p) || "—")}</span></td><td>${miniaturaProducto(p,esc)}${esc(p.nombre)}</td>
       <td class="muted">${esc(presDe(p))}</td><td class="num">${L(p.precio)}</td><td class="num">${LU(p.precio / 1.15 / uni(p))} <small class="muted">c/${esc(unidadDe(p))}</small></td></tr>`).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>`;
@@ -1273,7 +1275,7 @@ function vProductos(){
     ${list.map(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {}, viejo = c.actualizado && Date.now() - c.actualizado > 60 * 864e5;
       return `<tr ${edit ? "" : `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"`}${p.activo === false ? ' style="opacity:.45;filter:grayscale(1)"' : ""}>
       <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
-      <td>${esc(p.nombre)} ${edit ? "" : `<button class="btn sm" data-a="prodActivo" data-v="${esc(p.id)}" title="${p.activo === false ? "Activar: vuelve a salir al cotizar, en inventario y para el agente" : "Desactivar: deja de salir al cotizar, en inventario y para el agente"}">${p.activo === false ? "Inactivo" : "Activo"}</button>`}</td>
+      <td>${miniaturaProducto(p,esc)}${esc(p.nombre)} ${edit ? "" : `<button class="btn sm" data-a="prodActivo" data-v="${esc(p.id)}" title="${p.activo === false ? "Activar: vuelve a salir al cotizar, en inventario y para el agente" : "Desactivar: deja de salir al cotizar, en inventario y para el agente"}">${p.activo === false ? "Inactivo" : "Activo"}</button>`}</td>
       <td class="muted">${esc(presDe(p))}</td>
       <td class="num">${L(p.precio)}</td><td class="num">${L(d.venta)}</td>
       <td class="num">${edit ? `<input class="pc-in" type="number" min="0" step="0.01" inputmode="decimal" data-pc="${esc(p.id)}" data-cod="${esc(codDe(p))}" value="${esc(S.pcEdit[p.id] ?? (compraDe(p) || ""))}" aria-label="Compra sin ISV de ${esc(p.nombre)}">` : (d.compra ? L(d.compra) : '<span class="muted">—</span>')}</td>
@@ -1769,15 +1771,17 @@ function mProd(){
   <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_agente" ${g("agente", p.enAgente !== false) ? "checked" : ""}> Ofrece el agente</label>
+  <label><input type="checkbox" data-k="pe_negociado" data-redraw="1" ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"checked":""}> Precio negociado / producto especial (fuera del catálogo)</label>
   <h3 style="margin:18px 0 4px">Web y catálogo</h3>
   <p class="note">La web consulta estos datos al abrirse. Meta los toma al actualizar su catálogo: nombre, descripción, presentación y foto se editan aquí. <a href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Ver qué entra al catálogo</a></p>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${g("meta", p.enMeta !== false) ? "checked" : ""}> Mostrar en catálogo (*foto)</label>
+  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${!g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))&&g("meta",p.enCatalogo!==false)?"checked":""} ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"disabled":""}> Mostrar en catálogo (web y Meta)</label>
   <label><input type="checkbox" data-k="pe_textoWeb" ${g("textoWeb",p.mostrarDescripcionWeb!==false)?"checked":""}> Mostrar descripción en web y catálogo</label>
   <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción para web y catálogo (opcional)</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Este texto se usa en la web y el catálogo de Meta. No ponga precios: se toman del producto.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
   <label><input type="checkbox" data-k="pe_fotoWeb" ${g("fotoWeb",p.mostrarFotoWeb!==false)?"checked":""}> Mostrar imagen en web y catálogo</label>
   <div class="field"><label for="pe_foto">Imagen para web y catálogo (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
+  ${S.admin?`<div class="panel"><label for="subir_foto_producto">Subir imagen del producto</label><input id="subir_foto_producto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-imagen="pe_foto" ${S.imagenSubiendo?"disabled":""}><p class="note">${S.imagenSubiendo?"Subiendo imagen…":"JPG, PNG, WebP o GIF, hasta 6 MB. Se conserva el original y se crea una miniatura."}</p>${g("foto",p.foto||"")?`<a href="${esc(g("foto",p.foto||""))}" target="_blank" rel="noopener"><img src="${esc(S.f.pe_fotoMini||g("foto",p.foto||""))}" alt="Imagen adjunta" style="max-width:160px;max-height:160px;object-fit:contain">Ver imagen original</a>`:""}</div>`:""}
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
-  <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
+  <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Guardar producto</button></div>`;
 }
 function origenChat(c){
   const o=c.origenWeb;if(!o)return "";
@@ -2413,7 +2417,7 @@ const A = {
   },
   async reenviar(){ try { await sendEmailVerification(auth.currentUser); toast("Correo reenviado."); } catch (e) { toast(authError(e && e.code)); } },
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; Object.assign(AS, {abierto: false, msgs: null, quedan: null, completo: false}); asRender(); },
-  tab(v){ S.tab = v; S.m = null; if (!(TABS_MAS[rol()] || []).includes(v)) S.verMas = false; draw(); window.scrollTo(0, 0); },
+  tab(v){ if(S.imagenSubiendo)return toast("Espere a que termine de subir la imagen."); S.tab = v; S.m = null; if (!(TABS_MAS[rol()] || []).includes(v)) S.verMas = false; draw(); window.scrollTo(0, 0); },
   verMas(){ S.verMas = !S.verMas; drawHeader(); },
   addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
 
@@ -2550,7 +2554,7 @@ const A = {
   open(v){ S.m = {type: "cot", id: v, mode: "ver"}; clearForm(); draw(); },
   cobrar(v){ S.m = {type: "cot", id: v, mode: "pago"}; clearForm(); draw(); },
   openCxp(v){ S.m = {type: "cxp", id: v, mode: "ver"}; clearForm(); draw(); },
-  close(){ if(S.m?.type==="familiaWeb")return catalogoWebUI.acciones.cwCerrar(); if(S.m?.type === "prospecto")return prospectosUI.acciones.ppCancelar(); if (chatSub) { chatSub(); chatSub = null; } S.m = null; draw(); },
+  close(){ if(S.imagenSubiendo)return toast("Espere a que termine de subir la imagen."); if(S.m?.type==="familiaWeb")return catalogoWebUI.acciones.cwCerrar(); if(S.m?.type === "prospecto")return prospectosUI.acciones.ppCancelar(); if (chatSub) { chatSub(); chatSub = null; } S.m = null; draw(); },
   modeVer(){ S.m.mode = "ver"; clearForm(); draw(); },
   modeFac(){ S.m.mode = "factura"; clearForm(); draw(); },
   modePag(){ S.m.mode = "pago"; clearForm(); draw(); },
@@ -3318,7 +3322,7 @@ const A = {
     if (await utilGuardar(c, {pagado: true}, calculo.porFactura[c.id])) { toast("Marcado como pagado"); draw(); }
   },
   async prodSave(){
-    if(S.busy)return;
+    if(S.busy||S.imagenSubiendo)return;
     const p = S.m.id ? S.prod.find(x => x.id === S.m.id) : null;
     const g = (k, d) => S.f["pe_" + k] ?? d;
     const nombre = clean(g("nombre", p ? p.nombre : ""));
@@ -3329,10 +3333,12 @@ const A = {
     if (!Number.isFinite(precio)||!(precio > 0)) return toast("Escribe el precio.");
     const codigo = clean(g("codigo", p ? codDe(p) : sugerirCodigo(g("cat", "")))).toUpperCase();
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
-    const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
+    const negociado=!!g("negociado",p?(p.precioNegociado===true||esEtiquetaPersonalizada(p)):false),publicar=!negociado&&!!g("meta",p?p.enCatalogo!==false:true);
+    const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
-      soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !!g("agente", p ? p.enAgente !== false : true), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
-      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: !!g("meta", p ? p.enMeta !== false : true), descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
+      soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
+      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: publicar, descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
+    data.fotoMini=S.f.pe_fotoMini??(p&&data.foto===p.foto?p.fotoMini||"":"");if(S.f.pe_fotoArchivo)data.fotoArchivo=S.f.pe_fotoArchivo;
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
     if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin", "facturador")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
@@ -3501,7 +3507,8 @@ Object.assign(A,ventasDirectasUI.acciones);
 const gastosUI = crearGastos({S,esc,L,fdate,today,draw,toast,fallo,unif,call: d => fnGastos(d)});
 Object.assign(A, gastosUI.acciones);
 document.addEventListener("change", e => { if (["gg_mes", "gg_periodo"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; gastosUI.cambioPeriodo(); } });
-const catalogoWebUI=crearCatalogoWeb({S,esc,L,draw,toast,fallo,
+crearImagenesCatalogo({S,draw,toast,call:d=>fnSubirImagen(d)});
+const catalogoWebUI=crearCatalogoWeb({S,esc,L,miniatura: p=>miniaturaProducto(p,esc),draw,toast,fallo,
  cargar:async()=>{const d=await getDoc(doc(db,"config","catalogo_web"));return d.exists()?d.data():{familias:[],revision:0};},
  guardar:async datos=>{if(!S.admin)throw Error("Solo el administrador.");return runTransaction(db,async tx=>{const ref=doc(db,"config","catalogo_web"),d=await tx.get(ref),revision=d.exists()?Number(d.data().revision)||0:0;if(revision!==datos.revision)throw Error("La configuración cambió. Pulse Actualizar antes de guardar.");tx.set(ref,{familias:datos.familias,revision:revision+1,actualizado:Date.now(),por:S.me.uid});});},
  editarProducto:id=>A.prodEdit(id),nuevoProducto:cat=>{clearProd();S.f.pe_cat=cat;S.m={type:"prod",id:null};draw();}});
@@ -3597,7 +3604,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05b";
+const APP_VER = "2026-11-05c";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
