@@ -280,8 +280,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05d";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05d";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05e";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05e";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
 import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
@@ -393,6 +393,24 @@ function sugerirCodigo(cat){
   return p + "-" + String(max + 1).padStart(3, "0");
 }
 const presDe = p => p.presentacion || (SEEDMAP[p.id] || {}).presentacion || "";
+// El contenido de la presentación se fija en la nueva línea; no se recalculan documentos históricos.
+function tituloSinEmpaque(nombre){
+  return String(nombre||'').replace(/\s*\(\s*(?:(?:ROLLO|CAJA|FARDO|PAQUETE|BOLSA|RESMA|MILLAR)\b[^)]*\d[^)]*|\d[\d,.]*\s*(?:UNIDADES|UND|HOJAS|PAÑUELOS|ETIQUETAS|ROLLOS))\s*\)/gi,'').replace(/\s+/g,' ').trim();
+}
+function descripcionProducto(p){
+  const nombre=tituloSinEmpaque(p.nombre),pres=String(p.presentacion||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('es-HN');
+  if(!pres)return nombre;
+  const numeros=[...pres.matchAll(/\d[\d,.]*/g)].map(m=>Number(m[0].replace(/,/g,'')));
+  const empaque=/^(?:ROLLOS?|CAJAS?|FARDOS?|PAQUETES?|BOLSAS?|RESMAS?|MILLAR(?:ES)?)\b/.test(pres);
+  let contenido='';
+  if(empaque&&numeros.some(n=>n>1))contenido=pres;
+  else if(empaque&&!numeros.length&&Number(p.unidades)>1)contenido=pres.replace(/S$/,'')+' DE '+Number(p.unidades);
+  else if(/^\d[\d,.]*$/.test(pres)&&numeros[0]>1)contenido=pres+' UNIDADES';
+  else if(/^\d[\d,.]*\s+MILLAR(?:ES)?\b/.test(pres)&&numeros.some(n=>n>1))contenido=pres;
+  return contenido?nombre+' ('+contenido+')':nombre;
+}
+
+
 const plural = (n, u) => n === 1 ? u : (u === "clisé" ? "clisés" : u + "s");
 function calc(items, flete){
   const lines = (items || []).map(i => {
@@ -2420,7 +2438,7 @@ const A = {
   async salir(){ await signOut(auth); S.f = {}; S.cart = []; Object.assign(AS, {abierto: false, msgs: null, quedan: null, completo: false}); asRender(); },
   tab(v){ if(S.imagenSubiendo)return toast("Espere a que termine de subir la imagen."); S.tab = v; S.m = null; if (!(TABS_MAS[rol()] || []).includes(v)) S.verMas = false; draw(); window.scrollTo(0, 0); },
   verMas(){ S.verMas = !S.verMas; drawHeader(); },
-  addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: p.nombre, precio: Number(p.precio) || 0, cant: 1}); draw(); },
+  addp(v){ const p = S.prod.find(x => x.id === v); if (!p) return; const i = S.cart.find(x => x.id === v); if (i) i.cant++; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion:presDe(p),unidades:uni(p)}), precio: Number(p.precio) || 0, cant: 1}); draw(); },
 
   cliPick(v){ if (v === "__nuevo") pasarBusquedaANuevo(); S.f.cli_sel = v; delete S.f.cli_q; ["cli_ctc", "ctc_open", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]); draw(); },
   cliCambiar(){ ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email"].forEach(k => delete S.f[k]); draw(); setTimeout(() => { const i = $("#cli_q"); if (i) i.focus(); }, 0); },
@@ -2446,7 +2464,7 @@ const A = {
     const vu = S.f.pmodo === "p" && uni(p) > 1 ? {n: presPal(p), f: uni(p)} : otra ? {n: otra.toLowerCase(), f: 1} : {n: unidadDe(p), f: 1};
     const cant = q * vu.f;
     const i = S.cart.find(x => x.id === p.id && vuDe(x).n === vu.n);
-    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: p.nombre, precio: (Number(p.precio) || 0) / uni(p), unidad: unidadDe(p), vu, cant});
+    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion:presDe(p),unidades:uni(p)}), precio: (Number(p.precio) || 0) / uni(p), unidad: unidadDe(p), vu, cant});
     ["psel", "pcant", "pmodo", "pvu"].forEach(k => delete S.f[k]); draw();
   },
   pmodo(v){ S.f.pmodo = v; draw(); },
@@ -3605,7 +3623,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05d";
+const APP_VER = "2026-11-05e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
