@@ -530,7 +530,7 @@ document.querySelectorAll('.chip').forEach(function(b){
 // La descripción y el nombre se editan únicamente en Productos de MHAS/Ventas.
 async function cargarCatalogoVivo(){
  try{var r=await fetch('https://us-central1-mhas-ventas.cloudfunctions.net/catalogoWeb',{cache:'no-store'});if(!r.ok)throw Error('catálogo');var datos=await r.json();if(!Array.isArray(datos.productos))throw Error('formato');
- var usados=new Set();CATS.forEach(function(c){c.p=c.p.flatMap(function(p){var x=datos.productos.find(function(x){return x.id===p[0]||x.imagenId===p[0];});if(!x)return [];usados.add(x.id);return [[x.id,x.nombre,x.presentacion,x.descripcion,p[4]||[],x.foto]];});});
+ var usados=new Set();CATS.forEach(function(c){c.p=c.p.flatMap(function(p){var x=datos.productos.find(function(x){return x.id===p[0];})||datos.productos.find(function(x){return x.imagenId===p[0];});if(!x||usados.has(x.id))return [];usados.add(x.id);return [[x.id,x.nombre,x.presentacion,x.descripcion,p[4]||[],x.foto]];});});
  var familias={'Rollos':'pos','Etiquetas':'etiquetas','Formas continuas':'formas','Impresión de etiquetas':'impresion','Stretch film y cinta':'empaque'};
  datos.productos.filter(function(x){return !usados.has(x.id)&&x.foto;}).forEach(function(x){var c=CATS.find(function(c){return c.id===familias[x.categoria];});if(c)c.p.push([x.id,x.nombre,x.presentacion,x.descripcion,[],x.foto]);});
  renderCatalogo();var filtro=document.querySelector('.chip[aria-pressed="true"]');if(filtro)filtro.click();
