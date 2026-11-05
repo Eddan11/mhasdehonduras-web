@@ -1,10 +1,11 @@
+import { unidadTexto } from "./unidades-texto.js?v=2026-11-05f";
 // Registro comercial separado; no sustituye un comprobante fiscal ni declara exenciones.
 export function calcularDocumento(c,calc){const x=calc(c.items,c.flete);return c.sinComprobante?{...x,sinComprobante:true,isv:null,total:Math.round((x.base+x.flete)*100)/100}:x;}
 export function pdfInterno(c,jsPDF,calc){
  const d=new jsPDF(),L=n=>'L '+Number(n||0).toFixed(2),x=calcularDocumento(c,calc);let y=20;
  const texto=(s,size=10)=>{d.setFontSize(size);const lines=d.splitTextToSize(String(s),175);if(y+lines.length*5>275){d.addPage();y=20;}d.text(lines,18,y);y+=lines.length*5+3;};
  texto('COTIZACIÓN',16);texto('MHAS de Honduras');texto(c.numero||'');texto(c.cliente?.nombre||'Consumidor final');
- (c.items||[]).forEach((i,n)=>{const f=Math.max(1,Number(i.vu?.f)||1);texto(i.nombre);texto(`${Number(i.cant)/f} ${i.vu?.n||i.unidad||'unidades'} x ${L(x.lines[n].un*f)} · Importe ${L(x.lines[n].imp)}`);});
+ (c.items||[]).forEach((i,n)=>{const f=Math.max(1,Number(i.vu?.f)||1);texto(i.nombre);texto(`${Number(i.cant)/f} ${unidadTexto(i.vu?.n||i.unidad,Number(i.cant)/f)} x ${L(x.lines[n].un*f)} · Importe ${L(x.lines[n].imp)}`);});
  if(x.flete)texto('Flete: '+L(x.flete));texto('TOTAL: '+L(x.total),14);return d;
 }
 export function crearVentasDirectas({S,esc,L,today,draw,toast,fallo,call,esFact}){
