@@ -279,14 +279,15 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { unidadTexto } from "./unidades-texto.js?v=2026-11-05f";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05e";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05e";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05f";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05f";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
-import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05f";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-02f";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05f";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
@@ -618,10 +619,10 @@ function vCotizar(){
     ${S.cart.length ? S.cart.map((i, n) => { const l = cc.lines[n]; return `<div class="item">
       <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(i.nombre)}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
-        <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(vuDe(i).n)}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
-        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(vuDe(i).n)} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(vuDe(i).n)}</span>`}</div>
+        <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(unidadTexto(vuDe(i).n,qV(i)))}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
+        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(unidadTexto(vuDe(i).n,1))} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(unidadTexto(vuDe(i).n,1))}</span>`}</div>
       </div>
-      ${i.generico?`<div class="field"><label class="mini">Compra por ${esc(vuDe(i).n)} sin ISV (uso interno)</label><input class="pin" data-ccosto="${n}" type="number" min="0.000001" step="any" value="${i.costoU!=null?Number(i.costoU)*vuDe(i).f:""}"></div>`:""}
+      ${i.generico?`<div class="field"><label class="mini">Compra por ${esc(unidadTexto(vuDe(i).n,1))} sin ISV (uso interno)</label><input class="pin" data-ccosto="${n}" type="number" min="0.000001" step="any" value="${i.costoU!=null?Number(i.costoU)*vuDe(i).f:""}"></div>`:""}
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${cc.sinComprobante?L(l.imp)+" a cobrar":L(l.conIsv)+" con ISV"}</small></div>
@@ -1283,14 +1284,14 @@ function vProductos(){
   ${edit && S.pcPegar ? `<div class="panel" style="padding:12px 14px"><label for="pc_lista">Pega una lista: código y precio de compra sin ISV, uno por línea (por ejemplo <b>ROL-003 450</b>). Se llenan las casillas para que las revises antes de guardar.</label>
     <textarea id="pc_lista" rows="5" placeholder="ROL-003 450&#10;ROL-005 975"></textarea><div class="actions" style="margin-top:8px"><button class="btn" data-a="pcAplicar">Llenar casillas</button></div></div>` : ""}
   <div class="pr-resumen">
-    <div><small>Margen promedio</small><b style="color:${prom && prom < MARGEN_MIN ? "var(--bad)" : "var(--ok)"}">${conCosto.length ? prom.toFixed(1) + "%" : "—"}</b></div>
+    <div><small>Ganancia promedio sobre costo</small><b style="color:${prom && prom < MARGEN_MIN ? "var(--bad)" : "var(--ok)"}">${conCosto.length ? prom.toFixed(1) + "%" : "—"}</b></div>
     <div><small>Debajo de ${MARGEN_MIN}%</small><b style="color:${bajos ? "var(--bad)" : "var(--ink)"}">${bajos}</b></div>
     <div><small>Sin precio de compra</small><b style="color:${activos.length - conCosto.length ? "var(--warn)" : "var(--ink)"}">${activos.length - conCosto.length}</b></div>
   </div>
   <div class="chips" role="group" aria-label="Familia"><button data-a="prFam" data-v="" aria-pressed="${!fam}">Todos</button>${fams.map(f => `<button data-a="prFam" data-v="${esc(f)}" aria-pressed="${fam === f}">${esc(nomFam(f))}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="prq">Buscar por código o nombre</label><input id="prq" data-k="prq" value="${fv("prq")}" autocomplete="off"></div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table class="pr-tabla"><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Venta con ISV</th><th class="num">Venta sin ISV</th><th class="num">Compra sin ISV</th><th class="num">Ganancia</th><th class="num">Margen</th><th class="num" title="Precio más bajo (con ISV) que deja ${MARGEN_MIN}% de margen">Precio mínimo</th><th class="num" title="Cuánto puedes rebajar (con ISV) sin bajar de ${MARGEN_MIN}%">Desc. máximo</th><th>Costo al</th></tr></thead><tbody>
+  ${list.length ? `<table class="pr-tabla"><thead><tr><th>Código</th><th>Producto</th><th>Presentación</th><th class="num">Venta con ISV</th><th class="num">Venta sin ISV</th><th class="num">Compra sin ISV</th><th class="num">Ganancia</th><th class="num">% sobre costo</th><th class="num" title="Precio más bajo (con ISV) que deja ${MARGEN_MIN}% sobre costo">Precio mínimo</th><th class="num" title="Cuánto puedes rebajar (con ISV) sin bajar de ${MARGEN_MIN}%">Desc. máximo</th><th>Costo al</th></tr></thead><tbody>
     ${list.map(p => { const d = datosMargen(p), c = (S.costos || {})[p.id] || {}, viejo = c.actualizado && Date.now() - c.actualizado > 60 * 864e5;
       return `<tr ${edit ? "" : `class="click" data-a="prodEdit" data-v="${esc(p.id)}" tabindex="0"`}${p.activo === false ? ' style="opacity:.45;filter:grayscale(1)"' : ""}>
       <td><span class="stub">${esc(codDe(p) || "—")}</span></td>
@@ -1305,7 +1306,7 @@ function vProductos(){
       <td>${c.actualizado ? `<small style="${viejo ? "color:var(--warn);font-weight:700" : ""}" title="${viejo ? "Más de 60 días: revisa si el proveedor cambió el precio" : ""}">${fdate(ymd(new Date(c.actualizado)))}</small>` : '<span class="muted">—</span>'}</td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>
-  <p class="note">Margen = ganancia ÷ venta sin ISV. Precio mínimo y descuento máximo van con ISV (como se los dices al cliente) y respetan el margen mínimo de ${MARGEN_MIN}%.</p>`;
+  <p class="note">% sobre costo = (venta sin ISV − compra sin ISV) ÷ compra sin ISV × 100. Precio mínimo y descuento máximo van con ISV (como se los dices al cliente) y respetan el porcentaje mínimo sobre costo de ${MARGEN_MIN}%.</p>`;
 }
 
 function igualar(R){ const n = R.length; if (!n) return; const b = Math.floor(10000 / n) / 100; R.forEach((r, i) => { r.pct = i === n - 1 ? r2(100 - b * (n - 1)) : b; }); }
@@ -1344,7 +1345,7 @@ function invDatos(){
   });
   return Object.values(X).map(x => {
     const p = x.p, u = uni(p), exist = x.t0 == null ? null : x.base + x.mov - x.sal;
-    const diaria = x.v90 / 90, sug = diaria > 0 ? Math.ceil(diaria * 10 / u) * u : 0; // 7 días de venta + 3 de margen, en presentaciones completas
+    const diaria = x.v90 / 90, sug = diaria > 0 ? Math.ceil(diaria * 10 / u) * u : 0; // 7 días de venta + 3 sobre costo, en presentaciones completas
     const guardado = (S.inv || {})[p.id], reorden = guardado && guardado.reorden != null ? Number(guardado.reorden) : sug;
     const disp = exist; // Cotizaciones estimadas: no reservan ni descuentan existencias.
     const estado = exist == null ? ["Sin conteo", ""] : exist <= 0 ? ["Agotado", "b-bad"] : disp <= reorden ? ["Pedir", "b-warn"] : ["OK", "b-ok"];
@@ -1380,7 +1381,7 @@ function vInventario(){
       <td class="num">${d.dias == null ? '<span class="muted">—</span>' : d.dias + " d"}</td></tr>`).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
   </div></div>
-  <p class="note">Toca un producto para registrar entradas, conteos o ajustes y ver su historial. El reorden sugerido es lo que vendes en 10 días (7 de venta + 3 de margen), redondeado a presentaciones completas; lo puedes cambiar. Los productos inactivos no aparecen aquí.</p>`;
+  <p class="note">Toca un producto para registrar entradas, conteos o ajustes y ver su historial. El reorden sugerido es lo que vendes en 10 días (7 de venta + 3 sobre costo), redondeado a presentaciones completas; lo puedes cambiar. Los productos inactivos no aparecen aquí.</p>`;
 }
 function mInv(){
   const d = invDatos().find(x => x.p.id === S.m.id); if (!d) return "";
@@ -1737,10 +1738,10 @@ function mCot(){
     ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}${full && facDeCot(c) && !facDeCot(c).historica ? ` <button class="btn sm" data-a="facPdfCot" ${S.busy ? "disabled" : ""}>Ver factura</button>` : ""}</dd>` : ""}${full && (c.facturasAnuladas || []).length ? `<dt>Anuladas</dt><dd>${c.facturasAnuladas.map(esc).join(", ")}</dd>` : ""}
   </dl>
   ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(vuDe(i).n)}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`
   : `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Total</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(vuDe(i).n)}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(i.nombre)}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`}
   <p class="note">${c.sinComprobante?"Importes comerciales finales. Registro sin comprobante.":"Precios sin ISV."}</p>
   <div class="totals">${totalsHtml(cc, !full)}${(["facturada","vendida"].includes(c.estado) || pagado(c)>0) ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
@@ -1772,7 +1773,7 @@ function mProd(){
   <div class="field"><label for="pe_cat">Categoría</label><input id="pe_cat" data-k="pe_cat" list="cats" value="${esc(g("cat", p.categoria || ""))}">
     <datalist id="cats">${[...new Set(S.prod.map(x => x.categoria).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
   <div class="row">
-    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" data-k="pe_unidad" list="unids" value="${esc(g("unidad", p.id ? unidadDe(p) : "unidad"))}" placeholder="rollo, etiqueta, caja…">
+    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" style="text-transform:uppercase" data-k="pe_unidad" list="unids" value="${esc(g("unidad", p.id ? unidadDe(p) : "unidad"))}" placeholder="rollo, etiqueta, caja…">
       <datalist id="unids">${["rollo", "etiqueta", "caja", "unidad", "clisé", "paquete"].map(u => `<option value="${u}">`).join("")}</datalist></div>
     <div class="field"><label for="pe_pres">Presentación</label><input id="pe_pres" data-k="pe_pres" value="${esc(g("pres", p.id ? presDe(p) : ""))}" placeholder="Caja de 50, Rollo de 500…"></div>
   </div>
@@ -1785,7 +1786,7 @@ function mProd(){
     <div class="field"><label for="pe_venta">Precio de venta sin ISV (presentación)</label><input id="pe_venta" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_venta" value="${esc(venta)}"></div>
     <div class="field"><label for="pe_costo">Precio de compra sin ISV (presentación)</label><input id="pe_costo" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_costo" value="${esc(costo)}"></div>
   </div>
-  <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Margen por presentación: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
+  <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Ganancia sobre costo: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
   <p class="note">Si cambias cualquiera de los precios de venta, los otros se calculan solos. El precio de compra solo lo ves tú.</p>
   <div class="field" style="margin-top:10px"><label for="pe_nota">Nota para el agente de WhatsApp (opcional)</label><textarea id="pe_nota" data-k="pe_nota" placeholder="Ej. Precio por millar, se fabrica a la medida: no cotizar, pasar a una persona">${esc(g("nota", p.notaAgente || ""))}</textarea></div>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
@@ -1936,7 +1937,7 @@ const facDeCot = c => { const numero=c?.factura?.numero, n=c?.factura?.n??Number
 function datosFactura(c, cli, fecha, fp){
   const cc = calcCot(c);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
-  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: vuDe(i).n.toUpperCase(), desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
+  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: unidadTexto(vuDe(i).n,qV(i)), desc: String(i.nombre || "").toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
   if (cc.flete) lineas.push({cant: 1, unidad: "SERVICIO", desc: "FLETE DE ENTREGA", pu: cc.flete, imp: cc.flete});
   const sub = r2(cc.base + cc.flete), desc = 0;
   const cred = fp === "Crédito" ? {plazo: PLAZO_CRED, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha)} : {};
@@ -2191,7 +2192,7 @@ function vTalonario(all){
 function waLink(c){
   const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
   const cc = calcCot(c);
-  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${vuDe(i).n} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
+  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${unidadTexto(vuDe(i).n,qV(i))} x ${i.nombre} = ${L(cc.lines[n].imp)}`));
   lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), ...(c.sinComprobante?["Registro comercial sin comprobante fiscal"]:[`ISV 15%: ${L(cc.isv)}`]), `*Total: ${L(cc.total)}*`);
   lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
   let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
@@ -2274,7 +2275,7 @@ function armarPdf(c, interno){
     if (it) {
       tc(INK);
       // cantidad y unidad en la misma línea ("5 fardos"); si no cabe, se achica la letra
-      const qt = qV(it) + " " + vuDe(it).n; let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
+      const qt = qV(it) + " " + unidadTexto(vuDe(it).n,qV(it)); let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
       d.setFontSize(fs); d.text(qt, M + wC / 2, y + 4.1, {align: "center"}); d.setFontSize(9.5);
       d.text(nl, M + wC + 1.5, y + 4.1);
       d.text(LU((interno && !c.sinComprobante ? l.u : l.un) * vuDe(it).f), xs[2] + wP / 2, y + 4.1, {align: "center"});
@@ -3375,19 +3376,19 @@ const A = {
 const MARGEN_MIN = 25;
 function datosMargen(p){
   const venta = r2((Number(p.precio) || 0) / 1.15), compra = compraDe(p), ganancia = r2(venta - compra);
-  const minimoIsv = compra ? r2(compra / (1 - MARGEN_MIN / 100) * 1.15) : 0;
-  return {venta, compra, ganancia, pct: venta && compra ? ganancia / venta * 100 : 0, minimoIsv, descMax: compra ? r2((Number(p.precio) || 0) - minimoIsv) : 0};
+  const minimoIsv = compra ? r2(compra * (1 + MARGEN_MIN / 100) * 1.15) : 0;
+  return {venta, compra, ganancia, pct: venta && compra ? ganancia / compra * 100 : 0, minimoIsv, descMax: compra ? r2((Number(p.precio) || 0) - minimoIsv) : 0};
 }
 const compraDe = p => { const c = (S.costos || {})[p.id]; return c && Number(c.compra) > 0 ? Number(c.compra) : 0; };
 function margenTxt(venta, compra){
   if (!(venta > 0) || !(compra > 0)) return "";
-  const m = venta - compra, pct = m / venta * 100;
-  return `<span style="color:${pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"};font-weight:700">Ganancia ${L(m)} · margen ${pct.toFixed(1)}%</span>`;
+  const m = venta - compra, pct = m / compra * 100;
+  return `<span style="color:${pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"};font-weight:700">Ganancia ${L(m)} · sobre costo ${pct.toFixed(1)}%</span>`;
 }
 function prodMargen(){
   const o = $("#pe_margen"); if (!o) return;
   const venta = Number(($("#pe_venta") || {}).value) || 0, compra = Number(($("#pe_costo") || {}).value) || 0;
-  o.innerHTML = venta > 0 && compra > 0 ? "Margen por presentación: " + margenTxt(venta, compra) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>';
+  o.innerHTML = venta > 0 && compra > 0 ? "Ganancia sobre costo: " + margenTxt(venta, compra) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>';
 }
 // Orden por familia: el producto nuevo queda después del último de su familia (prefijo del código: ROL, ETQ, EMP…)
 const famDe = codigo => String(codigo || "").split("-")[0].toUpperCase();
@@ -3411,13 +3412,13 @@ async function armarExcelProductos(ExcelJS, filas, fechaTxt, minPct){
   const ws = wb.addWorksheet("Productos", {views: [{state: "frozen", ySplit: 4, xSplit: 2}], properties: {defaultRowHeight: 18}});
   const navy = "FF14264B", gold = "FFE0A526", gris = "FFEEF1F5";
   const cols = [["Código", 11], ["Producto", 40], ["Familia", 22], ["Presentación", 20], ["Unidades", 10], ["Venta con ISV", 14], ["Venta sin ISV", 14], ["Compra sin ISV", 15],
-    ["Ganancia", 13], ["Margen", 10], ["Precio mínimo con ISV (" + minPct + "%)", 17], ["Descuento máximo con ISV", 17], ["Costo actualizado", 14], ["Activo", 8]];
+    ["Ganancia", 13], ["% sobre costo", 16], ["Precio mínimo con ISV (" + minPct + "%)", 17], ["Descuento máximo con ISV", 17], ["Costo actualizado", 14], ["Activo", 8]];
   ws.columns = cols.map(([h, w]) => ({width: w}));
   ws.mergeCells(1, 1, 1, cols.length);
-  const t = ws.getCell(1, 1); t.value = "MHAS de Honduras · Productos, costos y márgenes"; t.font = {bold: true, size: 14, color: {argb: "FFFFFFFF"}}; t.fill = {type: "pattern", pattern: "solid", fgColor: {argb: navy}}; t.alignment = {vertical: "middle"};
+  const t = ws.getCell(1, 1); t.value = "MHAS de Honduras · Productos, costos y ganancia sobre costo"; t.font = {bold: true, size: 14, color: {argb: "FFFFFFFF"}}; t.fill = {type: "pattern", pattern: "solid", fgColor: {argb: navy}}; t.alignment = {vertical: "middle"};
   ws.getRow(1).height = 26;
   ws.mergeCells(2, 1, 2, cols.length);
-  const s = ws.getCell(2, 1); s.value = "Descargado el " + fechaTxt + " · Montos en lempiras · Margen = ganancia ÷ venta sin ISV · Precio mínimo y descuento máximo respetan el margen mínimo de " + minPct + "%. Si cambias la compra (columna H), todo se recalcula.";
+  const s = ws.getCell(2, 1); s.value = "Descargado el " + fechaTxt + " · Montos en lempiras · % sobre costo = (venta sin ISV − compra sin ISV) ÷ compra sin ISV × 100 · Precio mínimo y descuento máximo respetan el porcentaje mínimo sobre costo de " + minPct + "%. Si cambias la compra (columna H), todo se recalcula.";
   s.font = {italic: true, size: 10, color: {argb: "FF5B6474"}};
   const hr = ws.getRow(4); hr.values = cols.map(c => c[0]); hr.height = 30;
   hr.eachCell(c => { c.font = {bold: true, color: {argb: "FF172033"}}; c.fill = {type: "pattern", pattern: "solid", fgColor: {argb: gold}}; c.alignment = {vertical: "middle", horizontal: "center", wrapText: true}; c.border = {bottom: {style: "thin", color: {argb: navy}}}; });
@@ -3430,8 +3431,8 @@ async function armarExcelProductos(ExcelJS, filas, fechaTxt, minPct){
     row.getCell(7).value = {formula: `F${r}/1.15`};
     row.getCell(8).value = f.compra > 0 ? f.compra : null;
     row.getCell(9).value = {formula: `IF(H${r}>0,G${r}-H${r},"")`};
-    row.getCell(10).value = {formula: `IF(H${r}>0,(G${r}-H${r})/G${r},"")`};
-    row.getCell(11).value = {formula: `IF(H${r}>0,H${r}/(1-${minPct}/100)*1.15,"")`};
+    row.getCell(10).value = {formula: `IF(H${r}>0,(G${r}-H${r})/H${r},"")`};
+    row.getCell(11).value = {formula: `IF(H${r}>0,H${r}*(1+${minPct}/100)*1.15,"")`};
     row.getCell(12).value = {formula: `IF(H${r}>0,MAX(0,F${r}-K${r}),"")`};
     row.getCell(13).value = f.actualizado || null; row.getCell(14).value = f.activo ? "Sí" : "No";
     [6, 7, 8, 9, 11, 12].forEach(c => row.getCell(c).numFmt = L);
@@ -3454,7 +3455,7 @@ async function armarExcelProductos(ExcelJS, filas, fechaTxt, minPct){
   const rs = ult + 2;
   ws.getCell(rs, 2).value = "Resumen"; ws.getCell(rs, 2).font = {bold: true, size: 12};
   const resumen = [["Productos", {formula: `COUNTA(A5:A${ult})`}, "#,##0"], ["Sin precio de compra", {formula: `COUNTBLANK(H5:H${ult})`}, "#,##0"],
-    ["Margen promedio (con costo)", {formula: `IFERROR(AVERAGE(J5:J${ult}),"")`}, "0.0%"], ["Debajo de " + minPct + "%", {formula: `COUNTIFS(J5:J${ult},"<"&${minPct}/100)`}, "#,##0"]];
+    ["Ganancia promedio sobre costo", {formula: `IFERROR(AVERAGE(J5:J${ult}),"")`}, "0.0%"], ["Debajo de " + minPct + "%", {formula: `COUNTIFS(J5:J${ult},"<"&${minPct}/100)`}, "#,##0"]];
   resumen.forEach(([k, v, fmt], i) => { const c1 = ws.getCell(rs + 1 + i, 2), c2 = ws.getCell(rs + 1 + i, 3); c1.value = k; c2.value = v; c2.numFmt = fmt; c2.font = {bold: true}; c2.alignment = {horizontal: "right"}; });
   ws.pageSetup = {orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "4:4"};
   return wb.xlsx.writeBuffer();
@@ -3623,7 +3624,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05e";
+const APP_VER = "2026-11-05f";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
