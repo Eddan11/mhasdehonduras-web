@@ -280,6 +280,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05b";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
 import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-10-27j";
@@ -337,13 +338,13 @@ const S = {
   tab: null, cart: [], f: {}, m: null, filtro: "activas", busy: false, cxpForm: false, verPagadas: false, facturas: [], talForm: false, talFile: null, talProg: "", chatF: "todos"
 };
 const TABS = {
-  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "prospectos", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil", "ajustes"],
+  admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "prospectos", "clientes", "productos", "catalogoweb", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil", "ajustes"],
   facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
 // Todas las pestañas en la barra (se desliza). Para agrupar algunas en un botón "Más", ponerlas aquí. Compras y Por pagar están vinculados al inventario.
 const TABS_MAS = {};
-const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {catalogoweb:"Catálogo web",pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {vendida: ["SF", "b-sf"],cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -465,8 +466,9 @@ function draw0(){
   if (S.screen === "verificar") { v.innerHTML = vVerificar(); drawModal(); return; }
   const r = rol();
   if (!r) { v.innerHTML = `<div class="msg"><h1>Aún no tienes acceso</h1><p class="sub">Tu cuenta está creada. Pide al administrador que te asigne un rol de vendedor o facturador; cuando lo haga, esta página se actualiza sola.</p></div>`; drawModal(); return; }
+  if(r==="admin"&&!S.catalogoRuta&&new URLSearchParams(location.search).get("vista")==="catalogoweb"){S.tab="catalogoweb";S.catalogoRuta=true;}
   if (!TABS[r].includes(S.tab)) S.tab = TABS[r][0];
-  const fn = {pizarra: vPizarra, chats: vChats, agente: vAgente, prospectos: () => prospectosUI.vista(), cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, facturas: vFacturas, cobros: vCobros, pagar: vPagar, compras: () => comprasUI.vista(), gastos: () => gastosUI.vista(), perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
+  const fn = {catalogoweb:()=>catalogoWebUI.vista(),pizarra: vPizarra, chats: vChats, agente: vAgente, prospectos: () => prospectosUI.vista(), cotizar: vCotizar, clientes: vClientes, productos: vProductos, cotizaciones: vCotizaciones, facturas: vFacturas, cobros: vCobros, pagar: vPagar, compras: () => comprasUI.vista(), gastos: () => gastosUI.vista(), perfil: vPerfil, ajustes: vAjustes, inventario: vInventario, utilidad: vUtilidad, miutil: vMiUtil}[S.tab];
   v.innerHTML = fn();
   drawModal();
 }
@@ -1572,7 +1574,7 @@ function vAjustes(){
 function drawModal(){
   const md = $("#modal");
   if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
+  const html = S.m.type === "familiaWeb" ? catalogoWebUI.modal() : S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
   if (!html) { md.classList.remove("open"); return; }
   $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
   md.classList.add("open");
@@ -1770,8 +1772,10 @@ function mProd(){
   <h3 style="margin:18px 0 4px">Web y catálogo</h3>
   <p class="note">La web consulta estos datos al abrirse. Meta los toma al actualizar su catálogo: nombre, descripción, presentación y foto se editan aquí. <a href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoMeta?revisar=1" target="_blank" rel="noopener">Ver qué entra al catálogo</a></p>
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${g("meta", p.enMeta !== false) ? "checked" : ""}> Mostrar en catálogo (*foto)</label>
+  <label><input type="checkbox" data-k="pe_textoWeb" ${g("textoWeb",p.mostrarDescripcionWeb!==false)?"checked":""}> Mostrar descripción en web y catálogo</label>
   <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción para web y catálogo (opcional)</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Este texto se usa en la web y el catálogo de Meta. No ponga precios: se toman del producto.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
-  <div class="field"><label for="pe_foto">Foto para Meta (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
+  <label><input type="checkbox" data-k="pe_fotoWeb" ${g("fotoWeb",p.mostrarFotoWeb!==false)?"checked":""}> Mostrar imagen en web y catálogo</label>
+  <div class="field"><label for="pe_foto">Imagen para web y catálogo (enlace https, opcional)</label><input id="pe_foto" data-k="pe_foto" value="${esc(g("foto", p.foto || ""))}" placeholder="https://www.mhasdehonduras.com/img/meta/....jpg"></div>
   ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy ? "disabled" : ""}>Guardar producto</button></div>`;
 }
@@ -2322,7 +2326,7 @@ function startData(){
   const r = rol(), key = S.me.uid + ":" + r;
   if (subKey === key) return;
   stopData(); subKey = key;
-  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = []; S.convs = []; gastosUI.reiniciar(); prospectosUI.reiniciar(); S.gastosGenerales = []; S.gastoForm = null; S.compras = []; S.proveedores = []; S.compraForm = false; S.compraCart = []; S.compraIntento = null;
+  S.prod = []; S.cli = []; S.cot = []; S.cxp = []; S.usuarios = []; S.convs = []; gastosUI.reiniciar(); prospectosUI.reiniciar();catalogoWebUI.reiniciar(); S.gastosGenerales = []; S.gastoForm = null; S.compras = []; S.proveedores = []; S.compraForm = false; S.compraCart = []; S.compraIntento = null;
   if (!r) return;
   const fact = r === "admin" || r === "facturador";
   dataSubs.push(onSnapshot(doc(db, "config", "app"), s => { S.cfg = {emp: (s.exists() && s.data().emp) || {}}; render(); }, onErr));
@@ -2546,7 +2550,7 @@ const A = {
   open(v){ S.m = {type: "cot", id: v, mode: "ver"}; clearForm(); draw(); },
   cobrar(v){ S.m = {type: "cot", id: v, mode: "pago"}; clearForm(); draw(); },
   openCxp(v){ S.m = {type: "cxp", id: v, mode: "ver"}; clearForm(); draw(); },
-  close(){ if(S.m?.type === "prospecto")return prospectosUI.acciones.ppCancelar(); if (chatSub) { chatSub(); chatSub = null; } S.m = null; draw(); },
+  close(){ if(S.m?.type==="familiaWeb")return catalogoWebUI.acciones.cwCerrar(); if(S.m?.type === "prospecto")return prospectosUI.acciones.ppCancelar(); if (chatSub) { chatSub(); chatSub = null; } S.m = null; draw(); },
   modeVer(){ S.m.mode = "ver"; clearForm(); draw(); },
   modeFac(){ S.m.mode = "factura"; clearForm(); draw(); },
   modePag(){ S.m.mode = "pago"; clearForm(); draw(); },
@@ -3328,7 +3332,7 @@ const A = {
     const data = {codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
       presentacion: clean(g("pres", p ? presDe(p) : "")), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !!g("agente", p ? p.enAgente !== false : true), notaAgente: clean(g("nota", p ? p.notaAgente : "")),
-      enMeta: !!g("meta", p ? p.enMeta !== false : true), descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
+      mostrarDescripcionWeb:!!g("textoWeb",p?p.mostrarDescripcionWeb!==false:true),mostrarFotoWeb:!!g("fotoWeb",p?p.mostrarFotoWeb!==false:true),enMeta: !!g("meta", p ? p.enMeta !== false : true), descripcionWeb: clean(g("desc", p ? p.descripcionWeb : "")), foto: clean(g("foto", p ? p.foto : ""))};
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
     if (!p) { if (S.prod.some(x => x.id === id)) return toast("Ya existe un producto con ese nombre."); data.orden = ordenParaNuevo(codigo); data.creadoPor = S.me.uid; if (!puede("admin", "facturador")) { data.creadoPorNombre = S.me.nombre || S.me.email; data.activo = true; } }
@@ -3497,6 +3501,11 @@ Object.assign(A,ventasDirectasUI.acciones);
 const gastosUI = crearGastos({S,esc,L,fdate,today,draw,toast,fallo,unif,call: d => fnGastos(d)});
 Object.assign(A, gastosUI.acciones);
 document.addEventListener("change", e => { if (["gg_mes", "gg_periodo"].includes(e.target.dataset.k)) { S.f[e.target.dataset.k] = e.target.value; gastosUI.cambioPeriodo(); } });
+const catalogoWebUI=crearCatalogoWeb({S,esc,L,draw,toast,fallo,
+ cargar:async()=>{const d=await getDoc(doc(db,"config","catalogo_web"));return d.exists()?d.data():{familias:[],revision:0};},
+ guardar:async datos=>{if(!S.admin)throw Error("Solo el administrador.");return runTransaction(db,async tx=>{const ref=doc(db,"config","catalogo_web"),d=await tx.get(ref),revision=d.exists()?Number(d.data().revision)||0:0;if(revision!==datos.revision)throw Error("La configuración cambió. Pulse Actualizar antes de guardar.");tx.set(ref,{familias:datos.familias,revision:revision+1,actualizado:Date.now(),por:S.me.uid});});},
+ editarProducto:id=>A.prodEdit(id),nuevoProducto:cat=>{clearProd();S.f.pe_cat=cat;S.m={type:"prod",id:null};draw();}});
+Object.assign(A,catalogoWebUI.acciones);
 const comprasUI = crearCompras({S,esc,empresa,L,fdate,today,r2,draw,toast,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm,call: d => fnCompras(d)});
 Object.assign(A, comprasUI.acciones);
 const prospectosUI = crearProspectos({S,esc,empresa,draw,toast,fallo,crearContacto:ctx=>crearContactoProspecto({...ctx,guardarCorreo:d=>fnCorreoProspecto(d)}),crearPlantillas:ctx=>crearPlantillasProspectos({...ctx,cargar:async()=>{if(!S.admin)throw Error("Solo administración.");const s=await getDoc(doc(db,"config","prospectos_mensajes"));return s.exists()?s.data():{revision:0};},guardar:async datos=>{if(!S.admin)throw Error("Solo administración.");if(!datos.asunto||datos.asunto.length>200||!datos.correo||datos.correo.length>5000||!datos.whatsapp||datos.whatsapp.length>5000)throw Error("Revise el asunto y los mensajes.");return runTransaction(db,async tx=>{const r=doc(db,"config","prospectos_mensajes"),s=await tx.get(r),revision=s.exists()?Number(s.data().revision)||0:0;if(revision!==Number(datos.revision))throw Error("Los mensajes cambiaron en otra ventana. Pulse Volver a cargar antes de guardar.");const nuevo={asunto:datos.asunto,correo:datos.correo,whatsapp:datos.whatsapp,revision:revision+1,actualizado:Date.now(),por:S.me.uid};tx.set(r,nuevo);return nuevo;});}}),call: d => fnProspectos(d)});
@@ -3588,7 +3597,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05a";
+const APP_VER = "2026-11-05b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
