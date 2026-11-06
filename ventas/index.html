@@ -257,6 +257,8 @@ label{font-weight:500;line-height:1.5;margin-bottom:6px}
 /* Nombres comerciales: solo presentación; los contactos conservan su formato. */
 #cn,#ce_nombre,#cp_prov,#pp_nombre{ text-transform:uppercase; }
 body:has(.prospectos-vista){overflow-anchor:none}
+
+.prod-precios{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}.prod-totales{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0 18px}.prod-totales #pe_margen{margin-left:auto;text-align:right}.prod-opciones{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:10px 0}.prod-opciones label{display:flex;align-items:center;gap:8px}.prod-opciones input{width:18px;min-height:18px;flex:0 0 18px}.prod-caracteristicas input{margin-top:4px}
 </style>
 </head>
 <body>
@@ -279,15 +281,16 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-05j";
+import { infoProducto, nombreConTamano } from "./producto-info.js?v=2026-11-05k";
+import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-05k";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05j";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05j";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-05k";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-05k";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
-import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05j";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-05k";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05j";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-05k";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
@@ -399,7 +402,7 @@ function tituloSinEmpaque(nombre){
   return String(nombre||'').replace(/\s*\(\s*(?:(?:ROLLO|CAJA|FARDO|PAQUETE|PAQ|BOLSA|RESMA|MILLAR)\b[^)]*\d[^)]*|\d[\d,.]*\s*(?:UNIDADES|UND|HOJAS|PAÑUELOS|ETIQUETAS|ROLLOS))\s*\)/gi,'').replace(/\s+/g,' ').trim();
 }
 function descripcionProducto(p){
-  const nombre=tituloSinEmpaque(p.nombre),pres=String(p.presentacion||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('es-HN');
+  const nombre=tituloSinEmpaque(nombreConTamano(p)),pres=String(p.presentacion||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('es-HN');
   if(!pres)return abreviarTexto(nombre);
   const numeros=[...pres.matchAll(/\d[\d,.]*/g)].map(m=>Number(m[0].replace(/,/g,'')));
   const empaque=/^(?:ROLLOS?|CAJAS?|FARDOS?|PAQUETES?|PAQS?|BOLSAS?|RESMAS?|MILLAR(?:ES)?)\b/.test(pres);
@@ -1765,6 +1768,8 @@ function mProd(){
   const unit = g("unit", precio !== "" ? Math.round(Number(precio) / 1.15 / (Number(unidades) || 1) * 10000) / 10000 : "");
   const venta = g("venta", precio !== "" ? r2(Number(precio) / 1.15) : "");
   const costo = g("costo", p.id && compraDe(p) ? compraDe(p) : "");
+  const info = infoProducto(p);
+  const costoUnit = g("costoUnit", costo !== "" ? Math.round(Number(costo) / (Number(unidades)||1) * 1e6) / 1e6 : "");
   const adm = puede("admin", "facturador");
   if (!adm) return "";
   return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
@@ -1773,34 +1778,33 @@ function mProd(){
   <div class="field"><label for="pe_cat">Categoría</label><input id="pe_cat" data-k="pe_cat" list="cats" value="${esc(g("cat", p.categoria || ""))}">
     <datalist id="cats">${[...new Set(S.prod.map(x => x.categoria).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
   <div class="row">
-    <div class="field"><label for="pe_unidad">Se vende por</label><input id="pe_unidad" style="text-transform:uppercase" data-k="pe_unidad" list="unids" value="${esc(unidadTexto(g("unidad", p.id ? unidadDe(p) : "unidad"),1))}" placeholder="rollo, etiqueta, caja…">
-      <datalist id="unids">${["ROLLO", "ETQ", "CAJA", "UND", "CLISÉ", "PAQ", "FARDO", "BOLSA", "RESMA", "LIBRA"].map(u => `<option value="${u}">`).join("")}</datalist></div>
     <div class="field"><label for="pe_pres">Presentación</label><input id="pe_pres" data-k="pe_pres" value="${esc(g("pres", p.id ? presDe(p) : ""))}" placeholder="Caja de 50, Rollo de 500…"></div>
+    <div class="field"><label for="pe_unidades">Unidades por presentación</label><input id="pe_unidades" type="number" min="1" step="1" inputmode="numeric" data-k="pe_unidades" value="${esc(unidades)}"></div>
   </div>
-  <div class="field"><label for="pe_unidades">Unidades por presentación</label><input id="pe_unidades" type="number" min="1" step="1" inputmode="numeric" data-k="pe_unidades" value="${esc(unidades)}"></div>
-  <div class="row">
-    <div class="field"><label for="pe_precio">Precio con ISV (presentación)</label><input id="pe_precio" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_precio" value="${esc(precio)}"></div>
-    <div class="field"><label for="pe_unit">Precio unitario sin ISV</label><input id="pe_unit" type="number" min="0" step="any" inputmode="decimal" data-k="pe_unit" value="${esc(unit)}"></div>
+  <h3>Precios sin ISV</h3>
+  <div class="prod-precios">
+    <span></span><label>Unitario</label><label>Presentación</label>
+    <strong>Compra</strong><input aria-label="Compra unitaria sin ISV" id="pe_costoUnit" type="number" min="0" step="any" data-k="pe_costoUnit" value="${esc(costoUnit)}"><input aria-label="Compra por presentación sin ISV" id="pe_costo" type="number" min="0" step="any" data-k="pe_costo" value="${esc(costo)}">
+    <strong>Venta</strong><input aria-label="Venta unitaria sin ISV" id="pe_unit" type="number" min="0" step="any" data-k="pe_unit" value="${esc(unit)}"><input aria-label="Venta por presentación sin ISV" id="pe_venta" type="number" min="0" step="0.01" data-k="pe_venta" value="${esc(venta)}">
   </div>
-  <div class="row">
-    <div class="field"><label for="pe_venta">Precio de venta sin ISV (presentación)</label><input id="pe_venta" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_venta" value="${esc(venta)}"></div>
-    <div class="field"><label for="pe_costo">Precio de compra sin ISV (presentación)</label><input id="pe_costo" type="number" min="0" step="0.01" inputmode="decimal" data-k="pe_costo" value="${esc(costo)}"></div>
+  <div class="prod-totales"><span>Precio con ISV: <b id="pe_precioDato">${L(Number(precio)||0)}</b></span><span id="pe_margen">${Number(venta)>0&&Number(costo)>0?margenTxt(Number(venta),Number(costo)):'Sin costo registrado'}</span></div>
+  <h3>Opciones de venta</h3>
+  <div class="prod-opciones">
+    <label><input type="checkbox" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
+    <label><input type="checkbox" data-k="pe_agente" ${g("agente", p.enAgente !== false) ? "checked" : ""}> Ofrece el agente</label>
+    <label><input type="checkbox" data-k="pe_negociado" data-redraw="1" ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"checked":""}> Precio negociado / producto especial</label>
+    <label><input type="checkbox" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>
   </div>
-  <p class="note" id="pe_margen">${Number(venta) > 0 && Number(costo) > 0 ? "Ganancia sobre costo: " + margenTxt(Number(venta), Number(costo)) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>'}</p>
-
-
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_suelto" ${g("suelto", p.id ? !soloPres(p) : true) ? "checked" : ""}> Se vende suelto</label>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_agente" ${g("agente", p.enAgente !== false) ? "checked" : ""}> Ofrece el agente</label>
-  <label><input type="checkbox" data-k="pe_negociado" data-redraw="1" ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"checked":""}> Precio negociado / producto especial (fuera del catálogo)</label>
   <h3 style="margin:18px 0 4px">Web y catálogo</h3>
 
   <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_meta" ${!g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))&&g("meta",p.enCatalogo!==false)?"checked":""} ${g("negociado",p.precioNegociado===true||esEtiquetaPersonalizada(p))?"disabled":""}> Mostrar</label>
 
-  <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Describa el uso y las características del producto.">${esc(g("desc", p.descripcionWeb || ""))}</textarea></div>
+  <div class="field" style="margin-top:10px"><label for="pe_desc">Descripción</label><textarea id="pe_desc" data-k="pe_desc" placeholder="Describa el uso del producto.">${esc(g("desc", info.descripcion))}</textarea></div>
 
 
+  <div class="field"><label for="pe_tamano">Tamaño</label><input id="pe_tamano" data-k="pe_tamano" value="${esc(g("tamano",info.tamano))}" placeholder="Ej. 2 × 1 pulgadas"></div>
+  <div class="field prod-caracteristicas"><label for="pe_car0">Características:</label>${[0,1,2].map(n=>`<input id="pe_car${n}" aria-label="Característica ${n+1}" data-k="pe_car${n}" value="${esc(g("car"+n,info.caracteristicas[n]||""))}" placeholder="Opcional">`).join("")}</div>
   ${S.admin?`<div class="panel"><label for="subir_foto_producto">Subir imagen del producto</label><input id="subir_foto_producto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-imagen="pe_foto" ${S.imagenSubiendo?"disabled":""}><p class="note">${S.imagenSubiendo?"Subiendo imagen…":"JPG, PNG, WebP o GIF, hasta 6 MB. Se conserva el original y se crea una miniatura."}</p>${g("foto",p.foto||"")?`<a href="${esc(g("foto",p.foto||""))}" target="_blank" rel="noopener"><img src="${esc(S.f.pe_fotoMini||g("foto",p.foto||""))}" alt="Imagen adjunta" style="max-width:160px;max-height:160px;object-fit:contain">Ver imagen original</a>`:""}</div>`:""}
-  ${adm ? `<label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink);margin-top:6px"><input type="checkbox" style="width:20px;min-height:20px" data-k="pe_activo" ${g("activo", p.activo !== false) ? "checked" : ""}> Activo</label>` : `<p class="note">El producto queda disponible para cotizar de inmediato. Solo el administrador puede modificarlo después.</p>`}
   <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Guardar producto</button></div>`;
 }
 function origenChat(c){
@@ -3354,10 +3358,10 @@ const A = {
     const codigo = clean(g("codigo", p ? codDe(p) : sugerirCodigo(g("cat", "")))).toUpperCase();
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const negociado=!!g("negociado",p?(p.precioNegociado===true||esEtiquetaPersonalizada(p)):false),publicar=!negociado&&!!g("meta",p?p.enCatalogo!==false:true);
-    const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: clean(g("unidad", p ? unidadDe(p) : "unidad")) || "unidad",
+    const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: p ? unidadDe(p) : unidadNueva(g("pres", ""),unidades),
       presentacion: expandirTexto(clean(g("pres", p ? presDe(p) : ""))).toUpperCase(), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: p ? String(p.notaAgente || "") : "",
-      mostrarDescripcionWeb:publicar,mostrarFotoWeb:publicar,enMeta: publicar, descripcionWeb: textoNormal(expandirTexto(clean(g("desc", p ? p.descripcionWeb : "")))), foto: clean(g("foto", p ? p.foto : ""))};
+      mostrarDescripcionWeb:publicar,mostrarFotoWeb:publicar,enMeta: publicar, descripcionWeb: textoNormal(expandirTexto(clean(g("desc", infoProducto(p||{}).descripcion)))), tamanoWeb:clean(g("tamano",infoProducto(p||{}).tamano)), caracteristicasWeb:[0,1,2].map(n=>textoNormal(expandirTexto(clean(g("car"+n,infoProducto(p||{}).caracteristicas[n]||""))))).filter(Boolean), foto: clean(g("foto", p ? p.foto : ""))};
     data.fotoMini=S.f.pe_fotoMini??(p&&data.foto===p.foto?p.fotoMini||"":"");if(S.f.pe_fotoArchivo)data.fotoArchivo=S.f.pe_fotoArchivo;
     if (data.foto && !/^https:\/\//.test(data.foto)) return toast("La foto debe ser un enlace que empiece con https://");
     const id = p ? p.id : "p-" + nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
@@ -3385,10 +3389,35 @@ function margenTxt(venta, compra){
   const m = venta - compra, pct = m / compra * 100;
   return `<span style="color:${pct < MARGEN_MIN ? "var(--bad)" : "var(--ok)"};font-weight:700">Ganancia ${L(m)} · sobre costo ${pct.toFixed(1)}%</span>`;
 }
+function unidadNueva(presentacion,unidades){
+  const p=String(presentacion||"").toUpperCase();
+  if(/^ROLLO.*\bDE\b/.test(p)&&unidades>1)return "etiqueta";
+  if(/^CAJA/.test(p)&&/ROLLOS?/.test(p))return "rollo";
+  if(/^1?\s*ROLLO/.test(p))return "rollo";
+  return "unidad";
+}
 function prodMargen(){
-  const o = $("#pe_margen"); if (!o) return;
-  const venta = Number(($("#pe_venta") || {}).value) || 0, compra = Number(($("#pe_costo") || {}).value) || 0;
-  o.innerHTML = venta > 0 && compra > 0 ? "Ganancia sobre costo: " + margenTxt(venta, compra) : '<span class="muted">Escribe el precio de compra para ver el margen.</span>';
+  const venta=Number($("#pe_venta")?.value)||0,compra=Number($("#pe_costo")?.value)||0;
+  const margen=$("#pe_margen");if(margen)margen.innerHTML=venta>0&&compra>0?margenTxt(venta,compra):"Sin costo registrado";
+  const precio=$("#pe_precioDato");if(precio)precio.textContent=L(Number(S.f.pe_precio??S.prod.find(p=>p.id===S.m?.id)?.precio)||0);
+}
+function precioProducto(k,valor){
+  const n=Number($("#pe_unidades")?.value);
+  if(!Number.isSafeInteger(n)||n<1)return;
+  const leer=id=>$("#"+id)?.value??"";
+  const pon=(id,v)=>{S.f[id]=v;const el=$("#"+id);if(el)el.value=v;};
+  const red=n=>Math.round(n*1e6)/1e6;
+  if(k==="pe_costoUnit")pon("pe_costo",valor===""?"":red(Number(valor)*n));
+  if(k==="pe_costo")pon("pe_costoUnit",valor===""?"":red(Number(valor)/n));
+  if(k==="pe_unit"){pon("pe_venta",valor===""?"":r2(Number(valor)*n));pon("pe_precio",valor===""?"":r2(Number(valor)*n*1.15));}
+  if(k==="pe_venta"){pon("pe_unit",valor===""?"":red(Number(valor)/n));pon("pe_precio",valor===""?"":r2(Number(valor)*1.15));}
+  if(k==="pe_unidades"){
+    const previo=Number(S.f.pe_unidadesPrev)||uni(S.prod.find(p=>p.id===S.m?.id)||{});
+    if(leer("pe_venta")!==""){const neto=Number(leer("pe_venta"))/previo;pon("pe_venta",r2(neto*n));pon("pe_unit",red(neto));pon("pe_precio",r2(neto*n*1.15));}
+    if(leer("pe_costo")!==""){const costo=Number(leer("pe_costo"))/previo;pon("pe_costo",red(costo*n));pon("pe_costoUnit",red(costo));}
+    S.f.pe_unidadesPrev=n;
+  }
+  prodMargen();
 }
 // Orden por familia: el producto nuevo queda después del último de su familia (prefijo del código: ROL, ETQ, EMP…)
 const famDe = codigo => String(codigo || "").split("-")[0].toUpperCase();
@@ -3578,24 +3607,7 @@ document.addEventListener("input", e => {
     if (k === "flete") refrescarCarrito();
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
     if (k === "cq" || k === "prq" || k === "invq" || k === "utq" || k === "flq") draw();
-    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta") {
-      if(k==="pe_unidades"&&(!Number.isSafeInteger(Number(t.value))||Number(t.value)<1))return;
-      const un = Math.max(1, Number(($("#pe_unidades") || {}).value) || 1);
-      const pon = (id, v) => { S.f[id] = v; const o = $("#" + id); if (o) o.value = v; };
-      if(k==="pe_unidades"){
-        const p=S.prod.find(x=>x.id===S.m?.id),anterior=Number(S.f.pe_unidadesPrev)||(p?uni(p):1);
-        const unitario=Number(($("#pe_unit")||{}).value),costo=($("#pe_costo")||{}).value;
-        if(Number.isFinite(unitario)&&unitario>0)pon("pe_precio",r2(unitario*1.15*un));
-        if(costo!==undefined&&costo!==''&&Number.isFinite(Number(costo)))pon("pe_costo",Math.round(Number(costo)/anterior*un*1e4)/1e4);
-        S.f.pe_unidadesPrev=un;
-      }
-      if (k === "pe_unit") pon("pe_precio", t.value === "" ? "" : r2(Number(t.value) * 1.15 * un));
-      if (k === "pe_venta") pon("pe_precio", t.value === "" ? "" : r2(Number(t.value) * 1.15));
-      const pr = Number(($("#pe_precio") || {}).value);
-      if (k !== "pe_unit") { const v = Math.round(pr / 1.15 / un * 10000) / 10000; pon("pe_unit", isFinite(v) && pr ? v : ""); }
-      if (k !== "pe_venta") pon("pe_venta", pr ? r2(pr / 1.15) : "");
-    }
-    if (k === "pe_precio" || k === "pe_unit" || k === "pe_unidades" || k === "pe_venta" || k === "pe_costo") prodMargen();
+    if (["pe_unit","pe_unidades","pe_venta","pe_costo","pe_costoUnit"].includes(k)) precioProducto(k,t.value);
     if (k === "bq") draw();
     if (k === "cli_q") { const el = $("#cli_list"); if (el) el.innerHTML = cliListHtml(); }
     if (k === "pvu") { S.f.pmodo = clean(t.value) ? "o" : "u"; document.querySelectorAll('[data-a="pmodo"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === S.f.pmodo))); }
@@ -3624,7 +3636,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-05j";
+const APP_VER = "2026-11-05k";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
