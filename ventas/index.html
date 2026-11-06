@@ -284,16 +284,16 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
   sendEmailVerification, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDoc, getDocs, query, where, orderBy,
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { infoProducto, nombreConTamano } from "./producto-info.js?v=2026-11-06e";
-import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-06e";
+import { infoProducto, nombreConTamano } from "./producto-info.js?v=2026-11-06f";
+import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-06f";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
-import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-06e";
-import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-06e";
+import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-06f";
+import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-06f";
 import { crearCompras } from "./compras-ui.js?v=2026-11-04b";
 import { facturaConCopia } from "./factura-copia.js?v=2026-10-29e";
-import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-06e";
+import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-06f";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
-import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-06e";
+import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-06f";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
 import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
@@ -967,7 +967,7 @@ function asRender(){
 }
 
 /* ---------- pizarra (solo admin) ---------- */
-const PZ = {data: null, cargando: false, verHechas: false, rec: null};
+const PZ = {data: null, cargando: false, verHechas: false, verAtendidos: false, marcando: null, rec: null};
 const PZ_TIPOS = [["entregas", "🚚 Entregas / Ruta"], ["cobros", "💰 Cobros"], ["seguimiento", "📞 Seguimiento"], ["cotizar", "📄 Cotizar / Producción"], ["otros", "📌 Otros"]];
 const ymdLocal = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 function proxRuta(){ const d = new Date(); for (let i = 0; i < 8; i++) { const x = new Date(d.getTime() + i * 864e5); if (x.getDay() === 2 || x.getDay() === 4) return ymdLocal(x); } return today(); }
@@ -991,6 +991,15 @@ async function pzCargar(){
   try { const r = await fnAsistente({accion: "pizarra"}); PZ.data = r.data; }
   catch (e) { console.error(e); if (!PZ.data) PZ.data = {error: (e && e.message) || "error"}; }
   PZ.cargando = false; if (S.tab === "pizarra") draw();
+}
+async function pzMarcarDetectado(v,atendida){
+  if(PZ.marcando||PZ.cargando)return;
+  const [grupo,indice]=String(v).split(":"),lista=atendida?PZ.data?.detectado:PZ.data?.atendidos,x=lista?.[grupo]?.[Number(indice)];
+  if(!x?.clave||!x.version)return;
+  PZ.marcando=x.clave;draw();
+  try {await fnAsistente({accion:"pizarraAtender",clave:x.clave,version:x.version,atendida});await pzCargar();toast(atendida?"Marcado como atendido":"Devuelto a pendientes");}
+  catch(e){console.error(e);toast(e?.message||"No se pudo guardar la marca.");}
+  finally{PZ.marcando=null;draw();}
 }
 function pzCard(t, hecha){
   return `<div class="pz-card${!hecha && t.fecha < today() ? " atr" : ""}">
@@ -1031,21 +1040,23 @@ function vPizarra(){
   }).join("");
   const hechas = d.hechasHoy || [];
   const det = d.detectado || {};
-  const grupo = (k, titulo, lista, pista) => `<section class="pz-col"><h3>${titulo}<small>${lista.length}</small></h3>${lista.length ? lista.map((x, i) => `<div class="pz-it"><div>
+  const grupo = (k, titulo, lista, pista, atendida=false) => `<section class="pz-col"><h3>${titulo}<small>${lista.length}</small></h3>${lista.length ? lista.map((x, i) => `<div class="pz-it"><button type="button" class="pz-chk" data-a="${atendida?'pzReabrirDetectado':'pzAtenderDetectado'}" data-v="${k}:${i}" aria-label="${atendida?'Devolver a pendientes':'Marcar como atendido'}" title="${atendida?'Devolver a pendientes':'Marcar como atendido'}" ${PZ.marcando||PZ.cargando?'disabled':''}>${atendida?'✓':''}</button><div style="flex:1;min-width:0">
       ${x.tel ? `<button type="button" class="as-link" data-a="asVerChat" data-v="${esc(x.tel)}">${esc(x.nombre)}</button>` : x.cot ? `<button type="button" class="as-link" data-a="asVerCot" data-v="${esc(x.cot)}">${esc(x.nombre)}</button>` : esc(x.nombre)}
       <br><span>${esc(x.detalle || "")}</span>${x.cuando ? `<br><small>${esc(x.cuando)}</small>` : ""}</div>
-      <button type="button" class="btn sm" data-a="pzPasar" data-v="${k}:${i}">Pasar a…</button></div>`).join("") : `<div class="pz-vacio">${pista}</div>`}</section>`;
+      ${atendida?'':`<button type="button" class="btn sm" data-a="pzPasar" data-v="${k}:${i}">Pasar a…</button>`}</div>`).join("") : `<div class="pz-vacio">${pista}</div>`}</section>`;
+  const atendidos=d.atendidos||{},nAtendidos=Object.values(atendidos).reduce((n,a)=>n+a.length,0);
   return head + `<div class="pz-cols">${cols}</div>
   ${hechas.length ? `<div class="actions" style="margin-top:10px"><button class="btn sm" data-a="pzVerHechas">${PZ.verHechas ? "Ocultar" : "Ver"} hechas hoy (${hechas.length})</button></div>
     ${PZ.verHechas ? `<div class="pz-col pz-hechas" style="margin-top:8px">${hechas.map(t => pzCard(t, true)).join("")}</div>` : ""}` : ""}
   <h2 style="margin:22px 0 2px">Lo que detectó el sistema</h2>
-  <p class="sub" style="margin:0">No son tareas todavía: tócalas con "Pasar a…" para ponerlas en la columna que quieras.</p>
+  <p class="sub" style="margin:0">Use «Pasar a…» para crear una tarea o marque la casilla si ya está atendido o no necesita seguimiento. La marca se guarda en su pizarra; un cambio nuevo vuelve a aparecer.</p>
   <div class="pz-det">
     ${grupo("espera", "💬 Esperando respuesta", det.espera || [], "Nadie esperando")}
     ${grupo("produccion", "🏭 Consultas a producción", det.produccion || [], "Sin consultas")}
     ${grupo("cobros", "💰 Facturar y cobrar", det.cobros || [], "Nada por cobrar hoy")}
     ${grupo("abiertas", "📄 Cotizaciones abiertas", det.abiertas || [], "Ninguna abierta")}
-  </div>`;
+  </div>
+  ${nAtendidos?`<div class="actions"><button class="btn sm" data-a="pzVerAtendidos">${PZ.verAtendidos?'Ocultar':'Ver'} atendidos (${nAtendidos})</button></div>${PZ.verAtendidos?`<div class="pz-det">${[["espera","Esperando respuesta"],["produccion","Consultas a producción"],["cobros","Facturar y cobrar"],["abiertas","Cotizaciones abiertas"]].filter(([k])=>atendidos[k]?.length).map(([k,t])=>grupo(k,t,atendidos[k],"",true)).join("")}</div>`:''}`:''}`;
 }
 function mTarea(){
   const t = S.m.id ? ((PZ.data && PZ.data.pendientes) || []).find(x => x.id === S.m.id) || ((PZ.data && PZ.data.hechasHoy) || []).find(x => x.id === S.m.id) : (S.m.pre || {});
@@ -2932,6 +2943,9 @@ const A = {
   },
   pzRecargar(){ pzCargar(); draw(); },
   pzVerHechas(){ PZ.verHechas = !PZ.verHechas; draw(); },
+  pzVerAtendidos(){PZ.verAtendidos=!PZ.verAtendidos;draw();},
+  pzAtenderDetectado(v){return pzMarcarDetectado(v,true);},
+  pzReabrirDetectado(v){return pzMarcarDetectado(v,false);},
   async pzAgregar(){
     const texto = clean(S.f.pz_txt); if (!texto) return toast("Escribe o dicta la tarea.");
     const tipo = S.f.pz_tipo || tipoAuto(texto), fecha = S.f.pz_fecha || (tipo === "entregas" ? proxRuta() : today());
@@ -3649,7 +3663,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-06e";
+const APP_VER = "2026-11-06f";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
