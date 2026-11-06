@@ -79,13 +79,13 @@ header{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid 
 .hero h1 span{color:var(--gold)}
 .hero p{color:#d6dde6;font-size:1.15rem;max-width:520px;margin-bottom:28px}
 .hero .ctas{display:flex;flex-wrap:wrap;gap:12px}
-.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.hero-grid{display:grid;grid-template-columns:1fr;width:100%;max-width:520px;justify-self:center}
 .hero-grid img{background:#fff;border-radius:14px;width:100%;height:auto;aspect-ratio:1;object-fit:cover}
-.hero-tile{position:relative;aspect-ratio:1;overflow:hidden;border-radius:14px;background:#fff}
-.hero-grid .hero-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .65s ease}
+.hero-tile{position:relative;aspect-ratio:1;overflow:hidden;border-radius:20px;background:#fff}
+.hero-grid .hero-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:20px;box-sizing:border-box;transition:opacity .9s ease}
 .hero-grid .hero-tile .hero-next{opacity:0}
 .hero-grid .hero-tile .hero-next.is-visible{opacity:1}
-@media(prefers-reduced-motion:reduce){.hero-grid .hero-tile img{transition:none}}
+@media(prefers-reduced-motion:reduce){.hero-grid .hero-tile img{transition-duration:.2s}}
 
 .tag{display:inline-block;background:rgba(255,166,15,.15);color:var(--gold);font-weight:600;font-size:.85rem;padding:5px 12px;border-radius:99px;margin-bottom:18px;letter-spacing:.3px}
 @media(max-width:860px){.hero .wrap{grid-template-columns:1fr;padding-top:44px;padding-bottom:44px}.hero-grid{max-width:420px}}
@@ -190,7 +190,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .float-wa{position:fixed;right:18px;bottom:18px;z-index:60;width:58px;height:58px;border-radius:50%;background:var(--wa);display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.25)}
 .float-wa svg{width:30px;height:30px;fill:#fff}
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-@media(max-width:560px){.hero-grid{display:none}.grid{grid-template-columns:1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:block}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}.qbtns{grid-template-columns:1fr;gap:6px}.qbtn{font-size:.88rem;padding:8px 6px}.qbtn img,.card .qbtn img{width:20px;height:20px}.conds .qbtns{grid-template-columns:1fr 1fr}section{padding:44px 0}.custom{padding:24px}}
+@media(max-width:560px){.hero-grid{max-width:340px}.grid{grid-template-columns:1fr;gap:12px}.card img{padding:8px}.card .body{padding:12px}.card h4{font-size:.95rem}.card .desc{display:block}.card .sub{font-size:.85rem}.card .btn{padding:9px 10px}.qbtns{grid-template-columns:1fr;gap:6px}.qbtn{font-size:.88rem;padding:8px 6px}.qbtn img,.card .qbtn img{width:20px;height:20px}.conds .qbtns{grid-template-columns:1fr 1fr}section{padding:44px 0}.custom{padding:24px}}
 
 /* visor de imagen */
 .card img{cursor:zoom-in}
@@ -259,11 +259,6 @@ body.lb-lock{overflow:hidden}
       </div>
       <div class="hero-grid" aria-hidden="true">
         <img src="img/rollo-80.jpg" alt="" width="400" height="400">
-        <img src="img/etq-4x6.jpg" alt="" width="400" height="400">
-        <img src="img/ribbon-110.jpg" alt="" width="400" height="400">
-        <img src="img/quimico-3.jpg" alt="" width="400" height="400">
-        <img src="img/stretch-1500.jpg" alt="" width="400" height="400">
-        <img src="img/etq-impresa.jpg" alt="" width="400" height="400">
       </div>
     </div>
   </div>
@@ -307,7 +302,7 @@ body.lb-lock{overflow:hidden}
       <img class="cover" src="img/catalogo-portada.jpg" alt="Portada del catálogo MHAS" width="190" height="269">
       <div>
         <h2>Descargue el catálogo en PDF</h2>
-        <p>Todos nuestros productos en un solo archivo para compartir con su departamento de compras.</p>
+        <p>Todos nuestros productos en un solo archivo para compartir con su departamento de compras. Precios + ISV.</p>
         <a class="btn btn-orange" id="dlpdf" href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoPDF" download="Catalogo-MHAS-General.pdf">Descargar catálogo (PDF)</a>
       </div>
     </div>
@@ -551,7 +546,7 @@ var actualizarImagenesPortada=(function(){
    if(!ok||run!==generation||!canRotate()){busy=false;return schedule();}
    var tile=tiles[slot++%tiles.length],old=tile.querySelector('img');tile.appendChild(img);
    requestAnimationFrame(function(){img.classList.add('is-visible');});
-   setTimeout(function(){old.remove();img.className='';busy=false;schedule();},700);
+   setTimeout(function(){old.remove();img.className='';busy=false;schedule();},1000);
   }
   img.onload=function(){finish(true);};img.onerror=function(){pool=pool.filter(function(url){return url!==src;});finish(false);};img.src=src;
  }
@@ -560,7 +555,7 @@ var actualizarImagenesPortada=(function(){
  document.addEventListener('visibilitychange',schedule);
  motion.addEventListener('change',schedule);
  if('IntersectionObserver' in window)new IntersectionObserver(function(entries){visible=entries[0].isIntersecting;schedule();}).observe(grid);
- return function(categorias){generation++;pool=[...new Set(categorias.flatMap(function(c){return c.p.filter(function(p){return p[6]&&p[7];}).map(function(p){return new URL(p[7],location.href).href;});}))];cursor=0;schedule();};
+ return function(categorias){generation++;pool=[...new Set(categorias.flatMap(function(c){return c.p.filter(function(p){return p[6]&&p[5];}).map(function(p){return new URL(p[5],location.href).href;});}))];cursor=0;schedule();};
 })();
 async function cargarCatalogoVivo(){
  try{var r=await fetch('https://us-central1-mhas-ventas.cloudfunctions.net/catalogoWeb',{cache:'no-store'});if(!r.ok)throw Error('catálogo');var datos=await r.json();if(!Array.isArray(datos.productos))throw Error('formato');
