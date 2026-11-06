@@ -81,6 +81,11 @@ header{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid 
 .hero .ctas{display:flex;flex-wrap:wrap;gap:12px}
 .hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .hero-grid img{background:#fff;border-radius:14px;width:100%;height:auto;aspect-ratio:1;object-fit:cover}
+.hero-tile{position:relative;aspect-ratio:1;overflow:hidden;border-radius:14px;background:#fff}
+.hero-grid .hero-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .65s ease}
+.hero-grid .hero-tile .hero-next{opacity:0}
+.hero-grid .hero-tile .hero-next.is-visible{opacity:1}
+@media(prefers-reduced-motion:reduce){.hero-grid .hero-tile img{transition:none}}
 
 .tag{display:inline-block;background:rgba(255,166,15,.15);color:var(--gold);font-weight:600;font-size:.85rem;padding:5px 12px;border-radius:99px;margin-bottom:18px;letter-spacing:.3px}
 @media(max-width:860px){.hero .wrap{grid-template-columns:1fr;padding-top:44px;padding-bottom:44px}.hero-grid{max-width:420px}}
@@ -528,12 +533,42 @@ document.addEventListener('click',function(e){
 // filtros
 document.addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;var f=b.getAttribute('data-f');document.querySelectorAll('.chip').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});document.querySelectorAll('.cat').forEach(function(c){c.style.display=(f==='all'||c.getAttribute('data-cat')===f)?'':'none';});});
 // La descripción y el nombre se editan únicamente en Productos de MHAS/Ventas.
+var actualizarImagenesPortada=(function(){
+ var grid=document.querySelector('.hero-grid'),pool=[],cursor=0,slot=0,timer=null,busy=false,visible=true,hover=false,generation=0;
+ if(!grid)return function(){};
+ var motion=window.matchMedia('(prefers-reduced-motion: reduce)');
+ var tiles=Array.from(grid.querySelectorAll('img')).map(function(img){var tile=document.createElement('div');tile.className='hero-tile';img.replaceWith(tile);tile.appendChild(img);return tile;});
+ function canRotate(){return visible&&!hover&&!document.hidden&&!motion.matches&&grid.getBoundingClientRect().width>0&&pool.length>tiles.length;}
+ function schedule(){clearTimeout(timer);if(canRotate())timer=setTimeout(next,4000);}
+ function next(){
+  if(!canRotate()||busy)return schedule();
+  var shown=tiles.map(function(t){return t.querySelector('img').src;}),src='',attempts=0;
+  while(attempts++<pool.length){var candidate=pool[cursor++%pool.length];if(!shown.includes(candidate)){src=candidate;break;}}
+  if(!src)return schedule();
+  busy=true;var run=generation,finished=false,img=new Image(),deadline=setTimeout(function(){finish(false);},10000);
+  img.alt='';img.className='hero-next';img.decoding='async';
+  function finish(ok){if(finished)return;finished=true;clearTimeout(deadline);img.onload=img.onerror=null;
+   if(!ok||run!==generation||!canRotate()){busy=false;return schedule();}
+   var tile=tiles[slot++%tiles.length],old=tile.querySelector('img');tile.appendChild(img);
+   requestAnimationFrame(function(){img.classList.add('is-visible');});
+   setTimeout(function(){old.remove();img.className='';busy=false;schedule();},700);
+  }
+  img.onload=function(){finish(true);};img.onerror=function(){pool=pool.filter(function(url){return url!==src;});finish(false);};img.src=src;
+ }
+ grid.addEventListener('mouseenter',function(){hover=true;clearTimeout(timer);});
+ grid.addEventListener('mouseleave',function(){hover=false;schedule();});
+ document.addEventListener('visibilitychange',schedule);
+ motion.addEventListener('change',schedule);
+ if('IntersectionObserver' in window)new IntersectionObserver(function(entries){visible=entries[0].isIntersecting;schedule();}).observe(grid);
+ return function(categorias){generation++;pool=[...new Set(categorias.flatMap(function(c){return c.p.filter(function(p){return p[6]&&p[7];}).map(function(p){return new URL(p[7],location.href).href;});}))];cursor=0;schedule();};
+})();
 async function cargarCatalogoVivo(){
  try{var r=await fetch('https://us-central1-mhas-ventas.cloudfunctions.net/catalogoWeb',{cache:'no-store'});if(!r.ok)throw Error('catálogo');var datos=await r.json();if(!Array.isArray(datos.productos))throw Error('formato');
  var defaults={'Rollos':{id:'pos',t:'Rollos para punto de venta',d:'Papel térmico y químico para facturación y comprobantes'},'Formas continuas':{id:'formas',t:'Formas continuas',d:'Papel continuo para facturación'},'Etiquetas':{id:'etiquetas',t:'Etiquetas',d:'Etiquetas térmicas y personalizadas'},'Impresión de etiquetas':{id:'impresion',t:'Impresión de etiquetas',d:'Cintas de transferencia y placas'},'Stretch film y cinta':{id:'empaque',t:'Empaque y embalaje',d:'Insumos para embalaje'},'Limpieza':{id:'limpieza',t:'Limpieza',d:'Insumos de limpieza para su negocio'}};
  var familias=Array.isArray(datos.familias)?datos.familias:[],categorias=[...new Set(datos.productos.map(function(p){return p.categoria||'Otros';}).concat(familias.map(function(f){return f.categoria;})))];
  categorias.sort(function(a,b){return Number(String(a).trim().toLocaleLowerCase("es-HN")==="limpieza")-Number(String(b).trim().toLocaleLowerCase("es-HN")==="limpieza");});
  CATS=categorias.flatMap(function(cat,n){var f=familias.find(function(f){return f.categoria===cat;}),d=defaults[cat]||{id:'familia-'+n,t:cat,d:''};if(f&&f.visible===false)return [];return [{id:d.id,t:f?f.titulo:d.t,d:f?f.descripcion:d.d,foto:f?f.foto:'',p:datos.productos.filter(function(p){return (p.categoria||'Otros')===cat;}).map(function(p){return [p.id,p.nombre,p.presentacion,p.descripcion,[],p.foto,p.mostrarImagen!==false&&!!p.foto,p.fotoMini||p.foto,p.tamano||"",p.caracteristicas||[]];})}];});
+ actualizarImagenesPortada(CATS);
  var anteriorFiltro=document.querySelector('.chip[aria-pressed="true"]')?.getAttribute('data-f')||'all';document.querySelector('.chips').innerHTML='<button class="chip" aria-pressed="true" data-f="all">Todos</button>'+CATS.map(function(c){return '<button class="chip" aria-pressed="false" data-f="'+esc(c.id)+'">'+esc(c.t)+'</button>';}).join('');renderCatalogo();var filtro=Array.from(document.querySelectorAll('.chip')).find(function(b){return b.getAttribute('data-f')===anteriorFiltro;});if(filtro)filtro.click();
  var select=document.getElementById('q-prod');if(select){select.disabled=false;var anterior=select.value;select.innerHTML='<option value="">Seleccione un producto</option>'+CATS.map(function(c){return '<optgroup label="'+esc(c.t)+'">'+c.p.map(function(p){return '<option>'+esc(p[1])+'</option>';}).join('')+'</optgroup>';}).join('')+'<option>Otro / varios productos</option>';select.value=anterior;}
   }catch(e){document.getElementById('cats').innerHTML='<p>No se pudo cargar el catálogo. Puede volver a intentarlo o consultar por WhatsApp.</p><button class="chip" id="recargarCatalogo">Volver a cargar</button>';var select=document.getElementById('q-prod');if(select)select.disabled=true;}
