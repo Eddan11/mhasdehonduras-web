@@ -308,7 +308,7 @@ body.lb-lock{overflow:hidden}
       <div>
         <h2>Descargue el catálogo en PDF</h2>
         <p>Todos nuestros productos en un solo archivo para compartir con su departamento de compras.</p>
-        <a class="btn btn-orange" id="dlpdf" href="catalogo.pdf?v=20261028-007648b9" download="Catalogo-MHAS-de-Honduras.pdf">Descargar catálogo (PDF)</a>
+        <a class="btn btn-orange" id="dlpdf" href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoPDF" download="Catalogo-MHAS-General.pdf">Descargar catálogo (PDF)</a>
       </div>
     </div>
   </section>
@@ -538,7 +538,7 @@ var actualizarImagenesPortada=(function(){
  if(!grid)return function(){};
  var motion=window.matchMedia('(prefers-reduced-motion: reduce)');
  var tiles=Array.from(grid.querySelectorAll('img')).map(function(img){var tile=document.createElement('div');tile.className='hero-tile';img.replaceWith(tile);tile.appendChild(img);return tile;});
- function canRotate(){return visible&&!hover&&!document.hidden&&!motion.matches&&grid.getBoundingClientRect().width>0&&pool.length>tiles.length;}
+ function canRotate(){return visible&&!hover&&!document.hidden&&grid.getBoundingClientRect().width>0&&pool.length>tiles.length;}
  function schedule(){clearTimeout(timer);if(canRotate())timer=setTimeout(next,4000);}
  function next(){
   if(!canRotate()||busy)return schedule();
