@@ -295,7 +295,7 @@ import { crearGuia, FORMATOS_GUIA } from "./guia-envio.js?v=2026-11-06f";
 import { crearCompartirCliente } from "./compartir-cliente.js?v=2026-10-27i";
 import { crearVentasDirectas, calcularDocumento, pdfInterno } from "./ventas-directas-ui.js?v=2026-11-06f";
 import { crearPlantillasProspectos } from "./prospectos-plantillas.js?v=2026-10-28i";
-import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-03c";
+import { crearContactoProspecto } from "./prospectos-correo.js?v=2026-11-06g";
 import { crearProspectos } from "./prospectos-ui.js?v=2026-11-03d";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
@@ -322,7 +322,7 @@ const fnVentasDirectas = httpsCallable(getFunctions(fbApp, "us-central1"), "vent
 const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {timeout: 60000});
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
 const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
-const fnCorreoProspecto = httpsCallable(getFunctions(fbApp, "us-central1"), "correoProspectoBorrador", {timeout: 65000});
+const fnCorreoProspecto = httpsCallable(getFunctions(fbApp, "us-central1"), "correoProspectoBorrador", {timeout: 185000});
 const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
 
 /* ---------- utilidades ---------- */
@@ -1588,6 +1588,11 @@ function vAjustes(){
   return `
   <h1>Ajustes</h1>
   <p class="sub">Solo tú como administrador ves esta sección.</p>
+  <div class="panel">
+    <h2>Catálogos en PDF</h2>
+    <p class="note">Se generan con los productos activos que tengan Mostrar y precio de venta. Los productos especiales quedan fuera. Solo incluyen precios con ISV.</p>
+    <div class="actions"><a class="btn" href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoPDF" download="Catalogo-MHAS-General.pdf">Descargar general</a><button class="btn" data-a="catalogoPersonal" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Descargar personal"}</button></div>
+  </div>
   <div class="panel">
     <h2>Personas y roles</h2>
     <p class="note">Cada persona entra a esta página y toca “Crear cuenta”. Aparece aquí; tócala para asignarle rol y editar sus datos. Nombre, cargo, teléfono y correo salen en la firma de sus cotizaciones; las iniciales, en el número.</p>
@@ -2890,6 +2895,10 @@ const A = {
     if (await upd(doc(db, "config", "app"), {emp: e}, "Datos guardados", true)) Object.keys(S.f).filter(k => k.startsWith("em_")).forEach(k => delete S.f[k]);
     draw();
   },
+  async catalogoPersonal(){
+    if(!S.admin||S.busy)return;S.busy=true;draw();
+    try{const r=await fnProspectos({accion:"catalogo"}),p=r.data;if(!p?.contenido)throw Error("No se pudo generar el catálogo.");const raw=atob(p.contenido),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"})),a=document.createElement("a");a.href=url;a.download=p.nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast("Catálogo personal actualizado descargado.");}catch(e){fallo(e,"descargar el catálogo personal");}finally{S.busy=false;draw();}
+  },
   async savePerfil(){
     const m = S.me, ch = {nombre: clean(S.f.me_nombre ?? m.nombre), cargo: clean(S.f.me_cargo ?? (m.cargo || "Ventas")), tel: clean(S.f.me_tel ?? m.tel), correo: clean(S.f.me_correo ?? (m.correo || m.email))};
     if (!ch.nombre) return toast("Escribe tu nombre.");
@@ -3663,7 +3672,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-06f";
+const APP_VER = "2026-11-06g";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
