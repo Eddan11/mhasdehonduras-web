@@ -1590,7 +1590,7 @@ function vAjustes(){
   <p class="sub">Solo tú como administrador ves esta sección.</p>
   <div class="panel">
     <h2>Catálogos en PDF</h2>
-    <p class="note">Se generan con los productos activos que tengan Mostrar y precio de venta. Los productos especiales quedan fuera. Precios de venta + ISV.</p>
+    <p class="note">Se generan con los productos activos que tengan Mostrar y precio de venta. Los productos especiales quedan fuera. Ambos catálogos se descargan sin precios.</p>
     <div class="actions"><a class="btn" href="https://us-central1-mhas-ventas.cloudfunctions.net/catalogoPDF" download="Catalogo-MHAS-General.pdf">Descargar general</a><button class="btn" data-a="catalogoPersonal" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Descargar personal"}</button></div>
   </div>
   <div class="panel">
@@ -3672,7 +3672,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-06h";
+const APP_VER = "2026-11-06i";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
