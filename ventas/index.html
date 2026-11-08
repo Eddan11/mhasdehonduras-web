@@ -322,6 +322,7 @@ const fnVentasDirectas = httpsCallable(getFunctions(fbApp, "us-central1"), "vent
 const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {timeout: 60000});
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
 const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
+const fnRecompra = httpsCallable(getFunctions(fbApp, "us-central1"), "recompraCliente");
 const fnCorreoProspecto = httpsCallable(getFunctions(fbApp, "us-central1"), "correoProspectoBorrador", {timeout: 185000});
 const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
 
@@ -1864,6 +1865,15 @@ function mChat(){
   ${c.proveedor ? `<p class="note"><b>Proveedor:</b> el agente no responde en este chat y el asistente lo pone aparte de los clientes.</p>` : ""}
   <p class="note">"Reiniciar" hace que el agente olvide lo anterior de este chat y empiece de cero (útil para pruebas). El historial sigue visible aquí.</p>`;
 }
+function recompraFicha(c){
+  const r = S.f.ce_recompra;
+  const estados = {esperando:"Esperando respuesta", pregunta_fecha:"Pendiente de fecha", agendado:"Agendado", respondido:"Respondió", sin_respuesta:"Sin respuesta", enviando:"Envío por verificar", error_envio:"Error de envío", baja:"Se dio de baja", sin_telefono:"Sin WhatsApp principal", telefono_compartido:"WhatsApp asociado a otra ficha"};
+  const bloqueado = r && ["sin_telefono", "telefono_compartido"].includes(r.estado);
+  return `<div class="panel" style="padding:12px;margin:12px 0"><h2>Seguimiento de recompra</h2>
+    <p class="note">${r ? esc(bloqueado || r.estado === "baja" ? estados[r.estado] : r.pausado ? "Pausado" : estados[r.estado] || (r.autorizado ? "Autorizado" : "Sin permiso registrado")) : "Consulta el estado y registra el permiso del contacto principal para recibir recordatorios."}
+    ${r?.enviadoEn ? ` · Último mensaje: ${esc(fdate(ymd(new Date(r.enviadoEn))))}` : ""}${r?.proximo && !r.pausado ? ` · Próximo: ${esc(fdate(r.proximo))} a las 9:00 a. m.` : ""}</p>
+    <div class="actions">${!r ? '<button class="btn sm" data-a="cliRecompra" data-v="ver">Ver estado</button>' : bloqueado ? "" : r.autorizado ? `<button class="btn sm" data-a="cliRecompra" data-v="${r.pausado ? "reanudar" : "pausar"}">${r.pausado ? "Reanudar" : "Pausar"}</button>` : '<button class="btn sm" data-a="cliRecompra" data-v="autorizar">Registrar permiso</button>'}</div></div>`;
+}
 function mCli(){
   const c = S.m.id ? S.cli.find(x => x.id === S.m.id) : {};
   if (!c) return "";
@@ -1895,6 +1905,7 @@ function mCli(){
   <p class="note">El principal es al que le llegan los recordatorios. Al cotizar se escoge a quién va dirigida.</p>
   ${S.admin ? `<div class="field"><label for="ce_desde">Cliente desde</label><input id="ce_desde" type="date" data-k="ce_desde" value="${esc(g("desde", c.creado ? ymd(new Date(c.creado)) : today()))}"></div>` : ""}
   <div class="field"><label for="ce_ciclo">Pide cada (días)</label><input id="ce_ciclo" type="number" min="0" step="1" inputmode="numeric" data-k="ce_ciclo" value="${esc(g("ciclo", c.cicloDias || ""))}" placeholder="Automático${st && st.auto && st.ultFecha ? " (" + st.ciclo + " días)" : ""}"></div>
+  ${c.id && S.admin ? recompraFicha(c) : ""}
   <p class="note">Los cambios aplican a cotizaciones nuevas; las ya hechas conservan los datos con que se crearon.</p>
   <div class="actions"><button class="btn pri big" data-a="cliSave" ${S.busy ? "disabled" : ""}>Guardar cliente</button></div>
   ${c.id && S.admin ? `<div class="actions"><button class="btn danger" data-a="cliDel">Borrar cliente</button></div>` : ""}`;
@@ -3167,6 +3178,21 @@ const A = {
   cfil(v){ S.f.cfil = v; draw(); },
   cliNuevo(){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: null}; draw(); },
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
+  async cliRecompra(accion){
+    const id = S.m?.id, c = S.cli.find(x => x.id === id);
+    if (!S.admin || !c || S.busy) return;
+    if (accion === "autorizar" && (S.f.ce_ctcs?.[0]?.tel || "").replace(/\D/g, "") !== (contactosDe(c)[0]?.tel || "").replace(/\D/g, "")) return toast("Guarda primero el WhatsApp principal.");
+    const referencia = accion === "autorizar" ? prompt("Indica la fecha y dónde el contacto principal autorizó recibir recordatorios de recompra por WhatsApp.") : "";
+    if (referencia === null) return;
+    if (accion === "autorizar" && referencia.trim().length < 8) return toast("Indica dónde y cuándo dio el permiso.");
+    S.busy = true;
+    try {
+      const {data} = await fnRecompra({id, accion, referencia});
+      if (S.m?.type === "cli" && S.m.id === id) S.f.ce_recompra = data;
+    } catch (e) { fallo(e, "actualizar el seguimiento"); }
+    finally { S.busy = false; draw(); }
+  },
+
   ctcAdd(){ (S.f.ce_ctcs = S.f.ce_ctcs || []).push({nombre: "", cargo: "", tel: "", correo: ""}); draw(); },
   ctcDel(v){ if (S.f.ce_ctcs) S.f.ce_ctcs.splice(Number(v), 1); draw(); },
   async cliSave(){
@@ -3672,7 +3698,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-06i";
+const APP_VER = "2026-11-08a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
