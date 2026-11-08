@@ -430,7 +430,13 @@ function origenConsulta(){
   var clicGoogle=['gclid','gbraid','wbraid'].some(function(k){return !!q.get(k);});
   if(clicGoogle){o.utm_source='google';o.utm_medium='cpc';}
   if(!o.utm_source){
-    try{var ref=new URL(document.referrer).hostname;if(/(^|\.)google\.(com|hn|es|com\.hn|com\.gt|com\.sv|com\.mx|com\.ni|co\.cr)$/i.test(ref)){o.utm_source='google';o.utm_medium='organic';}}catch(e){}
+    try{
+      var ref=new URL(document.referrer).hostname;
+      if(/(^|\.)google\.(com|hn|es|com\.hn|com\.gt|com\.sv|com\.mx|com\.ni|co\.cr)$/i.test(ref)){o.utm_source='google';o.utm_medium='organic';}
+      else if(/(^|\.)facebook\.com$/i.test(ref))o.utm_source='facebook';
+      else if(/(^|\.)instagram\.com$/i.test(ref))o.utm_source='instagram';
+      else if(/(^|\.)(linkedin\.com|lnkd\.in)$/i.test(ref))o.utm_source='linkedin';
+    }catch(e){}
   }
   // Sólo referencias de origen, sin identificadores de clic ni datos del visitante.
   try{
@@ -441,18 +447,17 @@ function origenConsulta(){
 }
 function waUrl(item){
   var producto=(item||'').trim(),origen=origenConsulta();
-  var fuentes={ig:'I',instagram:'I',fb:'F',facebook:'F',google:'G',linkedin:'L',li:'L'};
+  var fuentes={ig:'IG',instagram:'IG',fb:'FB',facebook:'FB',linkedin:'LI',li:'LI'};
   var fuente=(origen.utm_source||'').toLowerCase();
-  var codigo=fuentes[fuente]||(fuente?'O':'N');
+  var codigo=Object.prototype.hasOwnProperty.call(fuentes,fuente)?fuentes[fuente]:'';
   var general=['Consulta general','Cotización','Contacto','Producto especial'].indexOf(producto)!==-1;
   var t='Hola MHAS, vi su página web y quiero cotizar'+(producto&&!general?' '+producto:'')+'.';
-  var medio=(origen.utm_medium||'').toLowerCase(),marca='';
-  if(codigo==='G'){
-    if(['cpc','ppc','paidsearch','paid_search','paid'].indexOf(medio)!==-1)marca=';M:P';
-    else if(medio==='organic')marca=';M:O';
-    var camp=origen.utm_id||origen.utm_campaign||'';if(marca===';M:P'&&/^\d{1,30}$/.test(camp))marca+=';C:'+camp;
+  if(fuente==='google'){
+    var medio=(origen.utm_medium||'').toLowerCase(),camp=origen.utm_id||origen.utm_campaign||'';
+    if(['cpc','ppc','paidsearch','paid_search','paid'].indexOf(medio)!==-1)codigo=camp==='24405519511'?'G1':'G+';
+    else codigo=medio==='organic'?'G':'G?';
   }
-  t+=' [O:W;F:'+codigo+marca+']';
+  if(codigo)t+=' ['+codigo+']';
   return 'https://wa.me/'+WA+'?text='+encodeURIComponent(t);
 }
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
