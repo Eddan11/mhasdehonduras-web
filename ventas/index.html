@@ -1356,6 +1356,7 @@ function invDatos(){
   const ahora = Date.now(), X = {};
   S.prod.filter(p => p.activo !== false).forEach(p => { X[p.id] = {p, base: 0, t0: null, conteoTs: null, mov: 0, sal: 0, comp: 0, v30: 0, v90: 0}; });
   (S.invMov || []).slice().sort((a, b) => (a.ts || 0) - (b.ts || 0)).forEach(m => {
+    if (m.tipo === "muestra_solicitada") return;
     const x = X[m.prod]; if (!x) return;
     if (m.tipo === "conteo") { x.base = Number(m.cant) || 0; x.t0 = m.ts || 0; x.conteoTs = x.t0; x.mov = 0; }
     else { if (x.t0 == null) { x.t0 = m.ts || 0; x.base = 0; } x.mov += Number(m.cant) || 0; }
@@ -1398,7 +1399,7 @@ function vInventario(){
   let list = D.filter(d => !q || [codDe(d.p), d.p.nombre, d.p.categoria].join(" ").toLowerCase().includes(q));
   if (fil !== "todos") list = list.filter(d => d.estado[0] === fil);
   return `
-  <h1>Inventario</h1><div class="actions"><button class="btn pri" data-a="cpNueva">Registrar compra</button></div>
+  <h1>Inventario</h1><div class="actions"><button class="btn pri" data-a="cpNueva">Registrar compra</button><button class="btn" data-a="muestraAbrir">Registrar muestra</button></div>
   <p class="sub">Las facturas descuentan al emitirse y las ventas sin comprobante al confirmarse. Las cotizaciones abiertas son una estimación y no descuentan ni reservan. Agrupado por familia y ordenado por código de producto.</p>
   <div class="pr-resumen">
     <div><small>Pedir</small><b style="color:${n("Pedir") ? "var(--warn)" : "var(--ink)"}">${n("Pedir")}</b></div>
@@ -1422,10 +1423,39 @@ function vInventario(){
   </div>
   <p class="note">Toca un producto para registrar entradas, conteos o ajustes y ver su historial. El reorden sugerido es lo que vendes en 10 días (7 de venta + 3 sobre costo), redondeado a presentaciones completas; lo puedes cambiar. Los productos inactivos no aparecen aquí.</p>`;
 }
+function listaMuestras(clienteId){
+  const movimientos = S.invMov || [];
+  const entregadas = new Map(movimientos.filter(m => m.tipo === "muestra").map(m => [m.muestraId, m]));
+  return movimientos.filter(m => m.tipo === "muestra_solicitada" && (!clienteId || m.clienteId === clienteId))
+    .map(m => ({...m, entrega: entregadas.get(m.id)})).sort((a, b) => b.ts - a.ts);
+}
+function tablaMuestras(muestras, confirmar = false){
+  return muestras.length ? `<div class="scroll"><table><thead><tr>${confirmar ? "<th>Cliente</th>" : ""}<th>Producto</th><th>Cantidad</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+    ${muestras.map(m => `<tr>${confirmar ? `<td>${empresa(m.clienteNombre)}</td>` : ""}<td>${esc(m.productoNombre)}${m.nota ? `<br><small class="muted">${esc(m.nota)}</small>` : ""}</td>
+    <td>${esc(m.muestraCantidad)} ${esc(m.unidad)}</td><td>${fdate(ymd(new Date(m.entrega?.ts || m.ts)))}</td>
+    <td>${m.entrega ? '<span class="badge b-ok">Entregada</span>' : confirmar ? `<button class="btn sm" data-a="muestraEntregar" data-v="${esc(m.id)}" ${S.busy ? "disabled" : ""}>Confirmar entrega</button>` : '<span class="badge b-warn">Solicitada</span>'}</td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="note">No hay muestras registradas.</p>`;
+}
+function mMuestra(){
+  const productos = S.prod.filter(p => p.activo !== false).sort((a, b) => codDe(a).localeCompare(codDe(b), "es", {numeric:true}));
+  const clientes = S.cli.slice().sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"));
+  const p = productos.find(x => x.id === S.f.muestra_prod), u = p ? uni(p) : 1;
+  const opciones = (lista, actual, etiqueta) => lista.map(x => `<option value="${esc(x.id)}" ${x.id === actual ? "selected" : ""}>${esc(etiqueta(x))}</option>`).join("");
+  const muestras = listaMuestras(), pendientes = muestras.filter(m => !m.entrega), recientes = muestras.filter(m => m.entrega).slice(0, 20);
+  return `<h1>Registrar muestra</h1><p class="sub">Vincula la muestra a un cliente. El inventario se rebaja cuando confirmas la entrega.</p>
+    <div class="field"><label for="muestra_cli">Cliente</label><select id="muestra_cli" data-k="muestra_cli"><option value="">Selecciona un cliente</option>${opciones(clientes, S.f.muestra_cli, c => [c.nombre, c.contacto, c.tel].filter(Boolean).join(" · "))}</select></div>
+    <div class="field"><label for="muestra_prod">Producto</label><select id="muestra_prod" data-k="muestra_prod" data-redraw="1"><option value="">Selecciona un producto</option>${opciones(productos, S.f.muestra_prod, x => `${codDe(x)} · ${x.nombre}`)}</select></div>
+    <div class="row"><div class="field"><label for="muestra_cant">Cantidad${p && u === 1 ? ` (${esc(plu(2, unidadDe(p)))})` : ""}</label><input id="muestra_cant" data-k="muestra_cant" type="number" min="0.001" step="any" inputmode="decimal" value="${fv("muestra_cant")}"></div>
+    ${u > 1 ? `<div class="field"><label for="muestra_modo">Contar en</label><select id="muestra_modo" data-k="muestra_modo"><option value="u">${esc(plu(2, unidadDe(p)))}</option><option value="p" ${S.f.muestra_modo === "p" ? "selected" : ""}>${esc(plu(2, presPal(p)))} (${u} c/u)</option></select></div>` : ""}</div>
+    <div class="field"><label for="muestra_nota">Nota (opcional)</label><input id="muestra_nota" data-k="muestra_nota" maxlength="240" value="${fv("muestra_nota")}"></div>
+    <div class="actions"><button class="btn pri" data-a="muestraGuardar" ${S.busy ? "disabled" : ""}>Guardar solicitud</button></div>
+    <hr class="sep"><h2>Muestras pendientes (${pendientes.length})</h2>${tablaMuestras(pendientes, true)}
+    ${recientes.length ? `<hr class="sep"><h2>Últimas entregadas</h2>${tablaMuestras(recientes, true)}` : ""}`;
+}
 function mInv(){
   const d = invDatos().find(x => x.p.id === S.m.id); if (!d) return "";
   const p = d.p, u = uni(p), modo = S.f.inv_modo || (u > 1 ? "p" : "u");
-  const ent = (S.invMov || []).filter(m => m.prod === p.id).map(m => ({ts: m.ts, tipo: {conteo: "Conteo", entrada: "Entrada", ajuste: "Ajuste"}[m.tipo] || m.tipo, cant: m.cant, quien: m.porNombre || "", nota: m.nota || ""}));
+  const ent = (S.invMov || []).filter(m => m.prod === p.id && m.tipo !== "muestra_solicitada").map(m => ({ts: m.ts, tipo: {conteo: "Conteo", entrada: "Entrada", ajuste: "Ajuste", muestra: "Muestra entregada"}[m.tipo] || m.tipo, cant: m.cant, quien: m.porNombre || "", nota: [m.clienteNombre, m.nota].filter(Boolean).join(" · ")}));
   const sal = S.cot.filter(c => !c.eliminada && ["facturada","vendida"].includes(c.estado)).flatMap(c => (c.items || []).filter(i => i.id === p.id).map(i => ({ts: invTs(c), tipo: c.estado==="vendida"?"Venta sin comprobante":"Factura", cant: -(Number(i.cant) || 0), quien: c.vendedorNombre || "", nota: c.numero + (c.factura && c.factura.numero ? " · " + c.factura.numero : "")})));
   const hist = ent.concat(sal).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 30);
   return `
@@ -1640,7 +1670,7 @@ function vAjustes(){
 function drawModal(){
   const md = $("#modal");
   if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "familiaWeb" ? catalogoWebUI.modal() : S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
+  const html = S.m.type === "muestra" ? mMuestra() : S.m.type === "familiaWeb" ? catalogoWebUI.modal() : S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
   if (!html) { md.classList.remove("open"); return; }
   $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
   md.classList.add("open");
@@ -1891,6 +1921,7 @@ function mCli(){
   const g = (k, d) => S.f["ce_" + k] ?? d, st = c.id ? statsCliente(c) : null;
   if (!S.f.ce_ctcs) { S.f.ce_ctcs = contactosDe(c).map(p => Object.assign({}, p)); if (!S.f.ce_ctcs.length) S.f.ce_ctcs.push({nombre: "", cargo: "", tel: "", correo: ""}); }
   const ctcsF = S.f.ce_ctcs;
+  const muestras = c.id && puede("admin", "facturador") ? listaMuestras(c.id) : [];
   return `<h1 style="padding-right:40px">${c.id ? "Editar cliente" : "Nuevo cliente"}</h1>
   ${st ? `<p class="sub">${st.pedidos} pedidos · facturado ${L(st.facturado)}${st.saldo > 0.005 ? " · debe " + L(st.saldo) : ""}${st.creadoPor ? " · creado por " + esc(st.creadoPor) : ""}</p>
   ${st.ultFecha ? `<div class="panel" style="padding:12px"><b>Último pedido: ${fdate(st.ultFecha)}</b> <span class="muted">(${esc(st.ultCot.numero)})</span><p class="note" style="margin:6px 0">${esc(st.ultItems)}</p>
@@ -1917,6 +1948,7 @@ function mCli(){
   ${S.admin ? `<div class="field"><label for="ce_desde">Cliente desde</label><input id="ce_desde" type="date" data-k="ce_desde" value="${esc(g("desde", c.creado ? ymd(new Date(c.creado)) : today()))}"></div>` : ""}
   <div class="field"><label for="ce_ciclo">Pide cada (días)</label><input id="ce_ciclo" type="number" min="0" step="1" inputmode="numeric" data-k="ce_ciclo" value="${esc(g("ciclo", c.cicloDias || ""))}" placeholder="Automático${st && st.auto && st.ultFecha ? " (" + st.ciclo + " días)" : ""}"></div>
   ${c.id && S.admin ? recompraFicha(c) : ""}
+  ${muestras.length ? `<hr class="sep"><h2>Muestras</h2>${tablaMuestras(muestras.slice(0, 20))}` : ""}
   <p class="note">Los cambios aplican a cotizaciones nuevas; las ya hechas conservan los datos con que se crearon.</p>
   <div class="actions"><button class="btn pri big" data-a="cliSave" ${S.busy ? "disabled" : ""}>Guardar cliente</button></div>
   ${c.id && S.admin ? `<div class="actions"><button class="btn danger" data-a="cliDel">Borrar cliente</button></div>` : ""}`;
@@ -3360,6 +3392,52 @@ const A = {
   prodEdit(v){ clearProd(); S.m = {type: "prod", id: v}; draw(); },
   async prodActivo(v){ const p = S.prod.find(x => x.id === v); if (!p) return; await upd(doc(db, "productos", v), {activo: p.activo === false}, p.activo === false ? "Producto activado" : "Producto desactivado: ya no sale al cotizar, en inventario ni para el agente"); },
   invFil(v){ S.f.inv_fil = v; draw(); },
+  muestraAbrir(){
+    if (!puede("admin", "facturador") || S.busy) return;
+    ["muestra_cli", "muestra_prod", "muestra_cant", "muestra_nota", "muestra_modo"].forEach(k => delete S.f[k]);
+    S.m = {type: "muestra", id: doc(collection(db, "inv_mov")).id}; draw();
+  },
+  async muestraGuardar(){
+    if (!puede("admin", "facturador") || S.busy || S.m?.type !== "muestra") return;
+    const m = S.m, p = S.prod.find(x => x.id === S.f.muestra_prod && x.activo !== false), c = S.cli.find(x => x.id === S.f.muestra_cli);
+    if (!c || !p) return toast("Selecciona el cliente y el producto.");
+    const presentacion = uni(p) > 1 && S.f.muestra_modo === "p", cantidad = Number(S.f.muestra_cant);
+    const unidades = Math.round(cantidad * (presentacion ? uni(p) : 1) * 1000) / 1000;
+    if (!(cantidad > 0 && unidades > 0 && Number.isFinite(unidades))) return toast("Escribe una cantidad mayor a cero.");
+    const ref = doc(db, "inv_mov", m.id);
+    const datos = {tipo: "muestra_solicitada", prod: p.id, productoNombre: p.nombre || codDe(p), clienteId: c.id, clienteNombre: c.nombre || "Cliente",
+      cant: 0, muestraUnidades: unidades, muestraCantidad: cantidad, unidad: plu(cantidad, presentacion ? presPal(p) : unidadDe(p)),
+      ts: Date.now(), por: S.me.uid, porNombre: S.me.nombre || S.u?.email || "", nota: clean(S.f.muestra_nota).slice(0, 240)};
+    S.busy = true; draw();
+    try {
+      await runTransaction(db, async tx => { if (!(await tx.get(ref)).exists()) tx.set(ref, datos); });
+      toast("Muestra solicitada guardada");
+      if (S.m === m) {
+        m.id = doc(collection(db, "inv_mov")).id;
+        ["muestra_cant", "muestra_nota"].forEach(k => delete S.f[k]);
+      }
+    } catch (e) { fallo(e, "guardar la solicitud de muestra"); }
+    finally { S.busy = false; draw(); }
+  },
+  async muestraEntregar(id){
+    if (!puede("admin", "facturador") || S.busy || S.m?.type !== "muestra") return;
+    const m = listaMuestras().find(x => x.id === id && !x.entrega);
+    if (!m || !confirm(`¿Confirmas que entregaste ${m.muestraCantidad} ${m.unidad} de ${m.productoNombre} a ${m.clienteNombre}?`)) return;
+    const solicitud = doc(db, "inv_mov", id), entrega = doc(db, "inv_mov", `entrega_${id}`);
+    S.busy = true; draw();
+    try {
+      const nueva = await runTransaction(db, async tx => {
+        const [s, e] = await Promise.all([tx.get(solicitud), tx.get(entrega)]), d = s.data();
+        if (e.exists()) return false;
+        if (d?.tipo !== "muestra_solicitada" || !Number.isFinite(d.muestraUnidades) || d.muestraUnidades <= 0) throw new Error("Solicitud inválida");
+        tx.set(entrega, {tipo: "muestra", muestraId: id, prod: d.prod, cant: -d.muestraUnidades, clienteId: d.clienteId, clienteNombre: d.clienteNombre,
+          ts: Date.now(), por: S.me.uid, porNombre: S.me.nombre || S.u?.email || "", nota: d.nota || ""});
+        return true;
+      });
+      toast(nueva ? "Muestra entregada e inventario actualizado" : "La entrega ya estaba registrada");
+    } catch (e) { fallo(e, "confirmar la entrega de la muestra"); }
+    finally { S.busy = false; draw(); }
+  },
   invAbrir(v){ ["inv_cant", "inv_nota", "inv_ro", "inv_tipo", "inv_modo"].forEach(k => delete S.f[k]); S.m = {type: "inv", id: v}; draw(); },
   invTipo(v){ S.f.inv_tipo = v; draw(); },
   invModo(v){ S.f.inv_modo = v; draw(); },
@@ -3710,7 +3788,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-09b";
+const APP_VER = "2026-11-09c";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
