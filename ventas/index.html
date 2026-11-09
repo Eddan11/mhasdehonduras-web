@@ -1212,8 +1212,9 @@ function vAgente(){
 function statsCliente(c){
   const cs = S.cot.filter(x => !x.eliminada && x.cliente && (x.cliente.id === c.id));
   const fac = cs.filter(x => x.estado === "facturada");
-  const pedidos = cs.filter(x => x.estado === "aprobada" || x.estado === "facturada")
-    .map(x => ({f: (x.factura && x.factura.fecha) || x.fecha, x})).sort((a, b) => a.f.localeCompare(b.f));
+  const pedidos = cs.filter(x => x.estado === "facturada" || x.estado === "vendida" || (x.estado === "aprobada" && !x.sinComprobante))
+    .map(x => ({f: x.factura?.fecha || x.ventaSinComprobante?.fecha || x.fecha, x})).filter(p => /^\d{4}-\d{2}-\d{2}$/.test(p.f || ""))
+    .sort((a, b) => a.f.localeCompare(b.f) || (a.x.creado || 0) - (b.x.creado || 0) || String(a.x.id).localeCompare(String(b.x.id)));
   const ult = pedidos.at(-1) || null;
   let ciclo = Number(c.cicloDias) || 0, auto = false;
   if (!ciclo && pedidos.length >= 2) {
@@ -1221,13 +1222,15 @@ function statsCliente(c){
     const g = gaps.filter(d => d > 0); if (g.length) { ciclo = Math.round(g.reduce((a, b) => a + b, 0) / g.length); auto = true; }
   }
   if (!ciclo && ult) { ciclo = 30; auto = true; }
-  const prox = ult ? addDays(ult.f, ciclo) : "";
+  const manual = ult && c.recompraManual?.pedidoId === ult.x.id ? c.recompraManual : null;
+  const fecha = ult ? manual?.fecha || addDays(ult.f, ciclo) : "";
+  const prox = manual?.omitido ? "" : fecha && new Date(fecha + "T12:00:00").getDay() === 0 ? addDays(fecha, 1) : fecha;
   const falta = prox ? diffDays(prox, today()) : null;
   const primera = cs.slice().sort((a, b) => (a.creado || 0) - (b.creado || 0))[0];
   return {n: cs.length, pedidos: pedidos.length, facturado: r2(fac.reduce((a, x) => a + (Number(x.total) || 0), 0)), saldo: r2(fac.reduce((a, x) => a + Math.max(0, saldo(x)), 0)),
     ultFecha: ult ? ult.f : "", ultItems: ult ? (ult.x.items || []).map(i => i.cant + " " + i.nombre).join(" · ") : "", ultCot: ult ? ult.x : null,
     cotRec: cs.slice().sort((a, b) => String(b.fecha || "").localeCompare(String(a.fecha || "")) || (b.creado || 0) - (a.creado || 0))[0] || null,
-    ciclo, auto, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
+    ciclo, auto, manual, prox, falta, creadoPor: c.creadoPorNombre || (S.usuarios.find(u => u.id === c.creadoPor) || {}).nombre || (primera && primera.vendedorNombre) || ""};
 }
 // Las asignaciones se cambian explícitamente desde Clientes; cargar la app no migra datos.
 const nomUsuario = id => (S.usuarios.find(u => u.id === id) || {}).nombre || "";
@@ -1237,6 +1240,7 @@ function duplicadoDe(c){
     ((c.rtn && o.rtn && c.rtn.replace(/\D/g, "") === o.rtn.replace(/\D/g, "")) || (normNom(c.nombre) && normNom(c.nombre) === normNom(o.nombre))));
 }
 function recordatorio(st){
+  if (st.manual?.omitido) return ["Recordatorio quitado", ""];
   if (st.falta == null) return ["Sin pedidos", ""];
   if (st.falta < 0) return ["Toca pedir · hace " + (-st.falta) + (st.falta === -1 ? " día" : " días"), "b-bad"];
   if (st.falta === 0) return ["Toca pedir hoy", "b-bad"];
@@ -1245,7 +1249,17 @@ function recordatorio(st){
 }
 function waRecordatorio(c, st){
   let tel = String(c.tel || "").replace(/\D/g, ""); if (tel.length === 8) tel = "504" + tel;
-  const txt = `Hola ${c.nombre}, le saluda ${S.me.nombre || "MHAS de Honduras"} de MHAS de Honduras. Su último pedido fue el ${fdate(st.ultFecha)}: ${st.ultItems}. ¿Le preparamos el siguiente? Con gusto le cotizamos.`;
+  const contacto = textoNormal(clean(contactosDe(c)[0]?.nombre).split(/\s+/)[0]) || textoNormal(clean(c.nombre));
+  const vendedor = textoNormal(clean(S.me.nombre).split(/\s+/)[0]);
+  const tipos = [[/^rollo(?:s)? termico/, "rollos térmicos"], [/^rollo(?:s)? quimico/, "rollos químicos"], [/^etiqueta/, "etiquetas"],
+    [/^(?:stretch film|film estirable|fleje)/, "film estirable"], [/^cinta adhesiva/, "cinta adhesiva"], [/^ribbon/, "ribbon"]];
+  const familias = [...new Set((st.ultCot?.items || []).map(i => {
+    const nombre = clean(i.nombre).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return tipos.find(([patron]) => patron.test(nombre))?.[1] || "";
+  }))];
+  const pregunta = familias.length === 1 && familias[0] ? `¿Cómo va de ${familias[0]}? Si ya necesita reponer, con gusto le preparo una cotización.` :
+    "¿Necesita reponer algún producto de su último pedido? Con gusto le preparo una cotización.";
+  const txt = `Buen día${contacto ? ", " + contacto : ""}. ${vendedor ? "Le saluda " + vendedor : "Le saludamos"} de MHAS de Honduras. ${pregunta}`;
   return `https://wa.me/${tel}?text=${encodeURIComponent(txt)}`;
 }
 function vClientes(){
@@ -1269,11 +1283,19 @@ function vClientes(){
       <td><b>${empresa(c.nombre)}</b>${c.contacto ? `<br><small>${esc(c.contacto)}</small>` : ""}<br><small class="muted">${esc([c.rtn, c.tel].filter(Boolean).join(" · "))}</small></td>
       <td>${st.cotRec ? `${fdate(st.cotRec.fecha)} <span class="stub">${esc(st.cotRec.numero)}</span><br><span class="badge ${(ESTADO[st.cotRec.estado] || ["", ""])[1]}">${(ESTADO[st.cotRec.estado] || [st.cotRec.estado])[0]}</span> <small class="muted">${L(st.cotRec.total)}</small>` : '<span class="muted">—</span>'}</td>
       <td>${st.ultFecha ? `${fdate(st.ultFecha)}<br><small class="muted">${esc(st.ultItems.length > 70 ? st.ultItems.slice(0, 70) + "…" : st.ultItems)}</small>` : '<span class="muted">—</span>'}</td>
-      <td><span class="badge ${rc}">${rt}</span>${st.ultFecha ? `<br><small class="muted">cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}</small>` : ""}</td>
+      <td><span class="badge ${rc}">${rt}</span>${st.prox ? `<br><small class="muted">${st.manual ? "Programado para " + fdate(st.prox) : `cada ${st.ciclo} días${st.auto ? "" : " (fijo)"}`}</small>` : ""}
+      ${st.ultCot && (fil === "toca" || st.manual) ? `<div class="actions" style="margin-top:6px"><button class="btn sm" data-a="recompraFecha" data-v="${esc(c.id)}">Cambiar fecha</button>${st.manual?.omitido ? "" : `<button class="btn sm" data-a="recompraQuitar" data-v="${esc(c.id)}">Quitar recordatorio</button>`}</div>` : ""}</td>
       <td class="num">${st.pedidos}</td><td class="num">${st.saldo > 0.005 ? `<b>${L(st.saldo)}</b>` : "—"}</td>
       <td><small>${esc(nomUsuario(c.asignado) || st.creadoPor || "—")}</small>${S.admin && duplicadoDe(c) ? `<br><span class="badge b-bad">Posible duplicado</span>` : ""}</td></tr>`; }).join("")}
   </tbody></table>` : `<p class="empty">${q ? "Ningún cliente coincide." : fil === "toca" ? "Ningún cliente tiene pedido pendiente en los próximos 7 días." : "Todavía no hay clientes."}</p>`}
   </div></div>`;
+}
+function mRecompraFecha(){
+  const c = S.cli.find(x => x.id === S.m.id);
+  if (!c) return "";
+  return `<h1>Cambiar fecha de recompra</h1><p class="sub">${empresa(c.nombre)}. Si eliges un domingo, se programa para el lunes.</p>
+    <div class="field"><label for="rc_fecha">Nueva fecha</label><input id="rc_fecha" type="date" min="${today()}" data-k="rc_fecha" value="${fv("rc_fecha")}"></div>
+    <div class="actions"><button class="btn pri" data-a="recompraFechaGuardar" ${S.busy ? "disabled" : ""}>Guardar fecha</button></div>`;
 }
 
 /* ---------- vista: productos ---------- */
@@ -1670,7 +1692,7 @@ function vAjustes(){
 function drawModal(){
   const md = $("#modal");
   if (!S.m || S.screen !== "app") { md.classList.remove("open"); return; }
-  const html = S.m.type === "muestra" ? mMuestra() : S.m.type === "familiaWeb" ? catalogoWebUI.modal() : S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
+  const html = S.m.type === "recompraFecha" ? mRecompraFecha() : S.m.type === "muestra" ? mMuestra() : S.m.type === "familiaWeb" ? catalogoWebUI.modal() : S.m.type === "prospecto" ? prospectosUI.modal() : S.m.type === "compra" ? comprasUI.modal() : S.m.type === "cot" ? mCot() : S.m.type === "prod" ? mProd() : S.m.type === "user" ? mUser() : S.m.type === "cli" ? mCli() : S.m.type === "chat" ? mChat() : S.m.type === "tarea" ? mTarea() : S.m.type === "inv" ? mInv() : S.m.type === "rep" ? mRep() : mCxp();
   if (!html) { md.classList.remove("open"); return; }
   $("#sheet").innerHTML = `<button class="btn sm x" data-a="close" aria-label="Cerrar">✕</button>` + html;
   md.classList.add("open");
@@ -1906,13 +1928,16 @@ function mChat(){
   ${c.proveedor ? `<p class="note"><b>Proveedor:</b> el agente no responde en este chat y el asistente lo pone aparte de los clientes.</p>` : ""}
   <p class="note">"Reiniciar" hace que el agente olvide lo anterior de este chat y empiece de cero (útil para pruebas). El historial sigue visible aquí.</p>`;
 }
-function recompraFicha(c){
+function recompraFicha(st){
   const r = S.f.ce_recompra;
   const estados = {esperando:"Esperando respuesta", pregunta_fecha:"Pendiente de fecha", agendado:"Agendado", respondido:"Respondió", sin_respuesta:"Sin respuesta", enviando:"Envío por verificar", error_envio:"Error de envío", baja:"Se dio de baja", sin_telefono:"Sin WhatsApp principal", telefono_compartido:"WhatsApp asociado a otra ficha"};
   const bloqueado = r && ["sin_telefono", "telefono_compartido"].includes(r.estado);
+  const manual = st.manual;
+  const reprogramado = manual?.fecha && (`${manual.fecha}:${manual.actualizado || 0}` !== r?.revisionManual || r?.pedidoId !== st.ultCot?.id);
   return `<div class="panel" style="padding:12px;margin:12px 0"><h2>Seguimiento de recompra</h2>
+    ${manual?.omitido ? '<p class="note">Recordatorio quitado para el último pedido.</p>' : reprogramado ? `<p class="note">Nueva fecha: ${esc(fdate(st.prox))} a las 9:00 a. m.</p>` : ""}
     <p class="note">${r ? esc(bloqueado || r.estado === "baja" ? estados[r.estado] : r.pausado ? "Pausado" : estados[r.estado] || (r.autorizado ? "Autorizado" : "Sin permiso registrado")) : "Consulta el estado y registra el permiso del contacto principal para recibir recordatorios."}
-    ${r?.enviadoEn ? ` · Último mensaje: ${esc(fdate(ymd(new Date(r.enviadoEn))))}` : ""}${r?.proximo && !r.pausado ? ` · Próximo: ${esc(fdate(r.proximo))} a las 9:00 a. m.` : ""}</p>
+    ${r?.enviadoEn ? ` · Último mensaje: ${esc(fdate(ymd(new Date(r.enviadoEn))))}` : ""}${r?.proximo && !r.pausado && !manual?.omitido && !reprogramado ? ` · Próximo: ${esc(fdate(r.proximo))} a las 9:00 a. m.` : ""}</p>
     <div class="actions">${!r ? '<button class="btn sm" data-a="cliRecompra" data-v="ver">Ver estado</button>' : bloqueado ? "" : r.autorizado ? `<button class="btn sm" data-a="cliRecompra" data-v="${r.pausado ? "reanudar" : "pausar"}">${r.pausado ? "Reanudar" : "Pausar"}</button>` : '<button class="btn sm" data-a="cliRecompra" data-v="autorizar">Registrar permiso</button>'}</div></div>`;
 }
 function mCli(){
@@ -1926,7 +1951,7 @@ function mCli(){
   ${st ? `<p class="sub">${st.pedidos} pedidos · facturado ${L(st.facturado)}${st.saldo > 0.005 ? " · debe " + L(st.saldo) : ""}${st.creadoPor ? " · creado por " + esc(st.creadoPor) : ""}</p>
   ${st.ultFecha ? `<div class="panel" style="padding:12px"><b>Último pedido: ${fdate(st.ultFecha)}</b> <span class="muted">(${esc(st.ultCot.numero)})</span><p class="note" style="margin:6px 0">${esc(st.ultItems)}</p>
     <span class="badge ${recordatorio(st)[1]}">${recordatorio(st)[0]}</span>
-    ${c.tel ? `<div class="actions" style="margin-top:10px"><a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a></div>` : ""}</div>` : ""}` : ""}
+    ${c.tel && !st.manual?.omitido ? `<div class="actions" style="margin-top:10px"><a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a></div>` : ""}</div>` : ""}` : ""}
   ${S.admin ? `<div class="field"><label for="ce_asignado">Vendedor asignado (solo él lo ve)</label><select id="ce_asignado" data-k="ce_asignado">
     ${S.usuarios.filter(u => u.id === S.me.uid || u.rol === "vendedor" || u.rol === "facturador").map(u => `<option value="${esc(u.id)}" ${(g("asignado", c.asignado || S.me.uid)) === u.id ? "selected" : ""}>${esc(u.nombre || u.email)}${u.id === S.me.uid ? " (tú)" : ""}</option>`).join("")}
   </select></div>
@@ -1947,7 +1972,7 @@ function mCli(){
   <p class="note">El principal es al que le llegan los recordatorios. Al cotizar se escoge a quién va dirigida.</p>
   ${S.admin ? `<div class="field"><label for="ce_desde">Cliente desde</label><input id="ce_desde" type="date" data-k="ce_desde" value="${esc(g("desde", c.creado ? ymd(new Date(c.creado)) : today()))}"></div>` : ""}
   <div class="field"><label for="ce_ciclo">Pide cada (días)</label><input id="ce_ciclo" type="number" min="0" step="1" inputmode="numeric" data-k="ce_ciclo" value="${esc(g("ciclo", c.cicloDias || ""))}" placeholder="Automático${st && st.auto && st.ultFecha ? " (" + st.ciclo + " días)" : ""}"></div>
-  ${c.id && S.admin ? recompraFicha(c) : ""}
+  ${c.id && S.admin ? recompraFicha(st) : ""}
   ${muestras.length ? `<hr class="sep"><h2>Muestras</h2>${tablaMuestras(muestras.slice(0, 20))}` : ""}
   <p class="note">Los cambios aplican a cotizaciones nuevas; las ya hechas conservan los datos con que se crearon.</p>
   <div class="actions"><button class="btn pri big" data-a="cliSave" ${S.busy ? "disabled" : ""}>Guardar cliente</button></div>
@@ -3222,6 +3247,36 @@ const A = {
   cfil(v){ S.f.cfil = v; draw(); },
   cliNuevo(){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: null}; draw(); },
   cliEdit(v){ Object.keys(S.f).filter(k => k.startsWith("ce_")).forEach(k => delete S.f[k]); S.m = {type: "cli", id: v}; draw(); },
+  recompraFecha(id){
+    const c = S.cli.find(x => x.id === id), st = c && statsCliente(c);
+    if (!st?.ultCot || S.busy) return;
+    S.f.rc_fecha = st.prox >= today() ? st.prox : today();
+    S.m = {type: "recompraFecha", id, pedidoId: st.ultCot.id}; draw();
+  },
+  async recompraFechaGuardar(){
+    const m = S.m, fecha = S.f.rc_fecha || "", c = S.cli.find(x => x.id === m?.id);
+    if (!c || m.type !== "recompraFecha" || S.busy) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !Number.isFinite(Date.parse(fecha)) || fecha < today() || addDays(fecha, 0) !== fecha) return toast("Elige una fecha válida, desde hoy en adelante.");
+    if (statsCliente(c).ultCot?.id !== m.pedidoId) return toast("Hay un pedido más reciente. Abre el recordatorio de nuevo.");
+    S.busy = true; draw();
+    try {
+      await updateDoc(doc(db, "clientes", c.id), {recompraManual: {pedidoId: m.pedidoId, fecha, actualizado: Date.now()}});
+      if (S.m === m) S.m = null;
+      const dia = new Date(fecha + "T12:00:00").getDay() === 0 ? addDays(fecha, 1) : fecha;
+      toast(`Recordatorio programado para el ${fdate(dia)}`);
+    } catch (e) { fallo(e, "cambiar la fecha de recompra"); }
+    finally { S.busy = false; draw(); }
+  },
+  async recompraQuitar(id){
+    const c = S.cli.find(x => x.id === id), st = c && statsCliente(c);
+    if (!st?.ultCot || S.busy || !confirm(`¿Quitar el recordatorio actual de ${c.nombre}? Se calculará uno nuevo cuando vuelva a comprar.`)) return;
+    S.busy = true; draw();
+    try {
+      await updateDoc(doc(db, "clientes", id), {recompraManual: {pedidoId: st.ultCot.id, omitido: true, actualizado: Date.now()}});
+      toast("Recordatorio quitado");
+    } catch (e) { fallo(e, "quitar el recordatorio de recompra"); }
+    finally { S.busy = false; draw(); }
+  },
   async cliRecompra(accion){
     const id = S.m?.id, c = S.cli.find(x => x.id === id);
     if (!S.admin || !c || S.busy) return;
@@ -3788,7 +3843,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-09c";
+const APP_VER = "2026-11-09d";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
