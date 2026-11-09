@@ -1982,8 +1982,6 @@ function totalLetras(t){
 }
 const fechaFac = s => { const [y, m, d] = String(s || "").split("-"); return y ? Number(d) + " " + MESES_F[Number(m) - 1] + " " + y : ""; };
 const nF = n => (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-// Precio unitario: 2 decimales, o hasta 4 si el precio final no es exacto (para que cantidad x precio cuadre con el importe)
-const nPU = n => (Number(n) || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 4});
 const facNum = (rangoIni, n) => String(rangoIni || CAI_DEF.rangoIni).split("-").slice(0, 3).join("-") + "-" + String(n).padStart(8, "0");
 const facBlancos = () => (S.facturas || []).filter(f => f.estado === "blanco").sort((a, b) => a.n - b.n);
 const facSiguiente = () => facBlancos()[0] || null;
@@ -2062,7 +2060,7 @@ async function estamparFactura(PDFLib, bytes, f){
     t(String(l.cant), 46, y, {center: true});
     if (un) t(un, 56, y);
     ls.forEach((x, k) => t(x, xDesc, y + k * 17));
-    t(nPU(l.pu), 445, y, {center: true});
+    t(nF(l.pu), 445, y, {center: true});
     t(nF(l.imp), R, y, {right: true});
     y += ls.length * 17 + 4;
   });
@@ -2098,16 +2096,17 @@ async function estamparFactura(PDFLib, bytes, f){
   }
   return await pdf.save();
 }
-async function pdfFactura(f){
+async function pdfFactura(f, soloOriginal = false){
   const PDFLib = await cargarPdfLib();
   const base = await pdfBlanco(f);
   if (f.estado === "blanco") return base;
   const original = await estamparFactura(PDFLib, base, f);
+  if (soloOriginal) return original;
   return await facturaConCopia(PDFLib, original, await cargarPdfJs());
 }
-async function entregarPdf(bytes, name){
+async function entregarPdf(bytes, name, soloDescarga = false){
   const blob = new Blob([bytes], {type: "application/pdf"});
-  try {
+  if (!soloDescarga) try {
     const file = new File([blob], name, {type: "application/pdf"});
     if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: name}); return; }
   } catch (err) { if (err && err.name === "AbortError") return; }
@@ -2212,7 +2211,7 @@ function vFacturas(){
         <td>${f.estado === "blanco" ? "" : esc(vendFac(f))}${f.emitidaEn ? `<br><small class="muted">${unif(f.por) !== duenoFac(f) && f.por ? "Facturó " + esc(nomUid(unif(f.por)) || f.porNombre || "") + " · " : ""}${horaTxt(f.emitidaEn)}</small>` : ""}</td>
         <td class="num">${f.estado === "blanco" ? "" : L(f.total)}</td>
         <td><span class="badge ${ec}">${et}</span>${f.historica ? ` <span class="badge">Histórica</span>` : ""}${f.anulada ? `<br><small class="muted">${esc(f.anulada.motivo || "")}${f.anulada.porNombre ? " · " + esc(f.anulada.porNombre) : ""}</small>` : ""}</td>
-        <td style="white-space:nowrap">${f.historica ? "" : `<button class="btn sm" data-a="facPdf" data-v="${f.n}" ${S.busy ? "disabled" : ""}>PDF</button>`}${(f.estado === "emitida" && fact) || (f.estado === "blanco" && S.admin) ? ` <button class="btn sm danger" data-a="facAnular" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Anular</button>` : ""}</td></tr>`; }).join("")}
+        <td><div class="actions" style="margin:0">${f.historica ? "" : `<button class="btn sm" data-a="facPdf" data-v="${f.n}" ${S.busy ? "disabled" : ""}>${f.estado === "emitida" ? "Original y copia" : "PDF"}</button>`}${f.estado === "emitida" && !f.historica ? `<button class="btn sm" data-a="facPdfOriginal" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Descargar original</button>` : ""}${(f.estado === "emitida" && fact) || (f.estado === "blanco" && S.admin) ? `<button class="btn sm danger" data-a="facAnular" data-v="${f.n}" ${S.busy ? "disabled" : ""}>Anular</button>` : ""}</div></td></tr>`; }).join("")}
     </tbody></table>` : `<p class="empty">${all.length ? "No hay facturas con ese filtro." : "Todavía no hay talonario cargado."}</p>`}
     </div>
     ${ult ? `<p class="note">Última emitida: ${esc(ult.numero)} · ${fdate(ult.fecha)} · ${empresa((ult.cliente && ult.cliente.nombre) || "")}${ult.porNombre ? " · " + esc(ult.porNombre) : ""}</p>` : ""}
@@ -2746,14 +2745,16 @@ const A = {
       else fallo(e, "emitir la factura");
     }
   },
-  async facPdf(v){
+  async facPdf(v, soloOriginal = false){
     const f = (S.facturas || []).find(x => String(x.n) === String(v)); if (!f) return;
     if (f.historica) return toast("Es una factura histórica: el sistema no tiene su PDF.");
+    if (soloOriginal && (f.estado !== "emitida" || S.busy)) return;
     S.busy = true; draw();
-    try { await entregarPdf(await pdfFactura(f), f.estado === "blanco" ? "Factura en blanco " + f.numero + ".pdf" : nombreFac(f)); }
+    try { await entregarPdf(await pdfFactura(f, soloOriginal), f.estado === "blanco" ? "Factura en blanco " + f.numero + ".pdf" : nombreFac(f), soloOriginal); }
     catch (e) { console.error(e); toast(e && e.code === "permission-denied" ? "No tienes permiso para ver el PDF." : "No se pudo armar el PDF."); }
     S.busy = false; draw();
   },
+  facPdfOriginal(v){ return A.facPdf(v, true); },
   async facPdfCot(){
     const c = S.cot.find(x => x.id === S.m.id), f = facDeCot(c);
     if (!f) return toast("Esta factura no está en el talonario del sistema.");
@@ -3709,7 +3710,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-09a";
+const APP_VER = "2026-11-09b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
