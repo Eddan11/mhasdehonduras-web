@@ -486,12 +486,13 @@ function pidOf(name){var r=null;CATS.forEach(function(c){c.p.forEach(function(p)
 function withIds(o,id){if(id){o.content_ids=[id];o.content_type='product';}return o;}
 function track(ev,params){try{if(window.fbq)fbq('track',ev,params||{});}catch(e){}}
 // Una solicitud recibida por correo no es una compra ni un clic en WhatsApp.
-function trackGoogleQuote(){
-  try{if(typeof window.gtag==='function')window.gtag('event','conversion',{'send_to':'AW-18538866349/EKrqCPudwaodEK3NgohF'});}catch(e){}
+function trackGoogleConversion(accion){
+  var destinos={cotizacion:'AW-18538866349/EKrqCPudwaodEK3NgohF',whatsapp:'AW-18538866349/P3oACNTx2LQdEK3NgohF'};
+  try{if(typeof window.gtag==='function'&&Object.prototype.hasOwnProperty.call(destinos,accion))window.gtag('event','conversion',{'send_to':destinos[accion]});}catch(e){}
 }
 document.addEventListener('click',function(e){
   var a=e.target.closest('a');if(!a)return;
-  if(a.classList.contains('js-wa')){track('Contact',withIds({content_name:a.getAttribute('data-item')||'WhatsApp',content_category:a.getAttribute('data-cat')||'General',method:'whatsapp'},a.getAttribute('data-pid')));}
+  if(a.classList.contains('js-wa')){track('Contact',withIds({content_name:a.getAttribute('data-item')||'WhatsApp',content_category:a.getAttribute('data-cat')||'General',method:'whatsapp'},a.getAttribute('data-pid')));trackGoogleConversion('whatsapp');}
   else if(a.classList.contains('js-call')){track('Contact',{method:'phone'});}
   else if(a.classList.contains('js-mail')){track('Contact',{method:'email'});}
   else if(a.id==='dlpdf'){track('ViewContent',{content_name:'Catálogo PDF'});}
@@ -616,7 +617,7 @@ qf.addEventListener('submit',function(e){
   .then(function(){
     qmsg('¡Solicitud enviada! Referencia '+ref+'. Le enviaremos la cotización a '+d.email+'.',true);
     track('Lead',withIds({content_name:d.Producto,content_category:'Cotización por correo',method:'email'},pidOf(d.Producto)));
-    trackGoogleQuote();
+    trackGoogleConversion('cotizacion');
     qf.reset();
   })
   .catch(function(){qmsg('No se pudo enviar. Escríbanos a '+QMAIL+' o al WhatsApp +504 3166-6059.',false);})
