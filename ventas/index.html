@@ -1253,13 +1253,15 @@ function waRecordatorio(c, st){
   const vendedor = textoNormal(clean(S.me.nombre).split(/\s+/)[0]);
   const tipos = [[/^rollo(?:s)? termico/, "rollos térmicos"], [/^rollo(?:s)? quimico/, "rollos químicos"], [/^etiqueta/, "etiquetas"],
     [/^(?:stretch film|film estirable|fleje)/, "film estirable"], [/^cinta adhesiva/, "cinta adhesiva"], [/^ribbon/, "ribbon"]];
-  const familias = [...new Set((st.ultCot?.items || []).map(i => {
-    const nombre = clean(i.nombre).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const productos = [...new Set((st.ultCot?.items || []).map(i => clean(i.nombre).replace(/\s+/g, " ").toLocaleLowerCase("es-HN")))]
+    .filter(nombre => nombre && !/^(flete|env[ií]o)\b/.test(nombre));
+  const familias = [...new Set(productos.map(producto => {
+    const nombre = producto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     return tipos.find(([patron]) => patron.test(nombre))?.[1] || "";
   }))];
-  const pregunta = familias.length === 1 && familias[0] ? `¿Cómo va de ${familias[0]}? Si ya necesita reponer, con gusto le preparo una cotización.` :
-    "¿Necesita reponer algún producto de su último pedido? Con gusto le preparo una cotización.";
-  const txt = `Buen día${contacto ? ", " + contacto : ""}. ${vendedor ? "Le saluda " + vendedor : "Le saludamos"} de MHAS de Honduras. ${pregunta}`;
+  const detalle = productos.length > 1 && familias.length === 1 && familias[0] ? `sus ${familias[0]}` :
+    productos.length ? `su pedido de ${productos.slice(0, 2).join(" y ")}${productos.length > 2 ? ", entre otros productos" : ""}` : "algún producto de su último pedido";
+  const txt = `Buen día${contacto ? ", " + contacto : ""}. ${vendedor ? "Le saluda " + vendedor : "Le saludamos"} de MHAS de Honduras. Espero esté bien. Le escribo para saber si necesita reponer ${detalle}. De ser así, con gusto le ${vendedor ? "preparo" : "preparamos"} una cotización.`;
   return `https://wa.me/${tel}?text=${encodeURIComponent(txt)}`;
 }
 function vClientes(){
@@ -3843,7 +3845,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-09d";
+const APP_VER = "2026-11-09e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
