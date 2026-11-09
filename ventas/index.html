@@ -69,9 +69,20 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .scroll{overflow-x:auto;max-width:100%;min-width:0}.cot-doc-fila{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.inv-scroll{max-height:70vh;max-height:70dvh;overflow:auto}
-.inv-scroll table{border-collapse:separate;border-spacing:0}
-.inv-scroll thead th{position:sticky;top:0;z-index:2;background:var(--card);box-shadow:0 1px 0 var(--line)}
+.inv-tabla{table-layout:fixed}
+.inv-tabla th,.inv-tabla td{padding:7px 5px;white-space:normal;overflow-wrap:anywhere}
+.inv-tabla thead th:first-child{width:6%}
+.inv-tabla thead th:nth-child(2){width:17%}
+.inv-tabla thead th:last-child{width:6%}
+.inv-tabla .stub,.inv-tabla .badge{white-space:normal;padding-inline:5px}
+@media (max-width:800px){
+  .inv-tabla,.inv-tabla tbody{display:block}
+  .inv-tabla thead{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+  .inv-tabla .inv-familia,.inv-tabla .inv-familia th{display:block}
+  .inv-tabla tr.click{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--line)}
+  .inv-tabla td{border:0;text-align:left}
+  .inv-tabla td[data-label]::before{content:attr(data-label);display:block;color:var(--muted);font-weight:600}
+}
 table{width:100%;border-collapse:collapse;font-size:var(--ui-normal)}
 th{text-align:left;font-size:var(--ui-normal);color:var(--muted);font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -1396,19 +1407,19 @@ function vInventario(){
   </div>
   <div class="chips" role="group" aria-label="Estado">${[["todos", "Todos"], ["Pedir", "Pedir"], ["Agotado", "Agotados"], ["Sin conteo", "Sin conteo"], ["OK", "OK"]].map(([v, t]) => `<button data-a="invFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="invq">Buscar por código o nombre</label><input id="invq" data-k="invq" value="${fv("invq")}" autocomplete="off"></div>
-  <div class="panel" style="padding:6px 10px"><div class="scroll inv-scroll" tabindex="0" role="region" aria-label="Inventario por familia">
-  ${list.length ? `<table><thead><tr><th>Código</th><th>Producto</th><th class="num">Existencia</th><th class="num">Estimado en cotizaciones</th><th class="num">Disponible</th><th class="num">Por recibir</th><th class="num">Reorden</th><th>Estado</th><th class="num">Vendido 30 d</th><th class="num">Vendido 90 d</th><th class="num">Días de inventario</th></tr></thead><tbody>
+  <div class="panel" style="padding:6px 8px">
+  ${list.length ? `<table class="inv-tabla" aria-label="Inventario por familia"><thead><tr><th>Código</th><th>Producto</th><th class="num">Existencia</th><th class="num">Estimado en cotizaciones</th><th class="num">Disponible</th><th class="num">Por recibir</th><th class="num">Reorden</th><th>Estado</th><th class="num">Vendido 30 d</th><th class="num">Vendido 90 d</th><th class="num">Días de inventario</th></tr></thead><tbody>
     ${inventarioPorFamilia(list).map(g => `<tr class="inv-familia"><th colspan="11" scope="rowgroup" style="background:var(--bg);padding:12px 8px;text-align:left">${esc(g.nombre)} <small class="muted">· ${g.items.length} ${g.items.length===1?'producto':'productos'}</small></th></tr>${g.items.map(d => `<tr class="click" data-a="invAbrir" data-v="${esc(d.p.id)}" tabindex="0">
       <td><span class="stub">${esc(codDe(d.p) || "—")}</span></td><td>${esc(d.p.nombre)}</td>
-      <td class="num">${cantTxt(d.p, d.exist)}</td><td class="num">${d.comp ? cantTxt(d.p, d.comp) : '<span class="muted">—</span>'}</td>
-      <td class="num">${d.disp == null ? "—" : `<b style="color:${d.disp <= 0 ? "var(--bad)" : "var(--ink)"}">${cantTxt(d.p, d.disp)}</b>`}</td>
-      <td class="num">${porRecibir(d.p.id) ? cantTxt(d.p, porRecibir(d.p.id)) : "—"}</td>
-      <td class="num">${d.reorden ? cantTxt(d.p, d.reorden) : '<span class="muted">—</span>'}${d.manual ? "" : ' <small class="muted">sug.</small>'}</td>
-      <td><span class="badge ${d.estado[1]}">${d.estado[0]}</span></td>
-      <td class="num">${d.v30 ? cantTxt(d.p, d.v30) : '<span class="muted">0</span>'}</td><td class="num">${d.v90 ? cantTxt(d.p, d.v90) : '<span class="muted">0</span>'}</td>
-      <td class="num">${d.dias == null ? '<span class="muted">—</span>' : d.dias + " d"}</td></tr>`).join("")}`).join("")}
+      <td class="num" data-label="Existencia">${cantTxt(d.p, d.exist)}</td><td class="num" data-label="Estimado en cotizaciones">${d.comp ? cantTxt(d.p, d.comp) : '<span class="muted">—</span>'}</td>
+      <td class="num" data-label="Disponible">${d.disp == null ? "—" : `<b style="color:${d.disp <= 0 ? "var(--bad)" : "var(--ink)"}">${cantTxt(d.p, d.disp)}</b>`}</td>
+      <td class="num" data-label="Por recibir">${porRecibir(d.p.id) ? cantTxt(d.p, porRecibir(d.p.id)) : "—"}</td>
+      <td class="num" data-label="Reorden">${d.reorden ? cantTxt(d.p, d.reorden) : '<span class="muted">—</span>'}${d.manual ? "" : ' <small class="muted">sug.</small>'}</td>
+      <td data-label="Estado"><span class="badge ${d.estado[1]}">${d.estado[0]}</span></td>
+      <td class="num" data-label="Vendido 30 d">${d.v30 ? cantTxt(d.p, d.v30) : '<span class="muted">0</span>'}</td><td class="num" data-label="Vendido 90 d">${d.v90 ? cantTxt(d.p, d.v90) : '<span class="muted">0</span>'}</td>
+      <td class="num" data-label="Días de inventario">${d.dias == null ? '<span class="muted">—</span>' : d.dias + " d"}</td></tr>`).join("")}`).join("")}
   </tbody></table>` : `<p class="empty">Ningún producto coincide.</p>`}
-  </div></div>
+  </div>
   <p class="note">Toca un producto para registrar entradas, conteos o ajustes y ver su historial. El reorden sugerido es lo que vendes en 10 días (7 de venta + 3 sobre costo), redondeado a presentaciones completas; lo puedes cambiar. Los productos inactivos no aparecen aquí.</p>`;
 }
 function mInv(){
@@ -3698,7 +3709,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-08a";
+const APP_VER = "2026-11-09a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
