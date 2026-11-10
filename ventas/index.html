@@ -334,6 +334,7 @@ const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {ti
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
 const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
 const fnRecompra = httpsCallable(getFunctions(fbApp, "us-central1"), "recompraCliente");
+const fnAgendaChat = httpsCallable(getFunctions(fbApp, "us-central1"), "agendaSeguimientoChat");
 const fnCorreoProspecto = httpsCallable(getFunctions(fbApp, "us-central1"), "correoProspectoBorrador", {timeout: 185000});
 const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
 
@@ -871,7 +872,7 @@ const ESTADO_CHAT = c => {
   return ["Responde el agente", "b-ok"];
 };
 const chatPide = c => !c.proveedor && c.estado === "pide_persona" && (c.pausadoHasta || 0) > Date.now();
-const CHAT_F = [["todos", "Todos", () => true], ["alerta", "Con alerta", c => !c.proveedor && (chatPide(c) || !!c.consultaProduccion)], ["persona", "Piden persona", chatPide], ["produccion", "Consultar producción", c => !c.proveedor && !!c.consultaProduccion]];
+const CHAT_F = [["todos", "Todos", () => true], ["alerta", "Con alerta", c => !c.proveedor && (chatPide(c) || !!c.consultaProduccion)], ["persona", "Piden persona", chatPide], ["produccion", "Consultar producción", c => !c.proveedor && !!c.consultaProduccion], ["agenda", "Agenda", c => !c.proveedor && c.agendaSeguimiento?.estado === "agendado"]];
 const chatsFiltrados = () => { const f = (CHAT_F.find(x => x[0] === S.chatF) || CHAT_F[0])[2]; return S.convs.filter(f); };
 const horaTxt = ms => { if (!ms) return ""; const d = new Date(ms); const h = d.toLocaleTimeString("es-HN", {hour: "2-digit", minute: "2-digit"}); return ymd(d) === today() ? h : fdate(ymd(d)) + " " + h; };
 /* ---------- asistente (ventana flotante, para todo el equipo) ---------- */
@@ -1096,19 +1097,22 @@ function periodoMensajes(dias, ahora = Date.now()){
 }
 
 function vChats(){
+  const chats = chatsFiltrados().sort((a, b) => S.chatF === "agenda"
+    ? a.agendaSeguimiento.fecha.localeCompare(b.agendaSeguimiento.fecha)
+    : (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0));
   return `
   <h1>Chats de WhatsApp</h1>
   <p class="sub">Lo que el agente está conversando. Los que piden una persona salen primero en rojo; respóndelos desde la app de WhatsApp Business y el agente se calla solo en ese chat.</p>
   <div class="actions" style="margin:0 0 12px"><label for="chat_dias">Días (incluye hoy)</label><input id="chat_dias" data-k="chat_dias" type="number" min="1" max="365" step="1" value="${esc(S.f.chat_dias ?? 1)}" style="width:80px" ${S.busy ? "disabled" : ""}><button class="btn" data-a="chatsDescargar" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Descargar mensajes"}</button></div>
   <div class="chips" role="group" aria-label="Filtrar chats" style="margin-bottom:10px">${CHAT_F.map(([v, t, fn]) => { const n = S.convs.filter(fn).length; return `<button data-a="chatF" data-v="${v}" aria-pressed="${(S.chatF || "todos") === v}">${t}${v !== "todos" ? ` <span class="cnt${n ? " hot" : ""}">${n}</span>` : ""}</button>`; }).join("")}</div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${chatsFiltrados().length ? `<table><thead><tr><th>Cliente</th><th>Último mensaje</th><th>Estado</th><th>Hora</th></tr></thead><tbody>
-    ${chatsFiltrados().sort((a, b) => (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0)).map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
+  ${chats.length ? `<table><thead><tr><th>Cliente</th><th>Último mensaje</th><th>Estado</th><th>Hora</th></tr></thead><tbody>
+    ${chats.map(c => { const [et, ec] = ESTADO_CHAT(c); return `<tr class="click" data-a="chatOpen" data-v="${esc(c.id)}" tabindex="0">
       <td><b>${esc(nombreChat(c))}</b>${c.proveedor ? ` <span class="badge">Proveedor</span>` : ""}${c.noLeidos ? ` <span class="cnt">${c.noLeidos}</span>` : ""}<br><small class="muted">${esc(c.tel || c.id)}</small></td>
       <td><small>${esc(c.ultimoTexto || "")}</small>${c.ultimaCotizacion ? `<br><span class="stub">${esc(c.ultimaCotizacion)}</span>` : ""}</td>
-      <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}${c.consultaProduccion ? `<br><span class="badge b-warn">Consultar ${c.consultaArea === "Bodega" ? "Bodega" : "Producción"}</span><br><small class="muted">${esc(c.consultaProduccion)}</small>` : ""}</td>
+      <td><span class="badge ${ec}">${et}</span>${c.estado === "pide_persona" && c.motivo ? `<br><small class="muted">${esc(c.motivo)}</small>` : ""}${c.consultaProduccion ? `<br><span class="badge b-warn">Consultar ${c.consultaArea === "Bodega" ? "Bodega" : "Producción"}</span><br><small class="muted">${esc(c.consultaProduccion)}</small>` : ""}${c.agendaSeguimiento?.estado === "agendado" ? `<br><small class="muted">Seguimiento · ${esc(fdate(c.agendaSeguimiento.fecha))}</small>` : ""}</td>
       <td><small>${horaTxt(c.actualizado)}</small></td></tr>`; }).join("")}
-  </tbody></table>` : `<p class="empty">${S.convs.length ? "No hay chats con alerta en este filtro." : "Todavía no hay chats. Cuando el agente esté activo, aquí verás cada conversación."}</p>`}
+  </tbody></table>` : `<p class="empty">${S.chatF === "agenda" ? "No hay seguimientos agendados." : S.convs.length ? "No hay chats con alerta en este filtro." : "Todavía no hay chats. Cuando el agente esté activo, aquí verás cada conversación."}</p>`}
   </div></div>`;
 }
 
@@ -1912,6 +1916,9 @@ function mChat(){
   const [et, ec] = ESTADO_CHAT(c);
   let tel = String(c.tel || c.id).replace(/\D/g, "");
   const quien = {cliente: c.nombre || "Cliente", agente: "Agente", equipo: "Equipo"};
+  const agenda = c.agendaSeguimiento;
+  const agendado = agenda?.estado === "agendado";
+  const estadosAgenda = {pregunta_fecha:"Esperando fecha del cliente", en_espera:"El cliente quedó en confirmar", atendido:"Atendido", cancelado:"Cancelado"};
   return `<h1 style="padding-right:40px">${esc(nombreChat(c))}</h1>
   <p class="sub">${esc(c.tel || c.id)} · <span class="badge ${ec}">${et}</span>${c.vendedorNombre ? " · vendedor: " + esc(c.vendedorNombre) : ""}</p>
   ${origenChat(c)}
@@ -1919,6 +1926,10 @@ function mChat(){
   ${c.consultaProduccion ? `<div class="panel" style="border-color:var(--gold);padding:12px"><b>Consulta a ${c.consultaArea === "Bodega" ? "Bodega" : "Producción"}:</b> ${esc(c.consultaProduccion)}
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="chatConsultaOk">Marcar como resuelta</button></div></div>` : ""}
   <div class="chatbox" id="chatbox">${S.chatMsgs.map(m => `<div class="bub ${m.de === "cliente" ? "in" : m.de === "equipo" ? "eq" : "out"}"><small>${esc(quien[m.de] || m.de)} · ${horaTxt(m.ts)}</small><div>${esc(m.texto || "").replace(/\n/g, "<br>")}</div></div>`).join("") || '<p class="empty">Cargando…</p>'}</div>
+  ${!c.proveedor ? `<div class="panel" style="padding:12px;margin-top:8px"><b>Seguimiento</b>
+    ${agendado ? ` · ${esc(fdate(agenda.fecha))} ${agenda.fecha < today() ? "· Vencido" : agenda.fecha === today() ? "· Hoy" : ""}<p class="note">${esc(agenda.motivo)} · Atiende el equipo</p>` : ` · ${esc(estadosAgenda[agenda?.estado] || "Sin fecha programada")}`}
+    <div class="actions"><button class="btn sm" data-a="chatAgenda" data-v="guardar">${agendado ? "Reprogramar" : "Agendar"}</button>
+    ${agendado ? '<button class="btn sm" data-a="chatAgenda" data-v="atendido">Marcar atendido</button><button class="btn sm" data-a="chatAgenda" data-v="cancelado">Cancelar seguimiento</button>' : agenda?.estado === "pregunta_fecha" ? '<button class="btn sm" data-a="chatAgenda" data-v="cancelado">Cancelar seguimiento</button>' : ""}</div></div>` : ""}
   <div class="actions">
     <a class="btn pri" href="https://wa.me/${esc(tel)}" target="_blank" rel="noopener">Abrir en WhatsApp</a>
     ${ec === "b-ok" ? `<button class="btn" data-a="chatPausar">Lo atiendo yo (pausar agente)</button>` : `<button class="btn" data-a="chatAgente">Devolver al agente</button>`}
@@ -3224,6 +3235,24 @@ const A = {
     S.busy = false; draw();
   },
   async chatConsultaOk(){ await upd(doc(db, "conversaciones", S.m.id), {consultaProduccion: ""}, "Consulta marcada como resuelta"); },
+  async chatAgenda(accion){
+    if (S.busy || S.m?.type !== "chat") return;
+    const id = S.m.id, c = S.convs.find(x => x.id === id);
+    if (!c || c.proveedor) return;
+    const agenda = c.agendaSeguimiento;
+    const datos = { id, accion, revision: agenda?.actualizado || 0 };
+    if (accion === "guardar") {
+      const fecha = prompt("Fecha del seguimiento (AAAA-MM-DD)", agenda?.fecha || today());
+      if (!fecha) return;
+      const motivo = prompt("¿Qué necesita retomar?", agenda?.motivo || (c.ultimaCotizacion ? "Retomar cotización " + c.ultimaCotizacion : "Retomar consulta de WhatsApp"));
+      if (!motivo?.trim()) return;
+      Object.assign(datos, { fecha: fecha.trim(), motivo: motivo.trim() });
+    }
+    S.busy = true;
+    try { await fnAgendaChat(datos); toast(accion === "guardar" ? "Seguimiento agendado" : "Seguimiento actualizado"); }
+    catch (e) { fallo(e, "actualizar el seguimiento"); }
+    finally { S.busy = false; draw(); }
+  },
   async chatPausar(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "persona", pausadoHasta: Date.now() + 12 * 3600e3}, "El agente se pausa 12 horas en este chat"); },
   async chatAgente(){ await upd(doc(db, "conversaciones", S.m.id), {estado: "agente", pausadoHasta: 0, devueltoEn: Date.now()}, "El agente vuelve a responder este chat"); },
   agModo(v){ S.f.ag_modo = v; draw(); },
@@ -3845,7 +3874,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-10b";
+const APP_VER = "2026-11-10c";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
