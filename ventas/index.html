@@ -225,7 +225,7 @@ input,select,textarea{font-size:var(--ui-normal)}
 .cnt.hot{background:#D92D20;color:#fff}
 a.btn{color:inherit}
 .chatbox{max-height:52vh;overflow-y:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
-.bub{max-width:82%;padding:8px 11px;border-radius:12px;font-size:var(--ui-normal);line-height:1.4}
+.bub{flex-shrink:0;max-width:82%;min-width:0;overflow-wrap:anywhere;padding:8px 11px;border-radius:12px;font-size:var(--ui-normal);line-height:1.4}
 .bub small{display:block;font-size:var(--ui-normal);color:var(--muted);margin-bottom:2px}
 .bub.in{align-self:flex-start;background:var(--card);border:1px solid var(--line)}
 .bub.out{align-self:flex-end;background:var(--ok-bg)}
@@ -3845,7 +3845,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-10a";
+const APP_VER = "2026-11-10b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
