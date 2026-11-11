@@ -2135,7 +2135,11 @@ async function estamparFactura(PDFLib, bytes, f){
   const limpio = s => String(s ?? "").toUpperCase().replace(/[^\x20-\x7E -ÿ]/g, "");
   const ajustar = (s, fnt, size, max) => { s = limpio(s); while (s && fnt.widthOfTextAtSize(s, size) > max) s = s.slice(0, -1); return s; };
   const t = (s, x, y, o = {}) => {
-    const fnt = o.bold ? bold : font, size = o.big ? 14 : SZ, txt = o.max ? ajustar(s, fnt, size, o.max) : limpio(s);
+    const fnt = o.bold ? bold : font;
+    let size = o.big ? 14 : SZ;
+    const limpioTxt = limpio(s);
+    if (o.fit) size = Math.min(size, size * o.fit / (fnt.widthOfTextAtSize(limpioTxt, size) || 1));
+    const txt = o.max ? ajustar(limpioTxt, fnt, size, o.max) : limpioTxt;
     const w = fnt.widthOfTextAtSize(txt, size), xx = o.right ? x - w : o.center ? x - w / 2 : x;
     pg.drawText(txt, {x: xx, y: H - y, size, font: fnt, color: o.color || ink});
   };
@@ -2197,8 +2201,21 @@ async function estamparFactura(PDFLib, bytes, f){
   lt.forEach((x, k) => t(x, 31, (lt.length > 1 ? 597 : 604) + k * 15));
   t(f.formaPago, 31, 652, {max: 100});
   t(nF(f.total), 150, 652);
-  if (f.plazo) { t(String(f.plazo), 240, 652, {center: true}); t(f.tiempo || "DÍAS", 311, 652, {center: true}); }
-  if (f.fechaMax) { const [yy, mm, dd] = f.fechaMax.split("-"); t(dd + "/" + mm + "/" + yy, 385, 652, {center: true}); }
+  const credito = /^CR[EÉ]DITO$/i.test(String(f.formaPago || "").trim());
+  if (credito) {
+    if (f.plazo) {
+      t(String(f.plazo), 240, 652, {center: true});
+      t(f.tiempo || "DÍAS", 311, 652, {center: true});
+    }
+    if (f.fechaMax) {
+      const [yy, mm, dd] = f.fechaMax.split("-");
+      t(dd + "/" + mm + "/" + yy, 385, 652, {center: true});
+    }
+  } else {
+    t("DE CONTADO", 240, 652, {center: true, fit: 69});
+    t("----", 311, 652, {center: true});
+    t("----", 385, 652, {center: true});
+  }
   if (f.previa) {
     pg.drawText("VISTA PREVIA", {x: 95, y: H - 560, size: 80, font: bold, color: rgb(0.2, 0.45, 0.85), opacity: 0.25, rotate: degrees(28)});
     t("VISTA PREVIA · SIN VALOR FISCAL", 31, 728, {size: 9, bold: true, color: rgb(0.2, 0.45, 0.85)});
@@ -3943,7 +3960,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11g";
+const APP_VER = "2026-11-11h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
