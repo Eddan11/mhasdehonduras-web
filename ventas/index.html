@@ -2152,7 +2152,8 @@ async function estamparFactura(PDFLib, bytes, f){
   }
   lineasDireccion.slice(0, 2).forEach((linea, i) => {
     const txt = ajustar(linea, font, tamDireccion, anchoDireccion);
-    pg.drawText(txt, {x: 71, y: H - 147 - i * 13, size: tamDireccion, font, color: ink});
+    const y = lineasDireccion.length > 1 ? 132 + i * 13 : 147;
+    pg.drawText(txt, {x: 71, y: H - y, size: tamDireccion, font, color: ink});
   });
   t(fechaFac(f.fecha), 103, 180, {size: 11});
   // "OC-00número": se quitan los ceros de relleno y se dejan solo 2 antes del número (OC-00000000033666 → OC-0033666)
@@ -3938,7 +3939,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11e";
+const APP_VER = "2026-11-11f";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
