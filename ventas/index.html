@@ -96,6 +96,9 @@ tr.click:hover td{background:var(--chip)}
 .b-sf{background:#8dcaff;color:#123d68}.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--chip);color:var(--ink)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .chips button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-size:var(--ui-normal);font-weight:600;cursor:pointer}
+.chips .chip-especial{width:145px;min-height:36px;border-radius:99px;padding:5px 10px;text-align:center;font-size:var(--ui-normal);font-weight:600}
+.chips input.chip-especial{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.chips input.chip-especial::placeholder{color:var(--on-accent);opacity:.85}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
 @media (max-width:620px){.stats{grid-template-columns:1fr}}
@@ -654,8 +657,9 @@ function vCotizar(){
       ${baseEnMillar(psel) ? "" : `<button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(unidadDe(psel))}</button>`}
       ${uni(psel) > 1 ? `<button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">${esc(presPal(psel).replace(/^./, letra => letra.toUpperCase()))}</button>` : ""}
       ${(baseEnMillar(psel) || puedeMillar(psel)) ? `<button type="button" data-a="pmodo" data-v="m" aria-pressed="${(S.f.pmodo || (baseEnMillar(psel) ? "m" : "u")) === "m"}">En millar</button>` : ""}
-      <button type="button" data-a="pmodo" data-v="o" aria-pressed="${S.f.pmodo === "o"}">Unidad especial</button></div>
-    ${S.f.pmodo === "o" ? `<div class="field"><label for="pvu">Unidad especial (texto)</label><input id="pvu" type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Ej. fardo, bolsa o paquete" autocomplete="off"><small class="muted">Usa el precio de la unidad base. Puedes ajustarlo en la línea.</small></div>` : ""}` : ""}
+      ${S.f.pmodo === "o"
+        ? `<input id="pvu" class="chip-especial" type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Unidad especial" aria-label="Unidad especial (texto)" autocomplete="off">`
+        : `<button type="button" class="chip-especial" data-a="pmodo" data-v="o">Unidad especial</button>`}</div>` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pajustar" data-v="-1" aria-label="Menos">−</button><input id="${campoCantidad}" type="number" min="1" step="1" inputmode="numeric" data-k="${campoCantidad}" value="${esc(valorCantidad)}" aria-label="${esc(etiquetaCantidad)}" title="${esc(etiquetaCantidad)}"><button type="button" data-a="pajustar" data-v="1" aria-label="Más">+</button></div>
       <button class="btn pri grow" data-a="addSel" ${psel || personalizado || S.f.psel === "__gen" ? "" : "disabled"}>${empaque ? "Agregar " + esc(presPal(psel)) : "Agregar"}</button>
@@ -3939,7 +3943,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11f";
+const APP_VER = "2026-11-11g";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
