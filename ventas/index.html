@@ -2212,7 +2212,7 @@ async function estamparFactura(PDFLib, bytes, f){
       t(dd + "/" + mm + "/" + yy, 385, 652, {center: true});
     }
   } else {
-    t("DE CONTADO", 240, 652, {center: true, fit: 69});
+    t("CONTADO", 240, 652, {center: true, fit: 69});
     t("----", 311, 652, {center: true});
     t("----", 385, 652, {center: true});
   }
@@ -3960,7 +3960,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11h";
+const APP_VER = "2026-11-11i";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
