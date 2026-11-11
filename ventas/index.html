@@ -109,6 +109,9 @@ tr.click:hover td{background:var(--chip)}
 .pitem .n{flex:1;min-width:0}
 .pitem small{color:var(--muted)}
 .qty{width:74px;min-height:36px;padding:6px 8px;text-align:right}
+.gen-precios > .field{flex:1 1 125px}
+.item .mini,.item .muted{font-size:inherit}
+.item .pin{font-size:inherit;min-height:36px}
 .pin{width:110px;min-height:36px;padding:6px 8px;text-align:right}
 .totals{margin-left:auto;max-width:300px}
 .totals div{display:flex;justify-content:space-between;padding:3px 0}
@@ -390,13 +393,29 @@ function iniciales(u){
 }
 // Unidad en que se cotizó cada línea (caja, bolsa, fardo…): la cantidad se guarda en unidades sueltas y "vu.f" dice cuántas trae cada una
 const vuDe = i => (i && i.vu && Number(i.vu.f) > 0) ? {n: String(i.vu.n || (i && i.unidad) || "unidad"), f: Number(i.vu.f)} : {n: String((i && i.unidad) || "unidad"), f: 1};
+const unidadIngresada = valor => {
+  const texto = clean(valor);
+  return /\p{L}/u.test(texto) ? texto : "unidad";
+};
+const unidadLinea = (i, q) => {
+  const unidad = unidadIngresada(vuDe(i).n);
+  return /\s|\d/.test(unidad) ? unidad.toLocaleUpperCase("es-HN") : unidadTexto(unidad, q);
+};
 const qV = i => Math.round((Number(i.cant) || 0) / vuDe(i).f * 1000) / 1000;
 const FORMAS = ["Transferencia", "Efectivo", "50/50", "Contra entrega", "Cheque", "Crédito"];
 const PLAZO_CRED = 30; // días de crédito que salen en la factura
-const fechaMaxCred = f => addDays(f, PLAZO_CRED); // 30 días: 21 oct → 20 nov (un mes menos un día)
+const plazoValido = plazo => Number.isSafeInteger(Number(plazo)) && Number(plazo) >= 1 && Number(plazo) <= 3650;
+const fechaMaxCred = (fecha, plazo) => plazoValido(plazo) ? addDays(fecha, Number(plazo) - 1) : "";
+function camposPlazo(campo, fecha, plazo, editable = true){
+  return `<div class="row">
+    <div class="field"><label for="${campo}">Plazo</label><input id="${campo}" type="number" min="1" max="3650" step="1" data-k="${campo}" value="${esc(plazo)}" ${editable ? "" : "readonly"}></div>
+    <div class="field"><label for="${campo}_tiempo">Tiempo</label><input id="${campo}_tiempo" value="Días" readonly></div>
+    <div class="field"><label for="${campo}_vence">Fecha máxima de pago</label><input id="${campo}_vence" value="${fdate(fechaMaxCred(fecha, plazo)).replaceAll("/", "-")}" readonly></div>
+  </div>`;
+}
 const FORMA_TXT = {"50/50": "50/50 · 50% anticipo y 50% al recibir", "Efectivo": "Pago en efectivo", "Contra entrega": "Pago contra entrega", "Cheque": "Pago con cheque", "Transferencia": "Pago con transferencia", "Tarjeta": "Pago con tarjeta", "Link de pago": "Pago con link de pago"};
 FORMA_TXT["Crédito"] = "Crédito a " + PLAZO_CRED + " días";
-const formaTxt = f => FORMA_TXT[f] || f || "";
+const formaTxt = (f, plazo) => f === "Crédito" && plazoValido(plazo) ? "Crédito a " + plazo + " días" : FORMA_TXT[f] || f || "";
 // Crédito solo lo asignan administrador y facturadores
 const formasPara = actual => FORMAS.filter(f => (f !== "Contra entrega" || actual === "Contra entrega") && (f !== "Crédito" || puede("admin", "facturador") || actual === "Crédito"));
 const sinIsv = p => r2((Number(p) || 0) / 1.15);
@@ -404,6 +423,7 @@ const LU = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractio
 const SEEDMAP = Object.fromEntries(SEED.map(p => [p.id, p]));
 const uni = p => Math.max(1, Number(p.unidades) || Number((SEEDMAP[p.id] || {}).unidades) || 1);
 const unidadDe = p => p.unidad || (SEEDMAP[p.id] || {}).unidad || "unidad";
+const esUnidadEtiqueta = p => /^etiquetas?$/i.test(unidadDe(p));
 const soloPres = p => p.soloPresentacion != null ? !!p.soloPresentacion : unidadDe(p) === "etiqueta";
 const codDe = p => p.codigo || (SEEDMAP[p.id] || {}).codigo || "";
 const PREF = {"Rollos": "ROL", "Etiquetas": "ETQ", "Formas continuas": "FOR", "Impresión de etiquetas": "IMP", "Stretch film y cinta": "EMP"};
@@ -601,7 +621,8 @@ function vCotizar(){
       <div class="field"><label for="ctc_correo">Correo (opcional)</label><input id="ctc_correo" type="email" data-k="ctc_correo" value="${fv("ctc_correo")}" inputmode="email" autocapitalize="off"></div></div>
     <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${empresa(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
-      <select id="fpg" data-k="fpago">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
+      <select id="fpg" data-k="fpago" data-redraw="1">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${f === "Crédito" ? f : formaTxt(f)}</option>`).join("")}</select></div>
+    ${S.f.fpago === "Crédito" ? camposPlazo("cot_plazo", S.f.cot_fecha || today(), S.f.cot_plazo ?? PLAZO_CRED, puede("admin", "facturador")) : ""}
     <label for="cot_factura" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--ui-normal);font-weight:500;margin:6px 0"><input id="cot_factura" type="checkbox" data-k="cot_factura" data-redraw="1" style="width:16px;height:16px;min-height:16px;margin:0;flex:0 0 16px" ${S.f.sin_comprobante!==true?"checked":""}>Factura</label>
     <div class="field"><label for="coc">Orden de compra del cliente (opcional)</label><input id="coc" data-k="cot_oc" value="${fv("cot_oc")}" placeholder="Número de O/C que dio el cliente" autocomplete="off"></div>
   </div>
@@ -616,17 +637,19 @@ function vCotizar(){
     ${S.f.psel === "__gen" || personalizado ? `
     ${personalizado ? '<p class="note"><b>Etiqueta personalizada</b></p>' : ""}
     <div class="field"><label for="gen_desc">Descripción del producto</label><input id="gen_desc" data-k="gen_desc" value="${fv("gen_desc")}" placeholder="${personalizado ? "Medida, material, impresión y presentación acordados" : "Ej. Rollo térmico 110 mm x 60 m"}" autocomplete="off"></div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-    <div class="field" style="max-width:180px"><label for="gen_unidad">Unidad</label><input id="gen_unidad" list="gen_unidades" data-k="gen_unidad" value="${fv("gen_unidad")}" placeholder="unidad" autocomplete="off"><datalist id="gen_unidades">${["unidad", "caja", "rollo", "millar", "bolsa", "fardo", "libra", "paquete", "resma"].map(u => `<option value="${u}">`).join("")}</datalist></div>
-    <div class="field" style="max-width:220px"><label for="gen_precio">Precio por unidad sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
-    <div class="field" style="max-width:220px"><label for="gen_costo">Precio de compra por unidad sin ISV (L.)</label><input id="gen_costo" data-k="gen_costo" type="number" min="0.000001" step="any" inputmode="decimal" value="${fv("gen_costo")}"></div>
+    <div class="row gen-precios">
+    <div class="field"><label for="gen_unidad">Unidad (texto)</label><input id="gen_unidad" type="text" list="gen_unidades" data-k="gen_unidad" value="${fv("gen_unidad")}" placeholder="unidad" autocomplete="off"><datalist id="gen_unidades">${["unidad", "caja", "rollo", "millar", "bolsa", "fardo", "libra", "paquete", "resma"].map(u => `<option value="${u}">`).join("")}</datalist></div>
+    <div class="field"><label for="gen_costo">Compra sin ISV (L.)</label><input id="gen_costo" data-k="gen_costo" type="number" min="0.000001" step="any" inputmode="decimal" value="${fv("gen_costo")}"></div>
+    <div class="field"><label for="gen_precio">Venta sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
     </div>
     <p class="note" style="margin:-4px 0 12px">Solo queda en esta cotización; no se agrega al catálogo.</p>` : ""}
     ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     <div class="chips" role="group" aria-label="Cantidad en" style="align-items:center">
       <button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(unidadDe(psel))}</button>
       ${uni(psel) > 1 ? `<button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc(presPal(psel))} (${uni(psel)})</button>` : ""}
-      <input data-k="pvu" value="${fv("pvu")}" placeholder="Otra: bolsa, fardo, libra…" aria-label="Otra unidad" style="flex:1 1 140px;min-height:34px;border-radius:99px;padding:4px 12px;${S.f.pmodo === "o" ? "border-color:var(--accent)" : ""}" autocomplete="off"></div>
+      ${esUnidadEtiqueta(psel) ? `<button type="button" data-a="pmodo" data-v="m" aria-pressed="${S.f.pmodo === "m"}">En millares</button>` : ""}
+      <input type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Otra unidad (texto)" aria-label="Otra unidad (texto)" style="flex:1 1 140px;min-height:34px;border-radius:99px;padding:4px 12px;${S.f.pmodo === "o" ? "border-color:var(--accent)" : ""}" autocomplete="off"></div>
+    ${uni(psel) > 1 && S.f.pmodo === "p" ? `<div class="field" id="empaque-cotizacion"><label for="punidades">Unidades por ${esc(presPal(psel))}</label><input id="punidades" type="number" min="1" step="1" inputmode="numeric" data-k="punidades" value="${esc(S.f.punidades ?? uni(psel))}"></div>` : ""}
     ${S.f.pmodo === "o" ? `<p class="note" style="margin:-6px 0 10px">Se cotiza por ${esc(clean(S.f.pvu) || "…")} al precio por ${esc(unidadDe(psel))}; si el precio es distinto, cámbielo en la línea.</p>` : ""}` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
@@ -638,10 +661,10 @@ function vCotizar(){
     ${S.cart.length ? S.cart.map((i, n) => { const l = cc.lines[n]; return `<div class="item">
       <div class="ihead"><b>${i.generico ? '<span class="stub">' + esc(i.id) + "</span> " : ""}${esc(abreviarTexto(i.nombre))}</b><button class="btn sm" data-a="rmp" data-v="${n}" aria-label="Quitar">✕</button></div>
       <div class="irow">
-        <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(unidadTexto(vuDe(i).n,qV(i)))}${vuDe(i).f > 1 ? " de " + vuDe(i).f : ""}</small>
-        <div class="num">${edPrecio || i.generico ? `<label class="mini">Precio por ${esc(unidadTexto(vuDe(i).n,1))} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(unidadTexto(vuDe(i).n,1))}</span>`}</div>
+        <div class="step"><button type="button" data-a="qmenos" data-v="${n}" aria-label="Menos">−</button><input type="number" min="1" step="1" inputmode="numeric" data-cq="${n}" value="${qV(i)}" aria-label="Cantidad"><button type="button" data-a="qmas" data-v="${n}" aria-label="Más">+</button></div><small class="muted" style="margin-left:6px">${esc(unidadLinea(i,qV(i)))}${vuDe(i).f > 1 && vuDe(i).n !== "millar" ? " de " + vuDe(i).f : ""}</small>
+      ${i.generico?`<div class="num"><label class="mini">Compra sin ISV</label><input class="pin" aria-label="Compra sin ISV por ${esc(unidadLinea(i,1))}" data-ccosto="${n}" type="number" min="0.000001" step="any" value="${i.costoU!=null?Number(i.costoU)*vuDe(i).f:""}"></div>`:""}
+        <div class="num">${edPrecio || i.generico ? `<label class="mini">${i.generico ? "Venta" : "Precio"} por ${esc(unidadLinea(i,1))} sin ISV</label><input class="pin" type="number" min="0" step="any" inputmode="decimal" data-cpr="${n}" value="${Math.round(l.u * vuDe(i).f * 100) / 100}">${listaDe(i) ? `<label class="mini" style="margin-top:6px">% rebajado de lista</label><input class="pin" type="number" step="any" inputmode="decimal" data-cpct="${n}" value="${pctLista(i, l) ?? ""}" style="max-width:110px" title="Lista: ${LU(listaDe(i) / 1.15 * vuDe(i).f)} sin ISV. Negativo = más caro que la lista">` : ""}` : `<span class="muted">${LU(l.u * vuDe(i).f)} c/${esc(unidadLinea(i,1))}</span>`}</div>
       </div>
-      ${i.generico?`<div class="field"><label class="mini">Compra por ${esc(unidadTexto(vuDe(i).n,1))} sin ISV (uso interno)</label><input class="pin" data-ccosto="${n}" type="number" min="0.000001" step="any" value="${i.costoU!=null?Number(i.costoU)*vuDe(i).f:""}"></div>`:""}
       <div class="irow">
         <div class="dsc"><label class="mini" for="d${n}">Rebajar del total L. (con ISV)</label><input id="d${n}" class="pin" type="number" min="0" step="0.01" inputmode="decimal" data-cd="${n}" value="${l.descIsv || ""}" placeholder="0.00"><span class="pct" id="pct${n}">${l.descX ? "Queda a " + LU(l.un) + " c/u" : ""}</span></div>
         <div class="num"><label class="mini">Importe</label><b id="imp${n}">${L(l.imp)}</b><br><small class="muted" id="cisv${n}">${cc.sinComprobante?L(l.imp)+" a cobrar":L(l.conIsv)+" con ISV"}</small></div>
@@ -1746,13 +1769,13 @@ function mCot(){
     ${cf ? "" : `<div class="field"><label for="fnom">Cliente (como sale en la factura)</label><input id="fnom" data-k="fac_nom" value="${esc(nom)}"></div>`}
     <div class="row">
       ${cf ? "" : `<div class="field"><label for="frtn">RTN</label><input id="frtn" data-k="fac_rtn" value="${esc(rtn)}" inputmode="numeric"></div>`}
-      <div class="field"><label for="ff">Fecha de emisión</label><input id="ff" type="date" data-k="fac_fecha" value="${esc(fecha)}"></div>
+      <div class="field"><label for="ff">Fecha de emisión</label><input id="ff" type="date" data-k="fac_fecha" data-redraw="1" value="${esc(fecha)}"></div>
     </div>
     <div class="field"><label for="fdir">Dirección</label><input id="fdir" data-k="fac_dir" value="${esc(dir)}"></div>
     <div class="field"><label for="foc">Orden de compra del cliente (opcional)</label><input id="foc" data-k="fac_oc" value="${esc(S.f.fac_oc ?? c.ordenCompra ?? "")}" placeholder="Número de O/C que dio el cliente"></div>
     ${(cf || !clean(rtn)) && cc.total > 10000 ? `<p class="note" style="color:var(--bad)">Ventas de más de L. 10,000 deben llevar los datos del cliente (nombre y RTN).</p>` : ""}
-    <div class="field"><label for="fp">Forma de pago</label><select id="fp" data-k="fac_fp" data-redraw="1">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
-    ${fp === "Crédito" ? `<p class="note">Crédito a ${PLAZO_CRED} días: fecha máxima de pago ${fdate(fechaMaxCred(fecha))}. Sale en la factura y en cuentas por cobrar.</p>` : ""}
+    <div class="field"><label for="fp">Forma de pago</label><select id="fp" data-k="fac_fp" data-redraw="1">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${f === "Crédito" ? f : formaTxt(f)}</option>`).join("")}</select></div>
+    ${fp === "Crédito" ? camposPlazo("fac_plazo", fecha, S.f.fac_plazo ?? c.plazo ?? PLAZO_CRED) : ""}
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado === true) ? "checked" : ""}> Ya pagó el total (queda finalizada)</label>
     <p class="note">Los productos y precios salen de la cotización. Antes de guardar vas a ver la factura armada; nada se guarda ni se usa el número hasta que confirmes. Si un producto o precio está mal, devuelve la cotización al vendedor para corregirla.</p>
     <div class="actions"><button class="btn pri" data-a="facPrevia" ${S.busy ? "disabled" : ""}>${S.busy ? "Armando vista previa…" : "Ver vista previa"}</button><button class="btn" data-a="modeVer">Cancelar</button></div>`
@@ -1766,7 +1789,7 @@ function mCot(){
       <div class="field" style="flex:2 1 200px"><label for="fhn">N.º de factura (completo o solo el número)</label><input id="fhn" type="text" inputmode="numeric" data-k="fac_hn" value="${fv("fac_hn")}" placeholder="000-001-01-00001388 o 1388"></div>
       <div class="field"><label for="fhf">Fecha de la factura</label><input id="fhf" type="date" data-k="fac_fecha" value="${esc(S.f.fac_fecha || today())}"></div>
     </div>
-    <div class="field"><label for="fhp">Forma de pago</label><select id="fhp" data-k="fac_fp">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${formaTxt(f)}</option>`).join("")}</select></div>
+    <div class="field"><label for="fhp">Forma de pago</label><select id="fhp" data-k="fac_fp">${FORMAS.map(f => `<option value="${f}" ${fp === f ? "selected" : ""}>${f === "Crédito" ? f : formaTxt(f)}</option>`).join("")}</select></div>
     <label style="display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)"><input type="checkbox" style="width:20px;min-height:20px" data-k="fac_pagado" ${(S.f.fac_pagado === true) ? "checked" : ""}> Ya pagó el total (queda finalizada)</label>
     <div class="actions"><button class="btn pri" data-a="saveFacHist" ${S.busy ? "disabled" : ""}>Guardar factura</button><button class="btn" data-a="modeVer">Cancelar</button></div>`;
   } else if (mode === "facprev") {
@@ -1836,14 +1859,14 @@ function mCot(){
     ${c.ordenCompra ? `<dt>Orden de compra</dt><dd>${esc(c.ordenCompra)}</dd>` : ""}
     <dt>Fecha</dt><dd>${fdate(c.fecha)} · válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}</dd>
     <dt>Vendedor</dt><dd>${esc(c.vendedorNombre || "")}</dd>
-    ${full && c.formaPago ? `<dt>Forma de pago</dt><dd>${esc(formaTxt(c.formaPago))}</dd>` : ""}
+    ${full && c.formaPago ? `<dt>Forma de pago</dt><dd>${esc(formaTxt(c.formaPago, c.plazo))}</dd>` : ""}
     ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}${full && facDeCot(c) && !facDeCot(c).historica ? ` <button class="btn sm" data-a="facPdfCot" ${S.busy ? "disabled" : ""}>Ver factura</button>` : ""}</dd>` : ""}${full && (c.facturasAnuladas || []).length ? `<dt>Anuladas</dt><dd>${c.facturasAnuladas.map(esc).join(", ")}</dd>` : ""}
   </dl>
   ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadLinea(i,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.u * vuDe(i).f)}</td><td class="num">${l.desc ? L(l.desc) + ` <small class="muted">(${pctTxt(l.pct)})</small>` : "—"}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`
   : `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Total</th></tr></thead><tbody>
-    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadTexto(vuDe(i).n,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
+    ${(c.items || []).map((i, n) => { const l = cc.lines[n]; return `<tr><td class="num">${qV(i)} <small class="muted">${esc(unidadLinea(i,qV(i)))}</small></td><td>${esc(abreviarTexto(i.nombre))}</td><td class="num">${LU(l.un * vuDe(i).f)}</td><td class="num">${L(l.imp)}</td></tr>`; }).join("")}
   </tbody></table></div>`}
   <p class="note">${c.sinComprobante?"Importes comerciales finales. Registro sin comprobante.":"Precios sin ISV."}</p>
   <div class="totals">${totalsHtml(cc, !full)}${(["facturada","vendida"].includes(c.estado) || pagado(c)>0) ? `<div><span class="muted">Pagado</span><span>${L(pagado(c))}</span></div><div><b>Saldo</b><b>${L(saldo(c))}</b></div>` : ""}</div>
@@ -2057,13 +2080,14 @@ const facBlancos = () => (S.facturas || []).filter(f => f.estado === "blanco").s
 const facSiguiente = () => facBlancos()[0] || null;
 const facUltima = () => (S.facturas || []).filter(f => f.estado === "emitida").sort((a, b) => b.n - a.n)[0] || null;
 const facDeCot = c => { const numero=c?.factura?.numero, n=c?.factura?.n??Number(String(numero||" ").split("-").at(-1)); return c?.factura?(S.facturas||[]).find(f=>f.cotId===c.id&&f.n===n)||null:null; };
-function datosFactura(c, cli, fecha, fp){
+function datosFactura(c, cli, fecha, fp, plazo){
   const cc = calcCot(c);
   // El descuento no se muestra: cada línea sale con su precio final (precio fijo) y su importe ya rebajado
-  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: unidadTexto(vuDe(i).n,qV(i)), desc: abreviarTexto(i.nombre).toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
+  const lineas = (c.items || []).map((i, k) => ({cant: qV(i), unidad: unidadLinea(i,qV(i)), desc: abreviarTexto(i.nombre).toUpperCase(), pu: Math.round(cc.lines[k].un * vuDe(i).f * 1e4) / 1e4, imp: cc.lines[k].imp}));
   if (cc.flete) lineas.push({cant: 1, unidad: "SERVICIO", desc: "FLETE DE ENTREGA", pu: cc.flete, imp: cc.flete});
   const sub = r2(cc.base + cc.flete), desc = 0;
-  const cred = fp === "Crédito" ? {plazo: PLAZO_CRED, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha)} : {};
+  const dias = fp === "Crédito" ? Number(plazo ?? c.plazo ?? PLAZO_CRED) : 0;
+  const cred = dias ? {plazo: dias, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha, dias)} : {};
   return Object.assign({cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)}, cred);
 }
 function cargarPdfLib(){
@@ -2214,7 +2238,9 @@ function facArmar(){
   if (falt.length && !confirm("No hay existencia suficiente:\n" + falt.join("\n") + "\n\n¿Facturar de todos modos?")) return null;
   // El costo de compra queda congelado en la factura (la utilidad no cambia aunque después cambie el costo)
   const items = (c.items || []).map(i => { if (i.costoU != null || i.generico) return i; const cu = costoUnit(i.id); return cu > 0 ? Object.assign({}, i, {costoU: Math.round(cu * 1e6) / 1e6}) : i; });
-  const fd = datosFactura(c, cli, fecha, fp);
+  const plazo = S.f.fac_plazo ?? c.plazo ?? PLAZO_CRED;
+  if (fp === "Crédito" && !plazoValido(plazo)) { toast("Escribe un plazo válido en días."); return null; }
+  const fd = datosFactura(c, cli, fecha, fp, plazo);
   const oc = clean(S.f.fac_oc ?? c.ordenCompra ?? "");
   if (oc) fd.ordenCompra = oc; // número de orden de compra que dio el cliente; sale en la línea de la dirección
   fd.cotNumero = c.numero;    // sale en la línea de la fecha de emisión
@@ -2316,7 +2342,7 @@ function vTalonario(all){
 function waLink(c){
   const lines = [`*Cotización ${c.numero}* – ${emp().nombre}`, ""];
   const cc = calcCot(c);
-  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${unidadTexto(vuDe(i).n,qV(i))} x ${abreviarTexto(i.nombre)} = ${L(cc.lines[n].imp)}`));
+  (c.items || []).forEach((i, n) => lines.push(`${qV(i)} ${unidadLinea(i,qV(i))} x ${abreviarTexto(i.nombre)} = ${L(cc.lines[n].imp)}`));
   lines.push("", `Subtotal: ${L(cc.base)}`, ...(cc.flete ? [`Flete: ${L(cc.flete)}`] : []), ...(c.sinComprobante?["Registro comercial sin comprobante fiscal"]:[`ISV 15%: ${L(cc.isv)}`]), `*Total: ${L(cc.total)}*`);
   lines.push(`Válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}.`);
   let tel = String((c.cliente && c.cliente.tel) || "").replace(/\D/g, "");
@@ -2399,7 +2425,7 @@ function armarPdf(c, interno){
     if (it) {
       tc(INK);
       // cantidad y unidad en la misma línea ("5 fardos"); si no cabe, se achica la letra
-      const qt = qV(it) + " " + unidadTexto(vuDe(it).n,qV(it)); let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
+      const qt = qV(it) + " " + unidadLinea(it,qV(it)); let fs = 9.5; while (fs > 6.5 && d.getTextWidth(qt) * fs / d.getFontSize() > wC - 2) fs -= 0.5;
       d.setFontSize(fs); d.text(qt, M + wC / 2, y + 4.1, {align: "center"}); d.setFontSize(9.5);
       d.text(nl, M + wC + 1.5, y + 4.1);
       d.text(LU((interno && !c.sinComprobante ? l.u : l.un) * vuDe(it).f), xs[2] + wP / 2, y + 4.1, {align: "center"});
@@ -2422,7 +2448,7 @@ function armarPdf(c, interno){
   const ns = notasDe(c), items = [];
   if (ns.entrega) items.push(["Tiempo de entrega:", e.entrega]);
   if (ns.envio) items.push(["Envío:", e.envio]);
-  if (ns.cond) items.push(["Condiciones:", formaTxt(c.formaPago || "Efectivo")]);
+  if (ns.cond) items.push(["Condiciones:", formaTxt(c.formaPago || "Efectivo", c.plazo)]);
   if (ns.validez) items.push(["Validez:", "Esta cotización es válida por " + (c.validez || e.validez) + " días a partir de la fecha."]);
   if (clean(c.notas)) items.push(["Nota:", clean(c.notas)]);
   if (items.length) {
@@ -2575,10 +2601,11 @@ const A = {
       if (!desc) return toast("Escribe la descripción del producto.");
       if (!Number.isFinite(pr) || !(pr > 0)) return toast("Escribe el precio unitario sin ISV.");
       const cant = Math.max(1, Math.round(Number(S.f.pcant) || 1));
-      const n = S.cart.filter(x => x.generico).length + 1;
-      const unidad = clean(S.f.gen_unidad).toLowerCase() || "unidad";
+      let n = 1;
+      while (S.cart.some(i => i.id === "GEN-" + String(n).padStart(3, "0"))) n++;
+      const unidad = unidadIngresada(S.f.gen_unidad).toLowerCase();
       S.cart.push({id: personalizado ? "ETQ-002" : "GEN-" + String(n).padStart(3, "0"), nombre: personalizado ? "Etiqueta personalizada · " + desc : desc, precio: pr * 1.15, unidad, cant, generico: true, costoU:Math.round(costo*1e6)/1e6});
-      ["psel", "pcant", "pmodo", "gen_desc", "gen_precio", "gen_unidad", "gen_costo"].forEach(k => delete S.f[k]); draw(); return;
+      ["psel", "pcant", "pmodo", "punidades", "pvu", "gen_desc", "gen_precio", "gen_unidad", "gen_costo"].forEach(k => delete S.f[k]); draw(); return;
     }
     const p = S.prod.find(x => x.id === S.f.psel); if (!p) return toast("Elige un producto.");
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
@@ -2586,13 +2613,19 @@ const A = {
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     const q = Math.max(1, Math.round(Number(S.f.pcant) || 1));
     const otra = S.f.pmodo === "o" && clean(S.f.pvu);
-    const vu = S.f.pmodo === "p" && uni(p) > 1 ? {n: presPal(p), f: uni(p)} : otra ? {n: otra.toLowerCase(), f: 1} : {n: unidadDe(p), f: 1};
+    const empaque = S.f.pmodo === "p" && uni(p) > 1;
+    const millar = S.f.pmodo === "m" && esUnidadEtiqueta(p);
+    const factor = empaque ? Number(S.f.punidades ?? uni(p)) : millar ? 1000 : 1;
+    if (empaque && (!Number.isSafeInteger(factor) || factor < 1)) return toast("Escribe un número entero de unidades por presentación, mayor que cero.");
+    const vu = {n: empaque ? presPal(p) : millar ? "millar" : otra ? unidadIngresada(otra).toLowerCase() : unidadDe(p), f: factor};
     const cant = q * vu.f;
-    const i = S.cart.find(x => x.id === p.id && vuDe(x).n === vu.n);
-    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion:presDe(p),unidades:uni(p)}), precio: (Number(p.precio) || 0) / uni(p), unidad: unidadDe(p), vu, cant});
-    ["psel", "pcant", "pmodo", "pvu"].forEach(k => delete S.f[k]); draw();
+    const i = S.cart.find(x => x.id === p.id && vuDe(x).n === vu.n && vuDe(x).f === vu.f);
+    if ((empaque || millar) && !Number.isSafeInteger(cant + (i?.cant || 0))) return toast("La cantidad total de unidades es demasiado grande.");
+    const presentacion = empaque && factor !== uni(p) ? vu.n + " de " + factor : presDe(p);
+    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion,unidades:empaque ? factor : uni(p)}), precio: (Number(p.precio) || 0) / uni(p), unidad: unidadDe(p), vu, cant});
+    ["psel", "pcant", "pmodo", "punidades", "pvu"].forEach(k => delete S.f[k]); draw();
   },
-  pmodo(v){ S.f.pmodo = v; draw(); },
+  pmodo(v){ S.f.pmodo = v; delete S.f.pvu; draw(); },
   notaSel(v){ const ns = notasForm(); S.f.nsel = Object.assign({}, S.f.nsel || {}, {[v]: !ns[v]}); draw(); },
   notaAuto(){ delete S.f.nsel; draw(); },
   ctcAbrir(){ S.f.ctc_open = true; draw(); },
@@ -2638,6 +2671,8 @@ const A = {
         delete S.f.cli_ctc; ["ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo"].forEach(k => delete S.f[k]);
       }
       if (!cliente.id) { const ref = await addDoc(collection(db, "clientes"), {nombre: cliente.nombre, contacto: cliente.contacto || "", contactos: cliente.contacto || cliente.tel || cliente.email ? [{nombre: cliente.contacto || "", cargo: cliente.cargo || "", tel: cliente.tel || "", correo: cliente.email || ""}] : [], direccion: cliente.direccion, rtn: cliente.rtn, tel: cliente.tel, email: cliente.email, creado: (S.admin && S.f.cot_fecha && S.f.cot_fecha < today()) ? new Date(S.f.cot_fecha + "T12:00:00").getTime() : Date.now(), creadoPor: S.me.uid, creadoPorNombre: S.me.nombre || S.me.email, asignado: V.id}); cliente.id = ref.id; }
+      const plazo = S.f.fpago === "Crédito" && puede("admin", "facturador") ? Number(S.f.cot_plazo ?? PLAZO_CRED) : null;
+      if (plazo !== null && !plazoValido(plazo)) return toast("Escribe un plazo válido en días.");
       const items = S.cart.map(i => Object.assign({id: i.id, nombre: abreviarTexto(i.nombre), cant: Math.max(1, Math.round(i.cant)), precio: Math.round(i.precio * 1e6) / 1e6, unidad: i.unidad || "", desc: 0}, i.generico ? {generico: true} : {}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: {n: vuDe(i).n, f: vuDe(i).f}} : {}));
       const c0 = calc(S.cart); items.forEach((it, n) => it.desc = c0.lines[n].descX);
       const flete = Math.max(0, r2(Number(S.f.flete) || 0));
@@ -2650,7 +2685,7 @@ const A = {
         const prev = S.cot.find(x => x.id === S.editId);
         if (!prev || prev.estado !== "cotizada") throw {code: "cerrada"};
         numero = prev.id;
-        const ch = {cliente, items, total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
+        const ch = {cliente, items, ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), fecha: (S.admin && S.f.cot_fecha) || prev.fecha || today(), actualizado: Date.now()};
         await updateDoc(doc(db, "cotizaciones", numero), ch);
         cot = Object.assign({}, prev, ch);
       } else {
@@ -2660,7 +2695,7 @@ const A = {
           if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
         } else numero = await siguienteNumero(iniciales(V));
-        cot = {numero, cliente, items, total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
+        cot = {numero, cliente, items, ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
           vendedor: V.id, vendedorNombre: V.nombre || V.email,
           vendedorInfo: {nombre: V.nombre || V.email, cargo: V.cargo || "Ventas", tel: V.tel || e.whatsapp, correo: V.correo || V.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
@@ -3011,7 +3046,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "cot_plazo", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "punidades", "pvu", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -3027,7 +3062,7 @@ const A = {
     }
     else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
     S.f.sin_comprobante=c.sinComprobante===true;
-    S.f.fpago = c.formaPago || "Efectivo"; S.f.notas = c.notas || ""; S.f.cot_oc = c.ordenCompra || ""; if (c.notasSel) S.f.nsel = Object.assign({}, c.notasSel); S.f.flete = Number(c.flete) ? String(c.flete) : ""; S.f.cot_fecha = c.fecha || today();
+    S.f.fpago = c.formaPago || "Efectivo"; S.f.cot_plazo = c.plazo ?? PLAZO_CRED; S.f.notas = c.notas || ""; S.f.cot_oc = c.ordenCompra || ""; if (c.notasSel) S.f.nsel = Object.assign({}, c.notasSel); S.f.flete = Number(c.flete) ? String(c.flete) : ""; S.f.cot_fecha = c.fecha || today();
     S.cart = (c.items || []).map(i => Object.assign({id: i.id, nombre: i.nombre, precio: Number(i.precio) || 0, unidad: i.unidad || "", cant: i.cant, desc: Number(i.desc) || 0, generico: !!i.generico}, i.costoU!=null?{costoU:Number(i.costoU)}:{}, i.vu ? {vu: i.vu} : {}));
     S.editId = c.id; S.m = null; S.tab = "cotizar"; draw(); window.scrollTo(0, 0);
   },
@@ -3843,12 +3878,17 @@ document.addEventListener("input", e => {
   if (k) {
     S.f[k] = t.type === "checkbox" ? t.checked : t.value;
     if (k === "flete") refrescarCarrito();
+    if (k === "cot_plazo" || k === "fac_plazo") {
+      const vence = $("#" + k + "_vence");
+      const fecha = (k === "cot_plazo" ? S.f.cot_fecha : S.f.fac_fecha) || today();
+      if (vence) vence.value = fdate(fechaMaxCred(fecha, t.value)).replaceAll("/", "-");
+    }
     if (k === "pe_cat" && S.m && !S.m.id && S.f.pe_codigo == null) { const o = $("#pe_codigo"); if (o) o.value = sugerirCodigo(t.value); }
     if (k === "cq" || k === "prq" || k === "invq" || k === "utq" || k === "flq") draw();
     if (["pe_unit","pe_unidades","pe_venta","pe_costo","pe_costoUnit"].includes(k)) precioProducto(k,t.value);
     if (k === "bq") draw();
     if (k === "cli_q") { const el = $("#cli_list"); if (el) el.innerHTML = cliListHtml(); }
-    if (k === "pvu") { S.f.pmodo = clean(t.value) ? "o" : "u"; document.querySelectorAll('[data-a="pmodo"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === S.f.pmodo))); }
+    if (k === "pvu") { S.f.pmodo = clean(t.value) ? "o" : "u"; const empaque = $("#empaque-cotizacion"); if (empaque) empaque.hidden = true; document.querySelectorAll('[data-a="pmodo"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === S.f.pmodo))); }
   }
 });
 document.addEventListener("change", e => {
@@ -3856,6 +3896,7 @@ document.addEventListener("change", e => {
   if (t.id === "tal_file") { S.talFile = (t.files && t.files[0]) || null; draw(); return; }
   if (t.id === "cli_q") { S.f.cli_q = t.value; cliResolver(); return; }
   if (t.dataset.k) S.f[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value;
+  if (t.dataset.k === "psel") ["pmodo", "pvu", "punidades"].forEach(k => delete S.f[k]);
   if(t.dataset.k==="cot_factura")S.f.sin_comprobante=!t.checked;
   if (t.dataset.k === "pz_tipo") { S.f.pz_tipoManual = true; const f = $("#pz_fecha"); if (f && !S.f.pz_fecha) f.value = t.value === "entregas" ? proxRuta() : today(); }
   if (t.dataset.k === "tz_tipo" && t.value === "entregas" && !S.f.tz_fecha) { const f = $("#tz_fecha"); if (f) { f.value = proxRuta(); S.f.tz_fecha = f.value; } }
@@ -3866,7 +3907,7 @@ document.addEventListener("change", e => {
     refrescarCarrito(); return;
   }
   if (t.dataset.k === "fac_fp") delete S.f.fac_pagado;
-  if (t.dataset.redraw || t.dataset.k === "fac_fp") draw();
+  if (t.dataset.redraw || t.dataset.k === "fac_fp" || t.dataset.k === "cot_fecha") draw();
 });
 draw();
 
@@ -3874,7 +3915,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-10c";
+const APP_VER = "2026-11-11a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
