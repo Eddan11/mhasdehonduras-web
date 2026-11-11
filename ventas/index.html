@@ -2140,10 +2140,20 @@ async function estamparFactura(PDFLib, bytes, f){
   t(cl.nombre, 64, 111, {size: 11, max: 360});
   t(cl.rtn, 437, 111, {size: 11, max: 140});
   // Dirección con todo el renglón; la OC y el número de cotización van a la derecha en la línea de la fecha de emisión
-  { // si no cabe en el renglón, la letra baja hasta 10 antes de cortar
-    let sz = SZ; const dtx = limpio(cl.direccion); while (sz > 10 && font.widthOfTextAtSize(dtx, sz) > 500) sz -= 0.5;
-    const txt = ajustar(dtx, font, sz, 500); pg.drawText(txt, {x: 71, y: H - 147, size: sz, font, color: ink});
+  const direccion = cl.direccion;
+  const anchoDireccion = 500;
+  let tamDireccion = SZ;
+  let lineasDireccion = partir(direccion, tamDireccion, anchoDireccion);
+  const desbordaDireccion = () => lineasDireccion.length > 2 ||
+    lineasDireccion.some(linea => font.widthOfTextAtSize(linea, tamDireccion) > anchoDireccion);
+  while (tamDireccion > 10 && desbordaDireccion()) {
+    tamDireccion -= 0.5;
+    lineasDireccion = partir(direccion, tamDireccion, anchoDireccion);
   }
+  lineasDireccion.slice(0, 2).forEach((linea, i) => {
+    const txt = ajustar(linea, font, tamDireccion, anchoDireccion);
+    pg.drawText(txt, {x: 71, y: H - 147 - i * 13, size: tamDireccion, font, color: ink});
+  });
   t(fechaFac(f.fecha), 103, 180, {size: 11});
   // "OC-00número": se quitan los ceros de relleno y se dejan solo 2 antes del número (OC-00000000033666 → OC-0033666)
   const der = [f.ordenCompra ? ocCorto(f.ordenCompra) : "", f.cotNumero || ""].filter(Boolean).join("     ");
@@ -3928,7 +3938,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11d";
+const APP_VER = "2026-11-11e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
