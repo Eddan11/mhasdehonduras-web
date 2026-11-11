@@ -423,7 +423,8 @@ const LU = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractio
 const SEEDMAP = Object.fromEntries(SEED.map(p => [p.id, p]));
 const uni = p => Math.max(1, Number(p.unidades) || Number((SEEDMAP[p.id] || {}).unidades) || 1);
 const unidadDe = p => p.unidad || (SEEDMAP[p.id] || {}).unidad || "unidad";
-const esUnidadEtiqueta = p => /^etiquetas?$/i.test(unidadDe(p));
+const baseEnMillar = p => uni(p) === 1 && /^millar(?:es)?\b/i.test(presDe(p).trim());
+const puedeMillar = p => /^(?:etiquetas?|rollos?)$/i.test(unidadDe(p));
 const soloPres = p => p.soloPresentacion != null ? !!p.soloPresentacion : unidadDe(p) === "etiqueta";
 const codDe = p => p.codigo || (SEEDMAP[p.id] || {}).codigo || "";
 const PREF = {"Rollos": "ROL", "Etiquetas": "ETQ", "Formas continuas": "FOR", "Impresión de etiquetas": "IMP", "Stretch film y cinta": "EMP"};
@@ -632,7 +633,7 @@ function vCotizar(){
     <div class="field"><label for="psel">Producto</label>
       <select id="psel" data-k="psel" data-redraw="1"><option value="">Elige un producto…</option>
       <option value="__gen" ${S.f.psel === "__gen" ? "selected" : ""}>GEN-001 · Producto genérico (escribir descripción y precio)</option>
-      ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${codDe(p) ? esc(codDe(p)) + " · " : ""}${esEtiquetaPersonalizada(p) ? "Etiqueta personalizada · escribir descripción y precio" : `${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(unidadDe(p))}`}</option>`).join("")}</optgroup>`).join("")}
+      ${cats.map(g => `<optgroup label="${esc(g.n)}">${g.ps.map(p => `<option value="${esc(p.id)}" ${S.f.psel === p.id ? "selected" : ""}>${codDe(p) ? esc(codDe(p)) + " · " : ""}${esEtiquetaPersonalizada(p) ? "Etiqueta personalizada · escribir descripción y precio" : `${esc(p.nombre)} · ${LU(p.precio / 1.15 / uni(p))} c/${esc(baseEnMillar(p) ? "millar" : unidadDe(p))}`}</option>`).join("")}</optgroup>`).join("")}
       </select></div>
     ${S.f.psel === "__gen" || personalizado ? `
     ${personalizado ? '<p class="note"><b>Etiqueta personalizada</b></p>' : ""}
@@ -643,14 +644,14 @@ function vCotizar(){
     <div class="field"><label for="gen_precio">Venta sin ISV (L.)</label><input id="gen_precio" type="number" min="0" step="any" inputmode="decimal" data-k="gen_precio" value="${fv("gen_precio")}"></div>
     </div>
     <p class="note" style="margin:-4px 0 12px">Solo queda en esta cotización; no se agrega al catálogo.</p>` : ""}
-    ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
+    ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(baseEnMillar(psel) ? "millar" : unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     <div class="chips" role="group" aria-label="Cantidad en" style="align-items:center">
-      <button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(unidadDe(psel))}</button>
+      ${baseEnMillar(psel) ? "" : `<button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(unidadDe(psel))}</button>`}
       ${uni(psel) > 1 ? `<button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">En ${esc(presPal(psel))} (${uni(psel)})</button>` : ""}
-      ${esUnidadEtiqueta(psel) ? `<button type="button" data-a="pmodo" data-v="m" aria-pressed="${S.f.pmodo === "m"}">En millares</button>` : ""}
-      <input type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Otra unidad (texto)" aria-label="Otra unidad (texto)" style="flex:1 1 140px;min-height:34px;border-radius:99px;padding:4px 12px;${S.f.pmodo === "o" ? "border-color:var(--accent)" : ""}" autocomplete="off"></div>
+      ${(baseEnMillar(psel) || puedeMillar(psel)) ? `<button type="button" data-a="pmodo" data-v="m" aria-pressed="${(S.f.pmodo || (baseEnMillar(psel) ? "m" : "u")) === "m"}">En millar</button>` : ""}
+      <button type="button" data-a="pmodo" data-v="o" aria-pressed="${S.f.pmodo === "o"}">Unidad especial</button></div>
     ${uni(psel) > 1 && S.f.pmodo === "p" ? `<div class="field" id="empaque-cotizacion"><label for="punidades">Unidades por ${esc(presPal(psel))}</label><input id="punidades" type="number" min="1" step="1" inputmode="numeric" data-k="punidades" value="${esc(S.f.punidades ?? uni(psel))}"></div>` : ""}
-    ${S.f.pmodo === "o" ? `<p class="note" style="margin:-6px 0 10px">Se cotiza por ${esc(clean(S.f.pvu) || "…")} al precio por ${esc(unidadDe(psel))}; si el precio es distinto, cámbielo en la línea.</p>` : ""}` : ""}
+    ${S.f.pmodo === "o" ? `<div class="field"><label for="pvu">Unidad especial (texto)</label><input id="pvu" type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Ej. fardo, bolsa o paquete" autocomplete="off"><small class="muted">Usa el precio de la unidad base. Puedes ajustarlo en la línea.</small></div>` : ""}` : ""}
     <div class="addrow">
       <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
       <button class="btn pri grow" data-a="addSel" ${psel || personalizado || S.f.psel === "__gen" ? "" : "disabled"}>Agregar</button>
@@ -2349,7 +2350,7 @@ function waLink(c){
   if (tel.length === 8) tel = "504" + tel;
   return `https://wa.me/${tel}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
-const EMP_DEF = {nombre: "MHAS DE HONDURAS S DE RL", rtn: "05019018067606", direccion: "33 calle zona el polvorín, Res. Valle Escondido, S.P.S.",
+const EMP_DEF = {nombre: "MHAS DE HONDURAS S DE RL", rtn: "05019018067606", direccion: "Colonia Renacer, San Pedro Sula, Cortés",
   pbx: "2540-1090", whatsapp: "3166-6059", correo: "comercial@mhasdehonduras.com",
   entrega: "1 día en San Pedro Sula", envio: "Fuera de San Pedro Sula, de 2 a 3 días por servicio de paquetería (el envío se paga al recibir)", validez: 15,
   horario: "", ubicacion: ""};
@@ -2612,20 +2613,22 @@ const A = {
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     const q = Math.max(1, Math.round(Number(S.f.pcant) || 1));
-    const otra = S.f.pmodo === "o" && clean(S.f.pvu);
+    const otra = S.f.pmodo === "o" ? clean(S.f.pvu) : "";
+    if (S.f.pmodo === "o" && !/\p{L}/u.test(otra)) return toast("Escribe el nombre de la unidad especial.");
     const empaque = S.f.pmodo === "p" && uni(p) > 1;
-    const millar = S.f.pmodo === "m" && esUnidadEtiqueta(p);
-    const factor = empaque ? Number(S.f.punidades ?? uni(p)) : millar ? 1000 : 1;
+    const millarBase = baseEnMillar(p);
+    const millar = !otra && (millarBase || (S.f.pmodo === "m" && puedeMillar(p)));
+    const factor = empaque ? Number(S.f.punidades ?? uni(p)) : millar && !millarBase ? 1000 : 1;
     if (empaque && (!Number.isSafeInteger(factor) || factor < 1)) return toast("Escribe un número entero de unidades por presentación, mayor que cero.");
     const vu = {n: empaque ? presPal(p) : millar ? "millar" : otra ? unidadIngresada(otra).toLowerCase() : unidadDe(p), f: factor};
     const cant = q * vu.f;
     const i = S.cart.find(x => x.id === p.id && vuDe(x).n === vu.n && vuDe(x).f === vu.f);
     if ((empaque || millar) && !Number.isSafeInteger(cant + (i?.cant || 0))) return toast("La cantidad total de unidades es demasiado grande.");
     const presentacion = empaque && factor !== uni(p) ? vu.n + " de " + factor : presDe(p);
-    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion,unidades:empaque ? factor : uni(p)}), precio: (Number(p.precio) || 0) / uni(p), unidad: unidadDe(p), vu, cant});
+    if (i) i.cant += cant; else S.cart.push({id: p.id, nombre: descripcionProducto({...p,presentacion,unidades:empaque ? factor : uni(p)}), precio: (Number(p.precio) || 0) / uni(p), unidad: millarBase ? "millar" : unidadDe(p), vu, cant});
     ["psel", "pcant", "pmodo", "punidades", "pvu"].forEach(k => delete S.f[k]); draw();
   },
-  pmodo(v){ S.f.pmodo = v; delete S.f.pvu; draw(); },
+  pmodo(v){ S.f.pmodo = v; draw(); if (v === "o") $("#pvu")?.focus(); },
   notaSel(v){ const ns = notasForm(); S.f.nsel = Object.assign({}, S.f.nsel || {}, {[v]: !ns[v]}); draw(); },
   notaAuto(){ delete S.f.nsel; draw(); },
   ctcAbrir(){ S.f.ctc_open = true; draw(); },
@@ -3888,7 +3891,6 @@ document.addEventListener("input", e => {
     if (["pe_unit","pe_unidades","pe_venta","pe_costo","pe_costoUnit"].includes(k)) precioProducto(k,t.value);
     if (k === "bq") draw();
     if (k === "cli_q") { const el = $("#cli_list"); if (el) el.innerHTML = cliListHtml(); }
-    if (k === "pvu") { S.f.pmodo = clean(t.value) ? "o" : "u"; const empaque = $("#empaque-cotizacion"); if (empaque) empaque.hidden = true; document.querySelectorAll('[data-a="pmodo"]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === S.f.pmodo))); }
   }
 });
 document.addEventListener("change", e => {
@@ -3915,7 +3917,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11a";
+const APP_VER = "2026-11-11b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
