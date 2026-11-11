@@ -96,8 +96,6 @@ tr.click:hover td{background:var(--chip)}
 .b-sf{background:#8dcaff;color:#123d68}.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--chip);color:var(--ink)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .chips button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-size:var(--ui-normal);font-weight:600;cursor:pointer}
-.chip-empaque{display:inline-flex;align-items:center;gap:6px}
-.chip-empaque input{width:78px;min-height:36px;padding:5px 8px;text-align:center;font-size:var(--ui-normal)}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
 @media (max-width:620px){.stats{grid-template-columns:1fr}}
@@ -425,6 +423,7 @@ const LU = n => "L. " + (Number(n) || 0).toLocaleString("en-US", {minimumFractio
 const SEEDMAP = Object.fromEntries(SEED.map(p => [p.id, p]));
 const uni = p => Math.max(1, Number(p.unidades) || Number((SEEDMAP[p.id] || {}).unidades) || 1);
 const unidadDe = p => p.unidad || (SEEDMAP[p.id] || {}).unidad || "unidad";
+const empaqueCot = p => Boolean(p && S.f.pmodo === "p" && uni(p) > 1);
 const baseEnMillar = p => uni(p) === 1 && /^millar(?:es)?\b/i.test(presDe(p).trim());
 const puedeMillar = p => /^(?:etiquetas?|rollos?)$/i.test(unidadDe(p));
 const soloPres = p => p.soloPresentacion != null ? !!p.soloPresentacion : unidadDe(p) === "etiqueta";
@@ -582,6 +581,10 @@ function vCotizar(){
   S.prod.filter(p => p.activo !== false && (Number(p.precio)>0 || esEtiquetaPersonalizada(p))).forEach(p => { let g = cats.find(x => x.n === p.categoria); if (!g) cats.push(g = {n: p.categoria, ps: []}); g.ps.push(p); });
   const personalizado = esEtiquetaPersonalizada(S.prod.find(p => p.id === S.f.psel));
   const psel = personalizado ? null : S.prod.find(p => p.id === S.f.psel);
+  const empaque = empaqueCot(psel);
+  const campoCantidad = empaque ? "punidades" : "pcant";
+  const valorCantidad = S.f[campoCantidad] ?? (empaque ? uni(psel) : 1);
+  const etiquetaCantidad = empaque ? "Unidades por " + presPal(psel) : S.f.pmodo === "o" ? "Cantidad en unidad especial" : "Cantidad";
   const ctcs = contactosDe(cliSel), ctcSel = S.f.cli_ctc ?? "";
   const dirCot = nuevo ? S.f.cli_dir : (cliSel || {}).direccion, fueraCot = esFueraSPS(dirCot), ns = notasForm();
   return `<div class="narrow">
@@ -649,14 +652,13 @@ function vCotizar(){
     ${psel ? `<p class="note" style="margin:-4px 0 12px"><b>${LU(psel.precio / 1.15 / uni(psel))}</b> por ${esc(baseEnMillar(psel) ? "millar" : unidadDe(psel))} sin ISV · ${esc(presDe(psel))} = ${L(psel.precio)} con ISV</p>
     <div class="chips" role="group" aria-label="Cantidad en" style="align-items:center">
       ${baseEnMillar(psel) ? "" : `<button type="button" data-a="pmodo" data-v="u" aria-pressed="${(S.f.pmodo || "u") === "u"}">En ${esc(unidadDe(psel))}</button>`}
-      ${uni(psel) > 1 ? `<span class="chip-empaque"><button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">${esc(presPal(psel).replace(/^./, letra => letra.toUpperCase()))}</button>
-        ${S.f.pmodo === "p" ? `<input id="punidades" type="number" min="1" step="1" inputmode="numeric" data-k="punidades" value="${esc(S.f.punidades ?? uni(psel))}" aria-label="Unidades por ${esc(presPal(psel))}" title="Unidades por ${esc(presPal(psel))}">` : ""}</span>` : ""}
+      ${uni(psel) > 1 ? `<button type="button" data-a="pmodo" data-v="p" aria-pressed="${S.f.pmodo === "p"}">${esc(presPal(psel).replace(/^./, letra => letra.toUpperCase()))}</button>` : ""}
       ${(baseEnMillar(psel) || puedeMillar(psel)) ? `<button type="button" data-a="pmodo" data-v="m" aria-pressed="${(S.f.pmodo || (baseEnMillar(psel) ? "m" : "u")) === "m"}">En millar</button>` : ""}
       <button type="button" data-a="pmodo" data-v="o" aria-pressed="${S.f.pmodo === "o"}">Unidad especial</button></div>
     ${S.f.pmodo === "o" ? `<div class="field"><label for="pvu">Unidad especial (texto)</label><input id="pvu" type="text" data-k="pvu" value="${fv("pvu")}" placeholder="Ej. fardo, bolsa o paquete" autocomplete="off"><small class="muted">Usa el precio de la unidad base. Puedes ajustarlo en la línea.</small></div>` : ""}` : ""}
     <div class="addrow">
-      <div class="step"><button type="button" data-a="pmenos" aria-label="Menos">−</button><input id="pcant" type="number" min="1" step="1" inputmode="numeric" data-k="pcant" value="${esc(S.f.pcant ?? 1)}" aria-label="Cantidad"><button type="button" data-a="pmas" aria-label="Más">+</button></div>
-      <button class="btn pri grow" data-a="addSel" ${psel || personalizado || S.f.psel === "__gen" ? "" : "disabled"}>Agregar</button>
+      <div class="step"><button type="button" data-a="pajustar" data-v="-1" aria-label="Menos">−</button><input id="${campoCantidad}" type="number" min="1" step="1" inputmode="numeric" data-k="${campoCantidad}" value="${esc(valorCantidad)}" aria-label="${esc(etiquetaCantidad)}" title="${esc(etiquetaCantidad)}"><button type="button" data-a="pajustar" data-v="1" aria-label="Más">+</button></div>
+      <button class="btn pri grow" data-a="addSel" ${psel || personalizado || S.f.psel === "__gen" ? "" : "disabled"}>${empaque ? "Agregar " + esc(presPal(psel)) : "Agregar"}</button>
     </div>` : `<p class="empty">Todavía no hay productos cargados.${S.admin ? " Cárgalos en Ajustes." : ""}</p>`}
   </div>
   <div class="panel">
@@ -2614,10 +2616,10 @@ const A = {
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
     if(!(Number(p.precio)>0))return toast("Este producto tiene el precio pendiente.");
-    const q = Math.max(1, Math.round(Number(S.f.pcant) || 1));
+    const empaque = empaqueCot(p);
+    const q = empaque ? 1 : Math.max(1, Math.round(Number(S.f.pcant) || 1));
     const otra = S.f.pmodo === "o" ? clean(S.f.pvu) : "";
     if (S.f.pmodo === "o" && !/\p{L}/u.test(otra)) return toast("Escribe el nombre de la unidad especial.");
-    const empaque = S.f.pmodo === "p" && uni(p) > 1;
     const millarBase = baseEnMillar(p);
     const millar = !otra && (millarBase || (S.f.pmodo === "m" && puedeMillar(p)));
     const factor = empaque ? Number(S.f.punidades ?? uni(p)) : millar && !millarBase ? 1000 : 1;
@@ -2635,8 +2637,15 @@ const A = {
   notaAuto(){ delete S.f.nsel; draw(); },
   ctcAbrir(){ S.f.ctc_open = true; draw(); },
   notaAbrir(){ S.f.nopen = !S.f.nopen; draw(); },
-  pmas(){ S.f.pcant = Math.max(1, Math.round(Number(S.f.pcant) || 1) + 1); draw(); },
-  pmenos(){ S.f.pcant = Math.max(1, Math.round(Number(S.f.pcant) || 1) - 1); draw(); },
+  pajustar(paso){
+    const p = S.prod.find(x => x.id === S.f.psel);
+    const empaque = empaqueCot(p);
+    const campo = empaque ? "punidades" : "pcant";
+    const inicial = empaque ? uni(p) : 1;
+    const actual = Number(S.f[campo]);
+    S.f[campo] = Math.max(1, Math.round(actual > 0 ? actual : inicial) + Number(paso));
+    draw();
+  },
   qmas(v){ const i = S.cart[Number(v)]; if (i) i.cant += vuDe(i).f; draw(); },
   qmenos(v){ const i = S.cart[Number(v)]; if (i && i.cant > vuDe(i).f) i.cant -= vuDe(i).f; draw(); },
   guia(v){ if (!v) { S.f.guiaOpc = !S.f.guiaOpc; draw(); return; } const c = S.cot.find(x => x.id === S.m.id); S.f.guiaOpc = false; draw(); if (c && window.jspdf) armarGuia(c, v).save("Guia " + c.numero + " - " + String((c.cliente && c.cliente.nombre) || "").replace(/[\\/:*?"<>|]+/g, "").slice(0, 40) + ".pdf"); },
@@ -3919,7 +3928,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11c";
+const APP_VER = "2026-11-11d";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
