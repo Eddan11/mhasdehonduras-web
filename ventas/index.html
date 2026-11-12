@@ -340,6 +340,7 @@ const fnGastos = httpsCallable(getFunctions(fbApp, "us-central1"), "gastos", {ti
 const fnCompras = httpsCallable(getFunctions(fbApp, "us-central1"), "compras", {timeout: 60000});
 const fnProspectos = httpsCallable(getFunctions(fbApp, "us-central1"), "prospectos", {timeout: 250000});
 const fnRecompra = httpsCallable(getFunctions(fbApp, "us-central1"), "recompraCliente");
+const fnGuardarDocumentoPago = httpsCallable(getFunctions(fbApp, "us-central1"), "guardarDocumentoPago");
 const fnAgendaChat = httpsCallable(getFunctions(fbApp, "us-central1"), "agendaSeguimientoChat");
 const fnCorreoProspecto = httpsCallable(getFunctions(fbApp, "us-central1"), "correoProspectoBorrador", {timeout: 185000});
 const fnAsistente = httpsCallable(getFunctions(fbApp, "us-central1"), "asistente", {timeout: 180000});
@@ -1725,6 +1726,17 @@ function vAjustes(){
     <div class="actions"><button class="btn pri" data-a="saveEmpresa" ${S.busy ? "disabled" : ""}>Guardar datos</button></div>
   </div>
   <div class="panel">
+    <h2>Adjuntos de pago para WhatsApp</h2>
+    <div class="field"><label for="pago_cuentas">Cuentas bancarias autorizadas</label><input id="pago_cuentas" type="file" accept="image/jpeg,.jpg,.jpeg"></div>
+    <button type="button" class="btn" data-a="guardarDocumentoPago" data-v="cuentas" ${S.busy ? "disabled" : ""}>Subir cuentas (JPG)</button>
+    <div class="row" style="margin-top:12px">
+      <div class="field"><label for="pago_constancia">Constancia de Pagos a Cuenta</label><input id="pago_constancia" type="file" accept="application/pdf,.pdf"></div>
+      <div class="field"><label for="pago_vence">Vencimiento de la constancia</label><input id="pago_vence" type="date" min="${today()}"></div>
+    </div>
+    <button type="button" class="btn" data-a="guardarDocumentoPago" data-v="constancia" ${S.busy ? "disabled" : ""}>Subir constancia (PDF)</button>
+    <p class="note">Máximo 900 KB por archivo. Cada carga reemplaza el adjunto de las próximas cotizaciones.</p>
+  </div>
+  <div class="panel">
     <h2>Data maestra de productos</h2>
     <p class="note">Los productos se editan en la pestaña Productos. Aquí puedes ${S.prod.length ? "reemplazar todo con" : "cargar"} la data maestra (${SEED.length} productos con código, unidad y presentación).</p>
     <div class="actions"><button class="btn${S.prod.length ? "" : " pri"}" data-a="seed" ${S.busy ? "disabled" : ""}>${S.prod.length ? "Actualizar con data maestra" : "Cargar catálogo"}</button></div>
@@ -3079,6 +3091,27 @@ const A = {
     } catch (e) { fallo(e, "guardar los roles"); }
     S.busy = false; draw();
   },
+  async guardarDocumentoPago(tipo){
+    if (!S.admin || S.busy || !["cuentas", "constancia"].includes(tipo)) return;
+    const archivo = $("#pago_" + tipo)?.files?.[0];
+    const vence = tipo === "constancia" ? $("#pago_vence")?.value : "";
+    if (!archivo || archivo.size > 900 * 1024) return toast("Selecciona un archivo de hasta 900 KB.");
+    if (tipo === "constancia" && (!vence || vence < today())) return toast("Indica la fecha de vencimiento vigente.");
+    S.busy = true;
+    draw();
+    try {
+      const bytes = new Uint8Array(await archivo.arrayBuffer());
+      let binario = "";
+      for (let i = 0; i < bytes.length; i += 8192) binario += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      await fnGuardarDocumentoPago({tipo, vence, contenido: btoa(binario)});
+      toast(tipo === "cuentas" ? "Cuentas actualizadas" : "Constancia actualizada");
+    } catch (e) {
+      fallo(e, "subir el adjunto de pago");
+    } finally {
+      S.busy = false;
+      draw();
+    }
+  },
   async saveEmpresa(){
     const cur = emp(), e = {};
     Object.keys(EMP_DEF).forEach(k => { const v = S.f["em_" + k]; e[k] = k === "validez" ? Math.max(1, Number(v ?? cur.validez) || 15) : clean(v ?? cur[k]); });
@@ -4003,7 +4036,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12e";
+const APP_VER = "2026-11-12f";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
