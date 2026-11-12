@@ -1910,6 +1910,7 @@ function mProd(){
   const adm = puede("admin", "facturador");
   if (!adm) return "";
   return `<h1 style="padding-right:40px">${p.id ? "Editar producto" : "Nuevo producto"}</h1>
+  ${S.m.plantilla ? `<p class="note">Plantilla de ${esc(S.m.plantilla)}. Cambia el nombre y revisa los datos antes de guardar.</p>` : ""}
   <div class="field"><label for="pe_codigo">Código</label><input id="pe_codigo" data-k="pe_codigo" value="${esc(g("codigo", p.id ? codDe(p) : sugerirCodigo(g("cat", ""))))}" autocapitalize="characters" placeholder="ETQ-012"></div>
   <div class="field"><label for="pe_nombre">Nombre (así sale en la cotización)</label><input id="pe_nombre" data-k="pe_nombre" value="${esc(g("nombre", p.nombre || ""))}"></div>
   <div class="field"><label for="pe_cat">Categoría</label><input id="pe_cat" data-k="pe_cat" list="cats" value="${esc(g("cat", p.categoria || ""))}">
@@ -1942,7 +1943,7 @@ function mProd(){
   <div class="field"><label for="pe_tamano">Tamaño</label><input id="pe_tamano" data-k="pe_tamano" value="${esc(g("tamano",info.tamano))}" placeholder="Ej. 2 × 1 pulgadas"></div>
   <div class="field prod-caracteristicas"><label for="pe_car0">Características:</label>${[0,1,2].map(n=>`<input id="pe_car${n}" aria-label="Característica ${n+1}" data-k="pe_car${n}" value="${esc(g("car"+n,info.caracteristicas[n]||""))}" placeholder="Opcional">`).join("")}</div>
   ${S.admin?`<div class="panel"><label for="subir_foto_producto">Subir imagen del producto</label><input id="subir_foto_producto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-imagen="pe_foto" ${S.imagenSubiendo?"disabled":""}><p class="note">${S.imagenSubiendo?"Subiendo imagen…":"JPG, PNG, WebP o GIF, hasta 6 MB. Se conserva el original y se crea una miniatura."}</p>${g("foto",p.foto||"")?`<a href="${esc(g("foto",p.foto||""))}" target="_blank" rel="noopener"><img src="${esc(S.f.pe_fotoMini||g("foto",p.foto||""))}" alt="Imagen adjunta" style="max-width:160px;max-height:160px;object-fit:contain">Ver imagen original</a>`:""}</div>`:""}
-  <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Guardar producto</button></div>`;
+  <div class="actions"><button class="btn pri big" data-a="prodSave" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Guardar producto</button>${p.id ? `<button type="button" class="btn" data-a="prodDuplicar" data-v="${esc(p.id)}" ${S.busy||S.imagenSubiendo ? "disabled" : ""}>Duplicar</button>` : ""}</div>`;
 }
 function origenChat(c){
   const o=c.origenWeb;if(!o)return "";
@@ -3575,6 +3576,27 @@ const A = {
     catch (e) { fallo(e, "ordenar los productos"); }
     S.busy = false; draw();
   },
+  prodDuplicar(v){
+    if (!puede("admin", "facturador") || S.busy || S.imagenSubiendo) return;
+    const p = S.prod.find(x => x.id === v);
+    if (!p) return;
+    const info = infoProducto(p), costo = compraDe(p);
+    clearProd();
+    Object.assign(S.f, {
+      pe_nombre: p.nombre, pe_cat: p.categoria || "", pe_pres: presDe(p),
+      pe_unidades: uni(p), pe_unidad: unidadDe(p), pe_precio: p.precio,
+      pe_suelto: !soloPres(p), pe_negociado: p.precioNegociado === true || esEtiquetaPersonalizada(p),
+      pe_activo: false, pe_agente: false, pe_meta: false,
+      pe_desc: info.descripcion, pe_tamano: info.tamano,
+      pe_car0: info.caracteristicas[0], pe_car1: info.caracteristicas[1], pe_car2: info.caracteristicas[2],
+      pe_foto: p.foto || "", pe_fotoMini: p.fotoMini || ""
+    });
+    if (costo) S.f.pe_costo = costo;
+    if (p.fotoArchivo) S.f.pe_fotoArchivo = p.fotoArchivo;
+    S.m = {type: "prod", id: null, plantilla: p.nombre};
+    draw();
+    $("#pe_nombre")?.focus();
+  },
   prodNuevo(){ clearProd(); S.m = {type: "prod", id: null}; draw(); },
   prodEdit(v){ clearProd(); S.m = {type: "prod", id: v}; draw(); },
   async prodActivo(v){ const p = S.prod.find(x => x.id === v); if (!p) return; await upd(doc(db, "productos", v), {activo: p.activo === false}, p.activo === false ? "Producto activado" : "Producto desactivado: ya no sale al cotizar, en inventario ni para el agente"); },
@@ -3693,11 +3715,12 @@ const A = {
     if(!Number.isSafeInteger(unidades)||unidades<1||unidades>10000000)return toast("Escriba una cantidad entera de unidades por presentación.");
     const precio = r2(g("precio", p ? p.precio : 0));
     if (!nombre) return toast("Escribe el nombre del producto.");
+    if (S.m.plantilla && nombre === expandirTexto(clean(S.m.plantilla)).toUpperCase()) return toast("Escribe un nombre distinto para la copia.");
     if (!Number.isFinite(precio)||!(precio > 0)) return toast("Escribe el precio.");
     const codigo = clean(g("codigo", p ? codDe(p) : sugerirCodigo(g("cat", "")))).toUpperCase();
     if (S.prod.some(x => x !== p && codDe(x) && codDe(x) === codigo)) return toast("Ese código ya existe.");
     const negociado=!!g("negociado",p?(p.precioNegociado===true||esEtiquetaPersonalizada(p)):false),publicar=!negociado&&!!g("meta",p?p.enCatalogo!==false:true);
-    const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: p ? unidadDe(p) : unidadNueva(g("pres", ""),unidades),
+    const data = {precioNegociado:negociado,enCatalogo:publicar,codigo, nombre, categoria: clean(g("cat", p ? p.categoria : "")) || "Otros", unidad: p ? unidadDe(p) : g("unidad", unidadNueva(g("pres", ""),unidades)),
       presentacion: expandirTexto(clean(g("pres", p ? presDe(p) : ""))).toUpperCase(), unidades, precio, activo: !!g("activo", p ? p.activo !== false : true),
       soloPresentacion: !g("suelto", p ? !soloPres(p) : true), enAgente: !negociado&&!!g("agente", p ? p.enAgente !== false : true), notaAgente: p ? String(p.notaAgente || "") : "",
       mostrarDescripcionWeb:publicar,mostrarFotoWeb:publicar,enMeta: publicar, descripcionWeb: textoNormal(expandirTexto(clean(g("desc", infoProducto(p||{}).descripcion)))), tamanoWeb:clean(g("tamano",infoProducto(p||{}).tamano)), caracteristicasWeb:[0,1,2].map(n=>textoNormal(expandirTexto(clean(g("car"+n,infoProducto(p||{}).caracteristicas[n]||""))))).filter(Boolean), foto: clean(g("foto", p ? p.foto : ""))};
@@ -3980,7 +4003,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12d";
+const APP_VER = "2026-11-12e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
