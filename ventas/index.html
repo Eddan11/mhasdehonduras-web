@@ -1719,8 +1719,9 @@ function vAjustes(){
   </div>` : ""; })()}
   <div class="panel">
     <h2>Datos de la empresa en el PDF</h2>
-    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["entrega", "Tiempo de entrega"], ["envio", "Envío"], ["validez", "Validez (días)"], ["horario", "Horario de atención (lo usa el agente)"], ["ubicacion", "Ubicación / tienda para clientes (lo usa el agente)"]]
+    ${[["nombre", "Razón social"], ["rtn", "RTN"], ["direccion", "Dirección"], ["pbx", "PBX"], ["whatsapp", "WhatsApp"], ["correo", "Correo"], ["validez", "Validez (días)"], ["horario", "Horario de atención (lo usa el agente)"], ["ubicacion", "Ubicación / tienda para clientes (lo usa el agente)"]]
       .map(([k, t]) => `<div class="field"><label for="em_${k}">${t}</label><input id="em_${k}" data-k="em_${k}" ${k === "validez" ? 'type="number" min="1"' : ""} value="${esc(S.f["em_" + k] ?? emp()[k])}"></div>`).join("")}
+    <div class="field"><label for="em_logistica">Envío</label><textarea id="em_logistica" data-k="em_logistica" rows="2" aria-describedby="em_logistica_ayuda">${esc(S.f.em_logistica ?? [emp().entrega, emp().envio].map(t => String(t).replace(/\s+/g, " ").trim()).join("\n"))}</textarea><small class="muted" id="em_logistica_ayuda">Primera línea para San Pedro Sula. Segunda línea para fuera de San Pedro Sula.</small></div>
     <div class="actions"><button class="btn pri" data-a="saveEmpresa" ${S.busy ? "disabled" : ""}>Guardar datos</button></div>
   </div>
   <div class="panel">
@@ -3080,6 +3081,11 @@ const A = {
   async saveEmpresa(){
     const cur = emp(), e = {};
     Object.keys(EMP_DEF).forEach(k => { const v = S.f["em_" + k]; e[k] = k === "validez" ? Math.max(1, Number(v ?? cur.validez) || 15) : clean(v ?? cur[k]); });
+    if (S.f.em_logistica !== undefined) {
+      const lineas = String(S.f.em_logistica).split(/\r?\n/).map(clean).filter(Boolean);
+      if (lineas.length !== 2) return toast("Escribe dos líneas de envío: una para San Pedro Sula y otra para fuera de San Pedro Sula.");
+      [e.entrega, e.envio] = lineas;
+    }
     if (await upd(doc(db, "config", "app"), {emp: e}, "Datos guardados", true)) Object.keys(S.f).filter(k => k.startsWith("em_")).forEach(k => delete S.f[k]);
     draw();
   },
@@ -3974,7 +3980,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12a";
+const APP_VER = "2026-11-12b";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
