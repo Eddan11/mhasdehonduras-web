@@ -416,6 +416,8 @@ function camposPlazo(campo, fecha, plazo, editable = true){
     <div class="field"><label for="${campo}_vence">Fecha máxima de pago</label><input id="${campo}_vence" value="${fdate(fechaMaxCred(fecha, plazo)).replaceAll("/", "-")}" readonly></div>
   </div>`;
 }
+const CANALES_VENTA = {whatsapp:"WhatsApp", web:"Web", telefono:"Teléfono", directa:"Venta directa", otro:"Otro"};
+const FUENTES_VENTA = {meta_ads:"Anuncio de Meta", facebook:"Facebook", instagram:"Instagram", google:"Google", linkedin:"LinkedIn"};
 const FORMA_TXT = {"50/50": "50/50 · 50% anticipo y 50% al recibir", "Efectivo": "Pago en efectivo", "Contra entrega": "Pago contra entrega", "Cheque": "Pago con cheque", "Transferencia": "Pago con transferencia", "Tarjeta": "Pago con tarjeta", "Link de pago": "Pago con link de pago"};
 FORMA_TXT["Crédito"] = "Crédito a " + PLAZO_CRED + " días";
 const formaTxt = (f, plazo) => f === "Crédito" && plazoValido(plazo) ? "Crédito a " + plazo + " días" : FORMA_TXT[f] || f || "";
@@ -631,6 +633,7 @@ function vCotizar(){
     <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${empresa(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago" data-redraw="1">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${f === "Crédito" ? f : formaTxt(f)}</option>`).join("")}</select></div>
+    ${!S.editId ? `<div class="field"><label for="cot_canal">Canal de entrada</label><select id="cot_canal" data-k="cot_canal"><option value="">Sin identificar</option>${Object.entries(CANALES_VENTA).map(([k,n])=>`<option value="${k}" ${S.f.cot_canal === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
     ${S.f.fpago === "Crédito" ? camposPlazo("cot_plazo", S.f.cot_fecha || today(), S.f.cot_plazo ?? PLAZO_CRED, puede("admin", "facturador")) : ""}
     <label for="cot_factura" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--ui-normal);font-weight:500;margin:6px 0"><input id="cot_factura" type="checkbox" data-k="cot_factura" data-redraw="1" style="width:16px;height:16px;min-height:16px;margin:0;flex:0 0 16px" ${S.f.sin_comprobante!==true?"checked":""}>Factura</label>
     <div class="field"><label for="coc">Orden de compra del cliente (opcional)</label><input id="coc" data-k="cot_oc" value="${fv("cot_oc")}" placeholder="Número de O/C que dio el cliente" autocomplete="off"></div>
@@ -1869,6 +1872,7 @@ function mCot(){
     <dt>Fecha</dt><dd>${fdate(c.fecha)} · válida hasta ${fdate(addDays(c.fecha, c.validez || 15))}</dd>
     <dt>Vendedor</dt><dd>${esc(c.vendedorNombre || "")}</dd>
     ${full && c.formaPago ? `<dt>Forma de pago</dt><dd>${esc(formaTxt(c.formaPago, c.plazo))}</dd>` : ""}
+    ${full && (c.origenCaptado?.canal || c.canalVenta || c.origen === "whatsapp") ? `<dt>Canal de entrada</dt><dd>${esc(CANALES_VENTA[c.origenCaptado?.canal || c.canalVenta || c.origen] || "Sin identificar")}${FUENTES_VENTA[c.origenCaptado?.fuente] ? " · " + esc(FUENTES_VENTA[c.origenCaptado.fuente]) : ""}</dd>` : ""}
     ${c.factura ? `<dt>Factura</dt><dd>${esc(c.factura.numero)} · ${fdate(c.factura.fecha)}${full && facDeCot(c) && !facDeCot(c).historica ? ` <button class="btn sm" data-a="facPdfCot" ${S.busy ? "disabled" : ""}>Ver factura</button>` : ""}</dd>` : ""}${full && (c.facturasAnuladas || []).length ? `<dt>Anuladas</dt><dd>${c.facturasAnuladas.map(esc).join(", ")}</dd>` : ""}
   </dl>
   ${full ? `<div class="scroll"><table><thead><tr><th class="num">Cant.</th><th>Producto</th><th class="num">Precio unit.</th><th class="num">Descuento</th><th class="num">Importe</th></tr></thead><tbody>
@@ -2097,7 +2101,9 @@ function datosFactura(c, cli, fecha, fp, plazo){
   const sub = r2(cc.base + cc.flete), desc = 0;
   const dias = fp === "Crédito" ? Number(plazo ?? c.plazo ?? PLAZO_CRED) : 0;
   const cred = dias ? {plazo: dias, tiempo: "DÍAS", fechaMax: fechaMaxCred(fecha, dias)} : {};
-  return Object.assign({cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)}, cred);
+  const canalVenta = c.origenCaptado?.canal || c.canalVenta || (c.origen === "whatsapp" ? "whatsapp" : "");
+  const fuenteVenta = c.origenCaptado?.fuente || "";
+  return Object.assign({...(canalVenta ? {canalVenta} : {}), ...(fuenteVenta ? {fuenteVenta} : {}), cliente: cli, fecha, formaPago: String(fp || "").toUpperCase(), lineas, sub, desc, gravado: r2(sub - desc), isv: cc.isv, total: cc.total, letras: totalLetras(cc.total)}, cred);
 }
 function cargarPdfLib(){
   if (window.PDFLib) return Promise.resolve(window.PDFLib);
@@ -2741,7 +2747,7 @@ const A = {
           if (numero === "COT-") throw {code: "existe"};
           if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
         } else numero = await siguienteNumero(iniciales(V));
-        cot = {numero, cliente, items, ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
+        cot = {numero, cliente, items, ...(CANALES_VENTA[S.f.cot_canal] ? {canalVenta:S.f.cot_canal} : {}), ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
           vendedor: V.id, vendedorNombre: V.nombre || V.email,
           vendedorInfo: {nombre: V.nombre || V.email, cargo: V.cargo || "Ventas", tel: V.tel || e.whatsapp, correo: V.correo || V.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
@@ -3092,7 +3098,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "cot_plazo", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "punidades", "pvu", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "cot_plazo", "cot_canal", "notas", "nsel", "nopen", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "punidades", "pvu", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
@@ -3960,7 +3966,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-11j";
+const APP_VER = "2026-11-11k";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
