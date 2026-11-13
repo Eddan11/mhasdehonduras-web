@@ -2429,9 +2429,14 @@ function marcaAgua(d){
   const w = 145, h = w * LOGO_MARCA.r;
   try { d.setGState(new d.GState({opacity: 0.07})); d.addImage(LOGO_MARCA.src, "PNG", (215.9 - w) / 2, (279.4 - h) / 2 - 8, w, h, "marca", "FAST"); d.setGState(new d.GState({opacity: 1})); } catch (_) {}
 }
-function armarPdf(c, interno){
+function armarPdf(c, interno, escala = 1){
   const e = emp(), {jsPDF} = window.jspdf;
   const d = new jsPDF({unit: "mm", format: "letter"});
+  const alto = d.internal.pageSize.getHeight();
+  if (escala < 1) {
+    d.saveGraphicsState();
+    d.setCurrentTransformationMatrix(new d.Matrix(escala, 0, 0, escala, d.internal.pageSize.getWidth() * d.internal.scaleFactor * (1 - escala) / 2, alto * d.internal.scaleFactor * (1 - escala)));
+  }
   const W = 215.9, M = 18, cx = W / 2, IW = W - 2 * M;
   const NAVY = [31, 56, 100], INK = [30, 30, 30], GRAY = [105, 110, 120], LINE = [205, 210, 220], YEL = [255, 248, 222], LAB = [232, 235, 242];
   const tc = a => d.setTextColor(a[0], a[1], a[2]), fc = a => d.setFillColor(a[0], a[1], a[2]), dc = a => d.setDrawColor(a[0], a[1], a[2]);
@@ -2471,12 +2476,12 @@ function armarPdf(c, interno){
   };
   header();
   d.setFont("helvetica", "normal"); d.setFontSize(9.5);
-  const filas = Math.max((c.items || []).length, 12);
+  const filas = (c.items || []).length;
   for (let r = 0; r < filas; r++) {
     const it = (c.items || [])[r], l = it ? cc.lines[r] : null;
     const nl = it ? d.splitTextToSize(abreviarTexto(it.nombre), wN - 3) : [""];
     const h = Math.max(5.8, nl.length * 4.2 + 1.6);
-    if (y + h > 240) { d.addPage(); y = 20; header(); d.setFont("helvetica", "normal"); d.setFontSize(9.5); }
+
     fc(YEL); d.rect(M, y, wC + wN, h, "F"); dc(LINE);
     let x = M; widths.forEach(w => { d.rect(x, y, w, h); x += w; });
     if (it) {
@@ -2492,7 +2497,7 @@ function armarPdf(c, interno){
     y += h;
   }
   const tot = c.sinComprobante ? [] : [["Subtotal", L(hasD ? cc.sub : cc.base)]].concat(hasD ? [["Descuento", "- " + L(cc.desc)], ["Subtotal con descuento", L(cc.base)]] : []).concat(cc.flete ? [["Flete", L(cc.flete)]] : []).concat([["ISV (15%)", L(cc.isv)]]);
-  if (y + tot.length * 6 + 70 > 270) { d.addPage(); y = 20; }
+
   tot.forEach(([k, val]) => {
     dc(LINE); d.rect(M, y, IW - wT, 6); d.rect(M + IW - wT, y, wT, 6);
     d.setFont("helvetica", "bold"); tc(INK); d.text(k, M + IW - wT - 1.5, y + 4.2, {align: "right"});
@@ -2514,7 +2519,7 @@ function armarPdf(c, interno){
   d.setFont("helvetica", "normal");
   const filasN = items.map(([k, t]) => [k, String(t).split(/\r?\n/).flatMap(par => d.splitTextToSize(par, IW - 4 - lab))]);
   const nh = 9 + filasN.reduce((a, [, ls]) => a + ls.length, 0) * 3.9 + 3;
-  if (y + nh + 30 > 272) { d.addPage(); y = 20; }
+
   fc([243, 244, 246]); d.rect(M, y, IW, nh, "F"); dc([170, 175, 185]); d.line(M, y, M, y + nh);
   tc(INK); d.setFont("helvetica", "bold"); d.text("NOTAS", M + 1.5, y + 4.5);
   let ny = y + 9;
@@ -2529,7 +2534,10 @@ function armarPdf(c, interno){
   d.setFont("helvetica", "bold"); d.setFontSize(10.5); tc(INK); d.text(v.nombre || "", M, y); y += 5.5;
   d.setFont("helvetica", "normal"); d.setFontSize(9.5); tc(GRAY);
   d.text([v.cargo, v.tel ? "Tel. " + v.tel : "", v.correo].filter(Boolean).join("  ·  "), M, y);
-  for (let pg = 1; pg <= d.getNumberOfPages(); pg++) { d.setPage(pg); marcaAgua(d); }
+  const disponible = alto - 12;
+  if (escala === 1 && y > disponible) return armarPdf(c, interno, disponible / y);
+  if (escala < 1) d.restoreGraphicsState();
+  marcaAgua(d);
   return d;
 }
 // Guía de envío: el mismo diseño (90 x 60) en etiqueta térmica 90 x 60, etiqueta 4x6 o carta/A4 (se escala y se centra)
@@ -4036,7 +4044,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12f";
+const APP_VER = "2026-11-12g";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
