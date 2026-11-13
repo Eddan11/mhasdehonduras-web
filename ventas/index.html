@@ -2476,7 +2476,7 @@ function armarPdf(c, interno, escala = 1){
   };
   header();
   d.setFont("helvetica", "normal"); d.setFontSize(9.5);
-  const filas = (c.items || []).length;
+  const filas = Math.max((c.items || []).length, 8);
   for (let r = 0; r < filas; r++) {
     const it = (c.items || [])[r], l = it ? cc.lines[r] : null;
     const nl = it ? d.splitTextToSize(abreviarTexto(it.nombre), wN - 3) : [""];
@@ -4044,7 +4044,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12g";
+const APP_VER = "2026-11-12h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
