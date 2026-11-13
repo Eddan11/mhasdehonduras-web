@@ -600,11 +600,7 @@ function vCotizar(){
     <div class="actions" style="margin-top:8px"><button class="btn sm" data-a="nuevaBlanco">Cancelar edición</button></div></div>` : ""}
   ${S.admin ? `<div class="panel">
     <h2>Fecha</h2>
-    <div class="row">
-      <div class="field"><label for="cot_fecha">Fecha de la cotización</label><input id="cot_fecha" type="date" data-k="cot_fecha" value="${esc(S.f.cot_fecha || today())}"></div>
-      ${S.editId ? "" : `<div class="field"><label for="cot_num">N.º anterior (solo para cotizaciones viejas)</label><input id="cot_num" data-k="cot_num" value="${fv("cot_num")}" placeholder="Ej. 1378" inputmode="numeric"></div>`}
-    </div>
-    <p class="note">Para registrar cotizaciones que ya hiciste antes: pon su fecha original y, si quieres, su número anterior (queda como COT-1378). Las listas se ordenan por fecha.</p>
+    <div class="field"><label for="cot_fecha">Fecha de la cotización</label><input id="cot_fecha" type="date" data-k="cot_fecha" value="${esc(S.f.cot_fecha || today())}"></div>
   </div>` : ""}
   <div class="panel">
     <h2>Cliente</h2>
@@ -619,10 +615,10 @@ function vCotizar(){
     <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${fv("cli_dir")}" placeholder="San Pedro Sula, Cortés"></div>
     <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" value="${fv("cli_rtn")}" inputmode="numeric"></div>
     <div class="field"><label for="ce">Correo (opcional)</label><input id="ce" type="email" data-k="cli_email" value="${fv("cli_email")}" inputmode="email" autocapitalize="off"></div>` : ""}
-    ${cliSel ? `${S.editId ? `
+    ${cliSel ? `
     <div class="field"><label for="cn">Cliente en la cotización</label><input id="cn" data-k="cli_nombre" value="${esc(S.f.cli_nombre ?? cliSel.nombre ?? "")}"></div>
     <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" inputmode="numeric" value="${esc(S.f.cli_rtn ?? cliSel.rtn ?? "")}"></div>
-    <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${esc(S.f.cli_dir ?? cliSel.direccion ?? "")}"></div>` : `<p class="note">${[cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : ""].filter(Boolean).map(esc).join(" · ") || "Sin dirección ni RTN"}</p>`}
+    <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${esc(S.f.cli_dir ?? cliSel.direccion ?? "")}"></div>
     ${!S.f.ctc_open && ctcSel !== "__nuevo" ? `<div class="row" style="align-items:center;margin-bottom:12px"><div><span class="muted">Atención:</span> <b>${ctcSel !== "" && ctcs[Number(ctcSel)] ? esc(ctcTxt(ctcs[Number(ctcSel)])) : "Sin contacto"}</b></div><button type="button" class="btn sm" data-a="ctcAbrir">Modificar</button></div>` : `
     <div class="field"><label for="cli_ctc">Atención a</label><select id="cli_ctc" data-k="cli_ctc" data-redraw="1">
       ${ctcs.map((p, n) => `<option value="${n}" ${ctcSel === String(n) ? "selected" : ""}>${esc(ctcTxt(p))}</option>`).join("")}
@@ -637,7 +633,7 @@ function vCotizar(){
     <p class="note" style="margin-top:-4px">Se guarda en la ficha de ${empresa(cliSel.nombre)} para usarlo en las próximas cotizaciones.</p>` : ""}`}` : ""}
     <div class="field"><label for="fpg">Forma de pago</label>
       <select id="fpg" data-k="fpago" data-redraw="1">${formasPara(S.f.fpago).map(f => `<option value="${f}" ${(S.f.fpago || "Transferencia") === f ? "selected" : ""}>${f === "Crédito" ? f : formaTxt(f)}</option>`).join("")}</select></div>
-    ${!S.editId ? `<div class="field"><label for="cot_canal">Canal de entrada</label><select id="cot_canal" data-k="cot_canal"><option value="">Sin identificar</option>${Object.entries(CANALES_VENTA).map(([k,n])=>`<option value="${k}" ${S.f.cot_canal === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
+    ${!S.editId ? `<div class="field"><label for="cot_canal">Canal de entrada</label><select id="cot_canal" data-k="cot_canal"><option value="" ${S.f.cot_canal === "" ? "selected" : ""}>Sin identificar</option>${Object.entries(CANALES_VENTA).map(([k,n])=>`<option value="${k}" ${(S.f.cot_canal ?? "whatsapp") === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
     ${S.f.fpago === "Crédito" ? camposPlazo("cot_plazo", S.f.cot_fecha || today(), S.f.cot_plazo ?? PLAZO_CRED, puede("admin", "facturador")) : ""}
     <label for="cot_factura" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--ui-normal);font-weight:500;margin:6px 0"><input id="cot_factura" type="checkbox" data-k="cot_factura" data-redraw="1" style="width:16px;height:16px;min-height:16px;margin:0;flex:0 0 16px" ${S.f.sin_comprobante!==true?"checked":""}>Factura</label>
     <div class="field"><label for="coc">Orden de compra del cliente (opcional)</label><input id="coc" data-k="cot_oc" value="${fv("cot_oc")}" placeholder="Número de O/C que dio el cliente" autocomplete="off"></div>
@@ -711,7 +707,7 @@ function ctcTxt(p){ return [p.nombre || "Sin nombre", p.cargo, p.tel].filter(Boo
 function ctcBusca(c){ return contactosDe(c).map(p => [p.nombre, p.cargo, p.tel, p.correo].join(" ")).join(" "); }
 function notasForm(automatico = false){
   const sel = S.f.cli_sel || "", cl = S.cli.find(c => c.id === sel);
-  return Object.assign(notasAuto(sel === "__nuevo" || S.editId ? S.f.cli_dir ?? cl?.direccion : cl?.direccion), automatico ? {} : S.f.nsel || {});
+  return Object.assign(notasAuto(S.f.cli_dir ?? cl?.direccion), automatico ? {} : S.f.nsel || {});
 }
 // Lo que se escribió en el buscador se aprovecha para el cliente nuevo: 8 dígitos = teléfono, 13-14 dígitos = RTN, lo demás = nombre
 function pasarBusquedaANuevo(){
@@ -2746,9 +2742,9 @@ const A = {
         if (!p.nombre) return toast("Escribe el nombre del contacto.");
         nuevoCtc = {c, lista: lista.concat([p])};
       } else if (cs !== "") p = lista[Number(cs)] || {};
-      const nombre = clean((S.editId ? S.f.cli_nombre : undefined) ?? c.nombre);
+      const nombre = clean(S.f.cli_nombre ?? c.nombre);
       if (!nombre) return toast("Escribe el nombre del cliente.");
-      cliente = {id: c.id, nombre, contacto: p.nombre || "", cargo: p.cargo || "", direccion: clean((S.editId ? S.f.cli_dir : undefined) ?? c.direccion), rtn: clean((S.editId ? S.f.cli_rtn : undefined) ?? c.rtn), tel: p.tel || "", email: p.correo || ""};
+      cliente = {id: c.id, nombre, contacto: p.nombre || "", cargo: p.cargo || "", direccion: clean(S.f.cli_dir ?? c.direccion), rtn: clean(S.f.cli_rtn ?? c.rtn), tel: p.tel || "", email: p.correo || ""};
     }
     S.busy = true; draw();
     try {
@@ -2776,13 +2772,9 @@ const A = {
         await updateDoc(doc(db, "cotizaciones", numero), ch);
         cot = Object.assign({}, prev, ch);
       } else {
-        const ant = S.admin ? clean(S.f.cot_num).toUpperCase().replace(/[^A-Z0-9-]/g, "") : "";
-        if (ant) {
-          numero = "COT-" + ant.replace(/^COT-?/, "").replace(/^-+|-+$/g, "");
-          if (numero === "COT-") throw {code: "existe"};
-          if (S.cot.some(x => x.id === numero)) throw {code: "existe"};
-        } else numero = await siguienteNumero(iniciales(V));
-        cot = {numero, cliente, items, ...(CANALES_VENTA[S.f.cot_canal] ? {canalVenta:S.f.cot_canal} : {}), ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
+        numero = await siguienteNumero(iniciales(V));
+        const canal = S.f.cot_canal ?? "whatsapp";
+        cot = {numero, cliente, items, ...(CANALES_VENTA[canal] ? {canalVenta:canal} : {}), ...(plazo !== null ? {plazo} : {}), total, flete, sinComprobante, notas: clean(S.f.notas), notasSel: notasForm(), ordenCompra: clean(S.f.cot_oc), formaPago: S.f.fpago || "Efectivo", ...((S.f.fpago === "50/50") ? {anticipoContraEntrega:{estado:"calculado",importe:Math.round(Math.round(total*100)/2)/100,saldo:r2(total-Math.round(Math.round(total*100)/2)/100)}} : {anticipoContraEntrega:null}), estado: "cotizada",
           vendedor: V.id, vendedorNombre: V.nombre || V.email,
           vendedorInfo: {nombre: V.nombre || V.email, cargo: V.cargo || "Ventas", tel: V.tel || e.whatsapp, correo: V.correo || V.email},
           fecha: (S.admin && S.f.cot_fecha) || today(), validez: Number(e.validez) || 15, creado: Date.now(), pagos: []};
@@ -3159,7 +3151,7 @@ const A = {
   },
   nuevaBlanco(silencio){
     S.editId = null; S.cart = [];
-    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "cot_plazo", "cot_canal", "notas", "nsel", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "punidades", "pvu", "cot_fecha", "cot_num", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
+    ["cli_sel", "cli_nombre", "cli_contacto", "cli_cargo", "cli_ctc", "ctc_nombre", "ctc_cargo", "ctc_tel", "ctc_correo", "cli_dir", "cli_rtn", "cli_tel", "cli_email", "fpago", "cot_plazo", "cot_canal", "notas", "nsel", "ctc_open", "cot_oc", "flete", "psel", "pcant", "pmodo", "punidades", "pvu", "cot_fecha", "sin_comprobante", "cot_factura", "gen_costo"].forEach(k => delete S.f[k]);
     if (silencio !== true) draw();
   },
   editar(){
