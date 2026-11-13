@@ -619,7 +619,10 @@ function vCotizar(){
     <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${fv("cli_dir")}" placeholder="San Pedro Sula, Cortés"></div>
     <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" value="${fv("cli_rtn")}" inputmode="numeric"></div>
     <div class="field"><label for="ce">Correo (opcional)</label><input id="ce" type="email" data-k="cli_email" value="${fv("cli_email")}" inputmode="email" autocapitalize="off"></div>` : ""}
-    ${cliSel ? `<p class="note">${[cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : ""].filter(Boolean).map(esc).join(" · ") || "Sin dirección ni RTN"}</p>
+    ${cliSel ? `${S.editId ? `
+    <div class="field"><label for="cn">Cliente en la cotización</label><input id="cn" data-k="cli_nombre" value="${esc(S.f.cli_nombre ?? cliSel.nombre ?? "")}"></div>
+    <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" inputmode="numeric" value="${esc(S.f.cli_rtn ?? cliSel.rtn ?? "")}"></div>
+    <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${esc(S.f.cli_dir ?? cliSel.direccion ?? "")}"></div>` : `<p class="note">${[cliSel.direccion, cliSel.rtn ? "RTN " + cliSel.rtn : ""].filter(Boolean).map(esc).join(" · ") || "Sin dirección ni RTN"}</p>`}
     ${!S.f.ctc_open && ctcSel !== "__nuevo" ? `<div class="row" style="align-items:center;margin-bottom:12px"><div><span class="muted">Atención:</span> <b>${ctcSel !== "" && ctcs[Number(ctcSel)] ? esc(ctcTxt(ctcs[Number(ctcSel)])) : "Sin contacto"}</b></div><button type="button" class="btn sm" data-a="ctcAbrir">Modificar</button></div>` : `
     <div class="field"><label for="cli_ctc">Atención a</label><select id="cli_ctc" data-k="cli_ctc" data-redraw="1">
       ${ctcs.map((p, n) => `<option value="${n}" ${ctcSel === String(n) ? "selected" : ""}>${esc(ctcTxt(p))}</option>`).join("")}
@@ -708,7 +711,7 @@ function ctcTxt(p){ return [p.nombre || "Sin nombre", p.cargo, p.tel].filter(Boo
 function ctcBusca(c){ return contactosDe(c).map(p => [p.nombre, p.cargo, p.tel, p.correo].join(" ")).join(" "); }
 function notasForm(automatico = false){
   const sel = S.f.cli_sel || "", cl = S.cli.find(c => c.id === sel);
-  return Object.assign(notasAuto(sel === "__nuevo" ? S.f.cli_dir : (cl || {}).direccion), automatico ? {} : S.f.nsel || {});
+  return Object.assign(notasAuto(sel === "__nuevo" || S.editId ? S.f.cli_dir ?? cl?.direccion : cl?.direccion), automatico ? {} : S.f.nsel || {});
 }
 // Lo que se escribió en el buscador se aprovecha para el cliente nuevo: 8 dígitos = teléfono, 13-14 dígitos = RTN, lo demás = nombre
 function pasarBusquedaANuevo(){
@@ -2743,7 +2746,9 @@ const A = {
         if (!p.nombre) return toast("Escribe el nombre del contacto.");
         nuevoCtc = {c, lista: lista.concat([p])};
       } else if (cs !== "") p = lista[Number(cs)] || {};
-      cliente = {id: c.id, nombre: c.nombre, contacto: p.nombre || "", cargo: p.cargo || "", direccion: c.direccion || "", rtn: c.rtn || "", tel: p.tel || "", email: p.correo || ""};
+      const nombre = clean((S.editId ? S.f.cli_nombre : undefined) ?? c.nombre);
+      if (!nombre) return toast("Escribe el nombre del cliente.");
+      cliente = {id: c.id, nombre, contacto: p.nombre || "", cargo: p.cargo || "", direccion: clean((S.editId ? S.f.cli_dir : undefined) ?? c.direccion), rtn: clean((S.editId ? S.f.cli_rtn : undefined) ?? c.rtn), tel: p.tel || "", email: p.correo || ""};
     }
     S.busy = true; draw();
     try {
