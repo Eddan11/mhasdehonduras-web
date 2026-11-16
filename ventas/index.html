@@ -1583,35 +1583,32 @@ function vUtilidad(){
   const fil = S.f.ut_fil || "pend", ven = S.f.ut_ven || "", q = clean(S.f.utq).toLowerCase(), yo = unif(S.me.uid);
   const todas = S.cot.filter(c => pagadaCot(c) && !!gastosUI.factura(c.id)).map(c => { const d = utilDe(c), general = gastosUI.factura(c.id); return {c, d: {...d, ...(general ? {venta: general.venta / 100, costo: general.costo / 100, gastos: general.directos / 100} : {}), gastosGenerales: (general && general.generales || 0) / 100, neta: general ? general.neta / 100 : d.neta}, o: duenoDe(c)}; });
   const parteDe = (x, uid) => { const p = gastosUI.parte(x.c.id, uid); return p ? {pct: p.pct, monto: p.neta / 100, pagado: p.pagado / 100} : null; };
-  const miParte = x => parteDe(x, yo);
-  // Botones: todas las personas (aunque todavía no tengan ventas) y cualquier otro grupo con ventas
-  const P = personas(), grupos = [...new Set(P.map(p => p.ini).concat(todas.map(x => x.o.grupo)))].sort();
-  // Cuadros de arriba: de la persona seleccionada; con "Ventas de todos", los de quien entró
-  const pSel = ven ? P.find(p => p.ini === ven) : null, uidR = pSel ? pSel.uid : yo;
-  const R = todas.reduce((a, x) => { const m = parteDe(x, uidR); if (m) { a.t += m.monto; if (x.d.u.pagado) a.p += m.pagado; } return a; }, {t: 0, p: 0});
-  const quien = pSel && pSel.uid !== yo ? esc(pSel.ini) : "";
-  let list = todas;
-  if (ven) list = list.filter(x => x.o.grupo === ven);
+  const P = personas();
+  const pSel = P.find(p => p.uid === ven);
+  const miParte = x => parteDe(x, pSel?.uid ?? yo);
+  const quien = pSel ? esc(pSel.ini) : "";
+  let list = pSel ? todas.filter(x => miParte(x)?.pct > 0) : todas;
   const tipo=S.f.ut_tipo||"todas";if(tipo==="facturadas")list=list.filter(x=>!x.c.sinComprobante);if(tipo==="sincomprobante")list=list.filter(x=>x.c.sinComprobante);
   if (q) list = list.filter(x => [x.c.numero, x.c.factura && x.c.factura.numero, x.c.cliente && x.c.cliente.nombre].join(" ").toLowerCase().includes(q));
   if (fil === "pend") list = list.filter(x => !x.d.u.pagado); else if (fil === "pag") list = list.filter(x => x.d.u.pagado); else if (fil === "sin") list = list.filter(x => !(x.d.u.reparto || []).length);
+  const R = list.reduce((a, x) => { const m = miParte(x); if (m) { a.t += m.monto; if (x.d.u.pagado) a.p += m.pagado; } return a; }, {t: 0, p: 0});
   list.sort((a, b) => String((b.c.factura || {}).fecha || b.c.fecha || "").localeCompare(String((a.c.factura || {}).fecha || a.c.fecha || "")));
   const T = list.reduce((a, x) => { a.venta += x.d.venta; a.costo += x.d.costo; a.gastos += x.d.gastos; a.generales += x.d.gastosGenerales; a.neta += x.d.neta; const m = miParte(x); if (m) a.mia += m.monto; return a; }, {venta: 0, costo: 0, gastos: 0, generales: 0, neta: 0, mia: 0});
   const sel = S.utSel || (S.utSel = new Set()), abiertas = list.filter(x => !x.d.u.pagado);
   [...sel].forEach(id => { if (!abiertas.some(x => x.c.id === id)) sel.delete(id); });
   const todasSel = abiertas.length > 0 && abiertas.every(x => sel.has(x.c.id));
-  const vacio = fil === "sin" ? "Todas las facturas pagadas ya tienen reparto." : `No hay facturas pagadas${fil === "pend" ? " pendientes" : fil === "pag" ? " ya cerradas" : ""}${ven ? " de " + esc(ven) : ""}.`;
+  const vacio = fil === "sin" ? (quien ? "El filtro Sin reparto muestra ventas sin asignación. Selecciona Todos los repartos para verlas." : "Todas las facturas pagadas ya tienen reparto.") : `No hay facturas pagadas${fil === "pend" ? " pendientes" : fil === "pag" ? " ya cerradas" : ""}${quien ? " con reparto para " + quien : ""}.`;
   return `
   <h1>Utilidad</h1>
   ${resumenGeneral}
   <h2>Repartos de ventas cobradas</h2><div class="chips">${[["facturadas","Con factura"],["sincomprobante","Sin comprobante"],["todas","Todas · control interno"]].map(([v,n])=>`<button data-a="utTipo" data-v="${v}" aria-pressed="${tipo===v}">${n}</button>`).join("")}</div><p class="sub">Gastos asignados muestra el descuento automático de cada factura según su utilidad bruta, desde el módulo Gastos. Los pagos anteriores se conservan. La utilidad se recalcula mientras la quincena está abierta; al cerrarla queda fija. Los gastos posteriores se aplican como ajustes en una quincena abierta.</p>
   <div class="pr-resumen"><div><small>${quien ? "Utilidad de " + quien + " · total" : "Mi utilidad · total"}</small><b>${L(R.t)}</b></div><div><small>${quien ? "Ya le pagaron" : "Ya me pagaron"}</small><b style="color:var(--ok)">${L(R.p)}</b></div><div><small>${R.t - R.p < 0 ? "Diferencia a compensar" : quien ? "Le falta recibir" : "Me falta recibir"}</small><b style="color:var(--warn)">${L(r2(R.t - R.p))}</b></div></div>
   <div class="chips" role="group" aria-label="Estado">${[["pend", "Pendientes de pagar"], ["sin", "Sin reparto"], ["pag", "Pagadas"], ["todas", "Todas"]].map(([v, t]) => `<button data-a="utFil" data-v="${v}" aria-pressed="${fil === v}">${t}</button>`).join("")}</div>
-  <div class="chips" role="group" aria-label="Ventas de"><button data-a="utVen" data-v="" aria-pressed="${!ven}">Ventas de todos</button>${grupos.map(g => `<button data-a="utVen" data-v="${esc(g)}" aria-pressed="${ven === g}">${esc(g)}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="Reparto para"><span class="muted">Reparto para</span><button data-a="utVen" data-v="" aria-pressed="${!pSel}">Todos los repartos</button>${P.map(p => `<button data-a="utVen" data-v="${esc(p.uid)}" aria-pressed="${pSel?.uid === p.uid}">${esc(p.ini)}</button>`).join("")}</div>
   <div class="field" style="max-width:360px"><label for="utq">Buscar factura o cliente</label><input id="utq" data-k="utq" value="${fv("utq")}" autocomplete="off"></div>
   ${sel.size ? `<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px"><b>${sel.size} ${sel.size === 1 ? "seleccionada" : "seleccionadas"}</b><button class="btn pri sm" data-a="utRepSel">Repartir</button><button class="btn sm" data-a="utPagarSel">Marcar pagadas</button><button class="btn sm" data-a="utSelNada">Quitar selección</button></div>` : ""}
   <div class="panel" style="padding:6px 10px"><div class="scroll">
-  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">${tipo==="sincomprobante"?"Importe comercial":tipo==="todas"?"Venta base / importe comercial":"Total sin ISV"}</th><th class="num">Costo sin ISV</th><th class="num">Gastos asignados</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">Mi parte</th><th>Pagado</th></tr></thead><tbody>
+  ${list.length ? `<table><thead><tr><th>${abiertas.length ? `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSelTodas" ${todasSel ? "checked" : ""} aria-label="Seleccionar todas">` : ""}</th><th>Factura</th><th>Venta de</th><th class="num">${tipo==="sincomprobante"?"Importe comercial":tipo==="todas"?"Venta base / importe comercial":"Total sin ISV"}</th><th class="num">Costo sin ISV</th><th class="num">Gastos asignados</th><th class="num">Utilidad neta</th><th>Reparto</th><th class="num">${quien ? "Parte de " + quien : "Mi parte"}</th><th>Pagado</th></tr></thead><tbody>
     ${list.map(x => { const c = x.c, d = x.d, cer = !!d.u.pagado, bloqueada = cer || !!gastosUI.factura(c.id)?.cerrada, m = miParte(x), suma = (d.u.reparto || []).reduce((a, r) => a + (Number(r.pct) || 0), 0);
       return `<tr${cer ? ' style="opacity:.75"' : ""}>
       <td>${cer ? "" : `<input type="checkbox" style="width:20px;min-height:20px" data-a="utSel" data-v="${esc(c.id)}" ${sel.has(c.id) ? "checked" : ""} aria-label="Seleccionar ${esc(c.numero)}">`}</td>
@@ -1626,7 +1623,7 @@ function vUtilidad(){
       <td>${cer ? `<span class="badge b-ok">☑ Pagado</span><br><small class="muted">${d.u.pagadoEn ? fdate(ymd(new Date(d.u.pagadoEn))) : ""}</small>` : `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" style="width:20px;min-height:20px" data-a="utPagar" data-v="${esc(c.id)}"> Pagado</label>`}</td></tr>`; }).join("")}
   </tbody><tfoot><tr class="tfoot"><td colspan="3"><b>${list.length} ${list.length === 1 ? "factura" : "facturas"}</b></td><td class="num">${L(T.venta)}</td><td class="num">${L(T.costo)}</td><td class="num">${L(T.gastos + T.generales)}</td><td class="num"><b>${L(T.neta)}</b></td><td></td><td class="num"><b>${L(T.mia)}</b></td><td></td></tr></tfoot></table>` : `<p class="empty">${vacio}</p>`}
   </div></div>
-  <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen del período incluye a todas las personas; "Mi utilidad" y "Mi parte" corresponden a tu usuario. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
+  <p class="note">"Venta de" indica de quién fue la venta (EMW = agente de WhatsApp; se agrupa con EM junto con las importadas). El resumen del período incluye a todas las personas; Las tarjetas y la columna de reparto muestran la parte de la persona seleccionada en las ventas de esta tabla. El costo se toma del precio de compra guardado al facturar (las anteriores usan el costo actual de Productos). Para cerrar una fila, primero asigna el reparto (debe sumar 100%).</p>`;
 }
 function utilidadConGenerales(c){ const d = utilDe(c), g = gastosUI.factura(c.id); return {...d, neta: g ? g.neta / 100 : d.neta}; }
 function mRep(){
