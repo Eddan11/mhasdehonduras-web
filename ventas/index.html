@@ -1138,7 +1138,7 @@ function vChats(){
     : (ESTADO_CHAT(b)[1] === "b-bad") - (ESTADO_CHAT(a)[1] === "b-bad") || (b.actualizado || 0) - (a.actualizado || 0));
   return `
   <h1>Chats de WhatsApp</h1>
-  <p class="sub">Lo que el agente está conversando. Los que piden una persona salen primero en rojo; respóndelos desde la app de WhatsApp Business y el agente se calla solo en ese chat.</p>
+  <p class="sub">Mensajes de WhatsApp registrados en el sistema, incluso con el agente apagado. Los que piden una persona salen primero en rojo; puede atenderlos desde WhatsApp Business.</p>
   <div class="actions" style="margin:0 0 12px"><label for="chat_dias">Días (incluye hoy)</label><input id="chat_dias" data-k="chat_dias" type="number" min="1" max="365" step="1" value="${esc(S.f.chat_dias ?? 1)}" style="width:80px" ${S.busy ? "disabled" : ""}><button class="btn" data-a="chatsDescargar" ${S.busy ? "disabled" : ""}>${S.busy ? "Preparando…" : "Descargar mensajes"}</button></div>
   <div class="chips" role="group" aria-label="Filtrar chats" style="margin-bottom:10px">${CHAT_F.map(([v, t, fn]) => { const n = S.convs.filter(fn).length; return `<button data-a="chatF" data-v="${v}" aria-pressed="${(S.chatF || "todos") === v}">${t}${v !== "todos" ? ` <span class="cnt${n ? " hot" : ""}">${n}</span>` : ""}</button>`; }).join("")}</div>
   <div class="panel" style="padding:6px 10px"><div class="scroll">
@@ -1165,7 +1165,7 @@ function vAgente(){
   <div class="panel">
     <h2>Estado</h2>
     <div class="chips" role="group" aria-label="Modo">${[["apagado", "Apagado"], ["prueba", "Prueba"], ["activo", "Activo"]].map(([v, t]) => `<button data-a="agModo" data-v="${v}" aria-pressed="${modo === v}">${t}</button>`).join("")}</div>
-    <p class="note">${modo === "apagado" ? "El agente no responde a nadie. Los chats llegan solo a la app del celular." : modo === "prueba" ? "Solo responde a los números de prueba de abajo. Los clientes reales no lo ven." : "Responde a todos los clientes. Recuerda apagar el agente de Meta en la app del celular."}</p>
+    <p class="note">${modo === "apagado" ? "El agente no responde a nadie. Los chats se registran en el panel y la medición de Meta continúa según su configuración." : modo === "prueba" ? "Solo responde a los números de prueba de abajo. Los chats de los clientes también se registran, sin respuesta automática." : "Responde a todos los clientes. Recuerda apagar el agente de Meta en la app del celular."}</p>
     <div class="field"><label for="ag_nums">Números de prueba (uno por línea)</label><textarea id="ag_nums" data-k="ag_nums" placeholder="9999-8888">${esc(g("nums", (a.numerosPrueba || []).join("\n")))}</textarea></div>
     <div class="field"><label for="ag_eq">Números del equipo: el agente nunca les responde (uno por línea)</label><textarea id="ag_eq" data-k="ag_eq" placeholder="9468-9500">${esc(g("eq", (a.numerosEquipo || []).join("\n")))}</textarea></div>
     <div class="field"><label for="ag_av">WhatsApp para avisos: le suena cuando el agente lo necesita o deja una cotización lista (uno por línea)</label><textarea id="ag_av" data-k="ag_av" placeholder="9999-8888">${esc(g("av", (a.avisosA || []).join("\n")))}</textarea></div>
@@ -4035,7 +4035,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-12h";
+const APP_VER = "2026-11-17a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
