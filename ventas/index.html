@@ -619,7 +619,7 @@ function vCotizar(){
     <div class="field"><label for="cn">Cliente en la cotización</label><input id="cn" data-k="cli_nombre" value="${esc(S.f.cli_nombre ?? cliSel.nombre ?? "")}"></div>
     <div class="field"><label for="cr">RTN (opcional)</label><input id="cr" data-k="cli_rtn" inputmode="numeric" value="${esc(S.f.cli_rtn ?? cliSel.rtn ?? "")}"></div>
     <div class="field"><label for="cd">Dirección</label><input id="cd" data-k="cli_dir" data-redraw="1" value="${esc(S.f.cli_dir ?? cliSel.direccion ?? "")}"></div>
-    ${!S.f.ctc_open && ctcSel !== "__nuevo" ? `<div class="row" style="align-items:center;margin-bottom:12px"><div><span class="muted">Atención:</span> <b>${ctcSel !== "" && ctcs[Number(ctcSel)] ? esc(ctcTxt(ctcs[Number(ctcSel)])) : "Sin contacto"}</b></div><button type="button" class="btn sm" data-a="ctcAbrir">Modificar</button></div>` : `
+    ${!S.f.ctc_open && ctcSel !== "__nuevo" ? `<div class="row" style="align-items:center;margin-bottom:12px"><div>${ctcSel !== "" && ctcs[Number(ctcSel)] ? `<span class="muted">Atención:</span> <b>${esc(ctcTxt(ctcs[Number(ctcSel)]))}</b>` : ""}</div><button type="button" class="btn sm" data-a="ctcAbrir">${ctcSel !== "" ? "Modificar atención" : "Agregar atención"}</button></div>` : `
     <div class="field"><label for="cli_ctc">Atención a</label><select id="cli_ctc" data-k="cli_ctc" data-redraw="1">
       ${ctcs.map((p, n) => `<option value="${n}" ${ctcSel === String(n) ? "selected" : ""}>${esc(ctcTxt(p))}</option>`).join("")}
       <option value="" ${ctcSel === "" ? "selected" : ""}>Sin contacto (solo la empresa)</option>
@@ -3157,10 +3157,7 @@ const A = {
     const cl = c.cliente || {};
     if (cl.id && S.cli.some(x => x.id === cl.id)) {
       S.f.cli_sel = cl.id;
-      const lista = contactosDe(S.cli.find(x => x.id === cl.id)), n = (cl.contacto || cl.tel || cl.email) ? lista.findIndex(p => (p.nombre || "") === (cl.contacto || "") && (p.tel || "") === (cl.tel || "") && (p.correo || "") === (cl.email || "")) : -1;
-      if (n >= 0) S.f.cli_ctc = String(n);
-      else if (cl.contacto) Object.assign(S.f, {cli_ctc: "__nuevo", ctc_nombre: cl.contacto, ctc_cargo: cl.cargo || "", ctc_tel: cl.tel || "", ctc_correo: cl.email || ""});
-      else S.f.cli_ctc = "";
+      S.f.cli_ctc = "";
     }
     else Object.assign(S.f, {cli_sel: "__nuevo", cli_nombre: cl.nombre || "", cli_contacto: cl.contacto || "", cli_dir: cl.direccion || "", cli_rtn: cl.rtn || "", cli_tel: cl.tel || "", cli_email: cl.email || ""});
     S.f.sin_comprobante=c.sinComprobante===true;
