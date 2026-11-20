@@ -1337,7 +1337,7 @@ function mRecompraFecha(){
   if (!c) return "";
   return `<h1>Cambiar fecha de recompra</h1><p class="sub">${empresa(c.nombre)}. Si eliges un domingo, se programa para el lunes.</p>
     <div class="field"><label for="rc_fecha">Nueva fecha</label><input id="rc_fecha" type="date" min="${today()}" data-k="rc_fecha" value="${fv("rc_fecha")}"></div>
-    <div class="actions"><button class="btn pri" data-a="recompraFechaGuardar" ${S.busy ? "disabled" : ""}>Guardar fecha</button></div>`;
+    <div class="actions"><button class="btn pri" data-a="recompraFechaGuardar" ${S.busy ? "disabled" : ""}>Guardar fecha</button>${S.m.volverCliente ? '<button class="btn" data-a="recompraVolver">Volver al cliente</button>' : ""}</div>`;
 }
 
 /* ---------- vista: productos ---------- */
@@ -2011,7 +2011,9 @@ function mCli(){
   ${st ? `<p class="sub">${st.pedidos} pedidos · facturado ${L(st.facturado)}${st.saldo > 0.005 ? " · debe " + L(st.saldo) : ""}${st.creadoPor ? " · creado por " + esc(st.creadoPor) : ""}</p>
   ${st.ultFecha ? `<div class="panel" style="padding:12px"><b>Último pedido: ${fdate(st.ultFecha)}</b> <span class="muted">(${esc(st.ultCot.numero)})</span><p class="note" style="margin:6px 0">${esc(st.ultItems)}</p>
     <span class="badge ${recordatorio(st)[1]}">${recordatorio(st)[0]}</span>
-    ${c.tel && !st.manual?.omitido ? `<div class="actions" style="margin-top:10px"><a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a></div>` : ""}</div>` : ""}` : ""}
+    <div class="actions" style="margin-top:10px">${c.tel && !st.manual?.omitido ? `<a class="btn pri" href="${esc(waRecordatorio(c, st))}" target="_blank" rel="noopener">Recordarle por WhatsApp</a>` : ""}
+      <button class="btn" data-a="recompraFecha" data-v="${esc(c.id)}" ${S.busy ? "disabled" : ""}>${st.manual?.omitido ? "Reactivar seguimiento" : "Cambiar fecha"}</button>
+      ${!st.manual?.omitido ? `<button class="btn" data-a="recompraQuitar" data-v="${esc(c.id)}" ${S.busy ? "disabled" : ""}>Descartar seguimiento</button>` : ""}</div></div>` : ""}` : ""}
   ${S.admin ? `<div class="field"><label for="ce_asignado">Vendedor asignado (solo él lo ve)</label><select id="ce_asignado" data-k="ce_asignado">
     ${S.usuarios.filter(u => u.id === S.me.uid || u.rol === "vendedor" || u.rol === "facturador").map(u => `<option value="${esc(u.id)}" ${(g("asignado", c.asignado || S.me.uid)) === u.id ? "selected" : ""}>${esc(u.nombre || u.email)}${u.id === S.me.uid ? " (tú)" : ""}</option>`).join("")}
   </select></div>
@@ -3429,8 +3431,9 @@ const A = {
     const c = S.cli.find(x => x.id === id), st = c && statsCliente(c);
     if (!st?.ultCot || S.busy) return;
     S.f.rc_fecha = st.prox >= today() ? st.prox : today();
-    S.m = {type: "recompraFecha", id, pedidoId: st.ultCot.id}; draw();
+    S.m = {type: "recompraFecha", id, pedidoId: st.ultCot.id, volverCliente: S.m?.type === "cli" && S.m.id === id}; draw();
   },
+  recompraVolver(){ if (S.m?.type === "recompraFecha" && S.m.volverCliente && !S.busy) { S.m = {type: "cli", id: S.m.id}; draw(); } },
   async recompraFechaGuardar(){
     const m = S.m, fecha = S.f.rc_fecha || "", c = S.cli.find(x => x.id === m?.id);
     if (!c || m.type !== "recompraFecha" || S.busy) return;
@@ -3439,7 +3442,7 @@ const A = {
     S.busy = true; draw();
     try {
       await updateDoc(doc(db, "clientes", c.id), {recompraManual: {pedidoId: m.pedidoId, fecha, actualizado: Date.now()}});
-      if (S.m === m) S.m = null;
+      if (S.m === m) S.m = m.volverCliente ? {type: "cli", id: c.id} : null;
       const dia = new Date(fecha + "T12:00:00").getDay() === 0 ? addDays(fecha, 1) : fecha;
       toast(`Recordatorio programado para el ${fdate(dia)}`);
     } catch (e) { fallo(e, "cambiar la fecha de recompra"); }
@@ -4048,7 +4051,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-20b";
+const APP_VER = "2026-11-20c";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
