@@ -144,7 +144,7 @@ tr.click:hover td{background:var(--chip)}
 @media (max-width:860px){.pz-add{grid-template-columns:1fr 1fr}.pz-add .pz-txtf{grid-column:1/-1}}
 .pz-mic{min-width:44px}
 .pz-mic.on{background:var(--bad);color:#fff;border-color:var(--bad)}
-.pz-cols{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start;margin-top:14px}
+.pz-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:start;margin-top:14px}
 @media (max-width:1100px){.pz-cols{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:700px){.pz-cols{grid-template-columns:1fr}}
 .pz-col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
@@ -303,6 +303,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { infoProducto, nombreConTamano } from "./producto-info.js?v=2026-11-06f";
 import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-06f";
+import { organizarPizarra } from "./pizarra-plan.js?v=2026-11-20a";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
 import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-06f";
 import { crearCatalogoWeb } from "./catalogo-web-ui.js?v=2026-11-06f";
@@ -368,7 +369,7 @@ const S = {
 };
 const TABS = {
   admin: ["cotizar", "pizarra", "cotizaciones", "facturas", "chats", "agente", "prospectos", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil", "ajustes"],
-  facturador: ["cotizar", "pizarra", "cotizaciones", "facturas", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil"],
+  facturador: ["cotizar", "cotizaciones", "facturas", "clientes", "productos", "compras", "inventario", "pagar", "utilidad", "gastos", "cobros", "perfil"],
   vendedor: ["cotizar", "cotizaciones", "miutil", "perfil"]
 };
 // Todas las pestañas en la barra (se desliza). Para agrupar algunas en un botón "Más", ponerlas aquí. Compras y Por pagar están vinculados al inventario.
@@ -1036,9 +1037,11 @@ function tipoAuto(t){
   return "otros";
 }
 async function pzCargar(){
+  if (!S.admin) { PZ.data = null; return; }
   if (PZ.cargando) return; PZ.cargando = true;
-  try { const r = await fnAsistente({accion: "pizarra"}); PZ.data = r.data; }
-  catch (e) { console.error(e); if (!PZ.data) PZ.data = {error: (e && e.message) || "error"}; }
+  const uid = S.me.uid;
+  try { const r = await fnAsistente({accion: "pizarra"}); if (S.admin && S.me.uid === uid) PZ.data = r.data; }
+  catch (e) { console.error(e); if (S.admin && S.me.uid === uid && !PZ.data) PZ.data = {error: (e && e.message) || "error"}; }
   PZ.cargando = false; if (S.tab === "pizarra") draw();
 }
 async function pzMarcarDetectado(v,atendida){
@@ -1059,52 +1062,49 @@ function pzCard(t, hecha){
   </div>`;
 }
 function vPizarra(){
+  if (!S.admin) return `<p class="empty">La pizarra es privada del administrador.</p>`;
   if (!PZ.data && !PZ.cargando) pzCargar();
   const d = PZ.data;
   const hoyTxt = (t => t.charAt(0).toUpperCase() + t.slice(1))(new Date().toLocaleDateString("es-HN", {weekday: "long", day: "numeric", month: "long"}));
   const tipoSel = S.f.pz_tipo || "seguimiento";
   const head = `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between">
-    <div><h1 style="margin-bottom:2px">Pizarra</h1><p class="sub" style="margin:0 0 12px">${esc(hoyTxt)}</p></div>
+    <div><h1 style="margin-bottom:2px">Mi asistente · Pizarra</h1><p class="sub" style="margin:0 0 12px">${esc(hoyTxt)} · Solo para ti</p></div>
     <div class="actions" style="margin:0"><button class="btn sm" data-a="pzRecargar" ${PZ.cargando ? "disabled" : ""}>${PZ.cargando ? "Actualizando…" : "Actualizar"}</button>${AB.oculto ? `<button class="btn sm" data-a="abToggle">Mostrar botón del asistente</button>` : ""}<button class="btn sm" data-a="asAbrir">Hablar con el asistente</button></div></div>
   <div class="panel" style="padding:12px 14px;margin-bottom:0"><div class="pz-add">
-    <div class="field pz-txtf" style="margin:0"><label for="pz_txt">Nueva tarea (escribe o dicta)</label><input id="pz_txt" data-k="pz_txt" value="${fv("pz_txt")}" placeholder="Ej. Llevar caja 80x60 a Aracely" autocomplete="off"></div>
-    <div class="field" style="margin:0"><label for="pz_tipo">Columna</label><select id="pz_tipo" data-k="pz_tipo">${PZ_TIPOS.map(([v, t]) => `<option value="${v}" ${tipoSel === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+    <div class="field pz-txtf" style="margin:0"><label for="pz_txt">¿Qué necesitas recordar?</label><input id="pz_txt" data-k="pz_txt" value="${fv("pz_txt")}" placeholder="Ej. Llamar a Betsy el lunes para confirmar su pedido" autocomplete="off"></div>
+    <div class="field" style="margin:0"><label for="pz_tipo">Tipo</label><select id="pz_tipo" data-k="pz_tipo">${PZ_TIPOS.map(([v, t]) => `<option value="${v}" ${tipoSel === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
     <div class="field" style="margin:0"><label for="pz_fecha">Fecha</label><input id="pz_fecha" type="date" data-k="pz_fecha" value="${esc(S.f.pz_fecha || (tipoSel === "entregas" ? proxRuta() : today()))}"></div>
     <button class="btn pz-mic${PZ.rec ? " on" : ""}" type="button" data-a="pzDictar" title="Dictar" aria-label="Dictar">${PZ.rec ? "■" : "🎤"}</button>
-    <button class="btn pri" type="button" data-a="pzAgregar">Agregar</button>
+    <button class="btn pri" type="button" data-a="pzAgregar">Guardar recordatorio</button>
   </div></div>`;
   if (!d) return head + `<p class="empty" style="margin-top:16px">Cargando la pizarra…</p>`;
   if (d.error) return head + `<p class="empty" style="margin-top:16px">No se pudo cargar la pizarra (${esc(d.error)}). Toca Actualizar.</p>`;
-  const pend = (d.pendientes || []).slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || String(a.hora).localeCompare(String(b.hora)));
-  const cols = PZ_TIPOS.map(([tipo, titulo]) => {
-    const ts = pend.filter(t => t.tipo === tipo);
-    let cuerpo;
-    if (!ts.length) cuerpo = `<div class="pz-vacio">Nada pendiente</div>`;
-    else if (tipo === "entregas") {
-      const dias = [...new Set(ts.map(t => t.fecha < today() ? today() : t.fecha))];
-      cuerpo = dias.map(f => { const g = ts.filter(t => (t.fecha < today() ? today() : t.fecha) === f); const dd = new Date(f + "T12:00:00"), ruta = dd.getDay() === 2 || dd.getDay() === 4;
-        return `<div class="pz-dia">${f === today() ? "Hoy" : fechaPz(f)}${ruta ? " · ruta" : ""} (${g.length})</div>` + g.map(t => pzCard(t)).join(""); }).join("");
-    } else cuerpo = ts.map(t => pzCard(t)).join("");
-    return `<section class="pz-col"><h3>${titulo}<small>${ts.length}</small></h3>${cuerpo}</section>`;
-  }).join("");
+  const plan = organizarPizarra({data:d, clientes:S.cli, statsCliente, hoy:today()});
+  const tareas = (lista, vacio) => lista.length ? lista.map(t => pzCard(t)).join("") : '<p class="pz-vacio">' + vacio + '</p>';
+  const resumen = '<div class="pz-cols"><section class="pz-col"><h3>Hoy<small>' + plan.hoyTareas.length + '</small></h3>' + tareas(plan.hoyTareas, 'Sin compromisos pendientes para hoy.') + '</section>' +
+    '<section class="pz-col"><h3>Clientes por contactar<small>' + ((d.detectado?.espera?.length || 0) + (d.detectado?.abiertas?.length || 0) + plan.recompras.length) + '</small></h3><p class="sub">Empieza por quienes esperan respuesta; después retoma cotizaciones y recompras.</p><a class="btn sm" href="#pz-clientes">Ver oportunidades</a></section>' +
+    '<section class="pz-col"><h3>Próximos recordatorios<small>' + plan.futuras.length + '</small></h3>' + tareas(plan.futuras, 'Agenda aquí lo que te pidan para otro día.') + '</section></div>';
+  const recompras = plan.recompras.slice(0,8).map(({c,st}) => '<div class="pz-card"><div class="pz-body"><b>' + esc(c.nombre) + '</b><div class="pz-m">' + esc(st.falta <= 0 ? 'Toca reponer' : 'Próxima recompra') + ' · ' + esc(fdate(st.prox)) + '</div><div class="pz-m">' + esc(st.ultItems) + '</div><div class="actions"><button class="btn sm" data-a="cliEdit" data-v="' + esc(c.id) + '">Ver cliente</button><button class="btn sm" data-a="pzRecompra" data-v="' + esc(c.id) + '">Agendar</button></div></div></div>').join('');
   const hechas = d.hechasHoy || [];
   const det = d.detectado || {};
   const grupo = (k, titulo, lista, pista, atendida=false) => `<section class="pz-col"><h3>${titulo}<small>${lista.length}</small></h3>${lista.length ? lista.map((x, i) => `<div class="pz-it"><button type="button" class="pz-chk" data-a="${atendida?'pzReabrirDetectado':'pzAtenderDetectado'}" data-v="${k}:${i}" aria-label="${atendida?'Devolver a pendientes':'Marcar como atendido'}" title="${atendida?'Devolver a pendientes':'Marcar como atendido'}" ${PZ.marcando||PZ.cargando?'disabled':''}>${atendida?'✓':''}</button><div style="flex:1;min-width:0">
       ${x.tel ? `<button type="button" class="as-link" data-a="asVerChat" data-v="${esc(x.tel)}">${esc(x.nombre)}</button>` : x.cot ? `<button type="button" class="as-link" data-a="asVerCot" data-v="${esc(x.cot)}">${esc(x.nombre)}</button>` : esc(x.nombre)}
       <br><span>${esc(x.detalle || "")}</span>${x.cuando ? `<br><small>${esc(x.cuando)}</small>` : ""}</div>
-      ${atendida?'':`<button type="button" class="btn sm" data-a="pzPasar" data-v="${k}:${i}">Pasar a…</button>`}</div>`).join("") : `<div class="pz-vacio">${pista}</div>`}</section>`;
+      ${atendida?'':`<button type="button" class="btn sm" data-a="pzPasar" data-v="${k}:${i}">Agendar</button>`}</div>`).join("") : `<div class="pz-vacio">${pista}</div>`}</section>`;
   const atendidos=d.atendidos||{},nAtendidos=Object.values(atendidos).reduce((n,a)=>n+a.length,0);
-  return head + `<div class="pz-cols">${cols}</div>
+  return head + resumen + `<p class="note">Tus recordatorios se guardan en tu cuenta. Las oportunidades se calculan con los datos del sistema; revisa el último contacto antes de escribir.</p>
   ${hechas.length ? `<div class="actions" style="margin-top:10px"><button class="btn sm" data-a="pzVerHechas">${PZ.verHechas ? "Ocultar" : "Ver"} hechas hoy (${hechas.length})</button></div>
     ${PZ.verHechas ? `<div class="pz-col pz-hechas" style="margin-top:8px">${hechas.map(t => pzCard(t, true)).join("")}</div>` : ""}` : ""}
-  <h2 style="margin:22px 0 2px">Lo que detectó el sistema</h2>
-  <p class="sub" style="margin:0">Use «Pasar a…» para crear una tarea o marque la casilla si ya está atendido o no necesita seguimiento. La marca se guarda en su pizarra; un cambio nuevo vuelve a aparecer.</p>
+  <h2 id="pz-clientes" style="margin:22px 0 2px">Clientes y oportunidades</h2>
+  <p class="sub" style="margin:0">Abre el chat o la cotización, agenda el siguiente paso o marca lo atendido. Un mensaje o cambio nuevo vuelve a aparecer.</p>
   <div class="pz-det">
     ${grupo("espera", "💬 Esperando respuesta", det.espera || [], "Nadie esperando")}
     ${grupo("produccion", "🏭 Consultas a producción", det.produccion || [], "Sin consultas")}
     ${grupo("cobros", "💰 Facturar y cobrar", det.cobros || [], "Nada por cobrar hoy")}
     ${grupo("abiertas", "📄 Cotizaciones abiertas", det.abiertas || [], "Ninguna abierta")}
   </div>
+  <section class="panel" style="margin-top:14px"><h2>Clientes por reponer <small>(${plan.recompras.length})</small></h2><p class="sub">Usa la última compra y respeta las fechas cambiadas o recordatorios quitados en Clientes.</p>${recompras || '<p class="pz-vacio">Sin recompras próximas pendientes de agendar.</p>'}<button class="btn sm" data-a="pzClientes">Ver todos en Toca pedir</button></section>
+  <section class="panel"><h2>Para conseguir clientes sin anuncios</h2><p class="sub">Retoma primero las oportunidades de arriba. Después puedes preparar un estado con productos disponibles, revisar prospectos o pedir un referido a un cliente satisfecho.</p><div class="actions"><button class="btn sm" data-a="pzIdea" data-v="Publicar un estado de WhatsApp con productos disponibles y ofrecer cotización">Recordar publicar un estado</button><button class="btn sm" data-a="pzIdea" data-v="Pedir un referido a un cliente satisfecho">Recordar pedir un referido</button><button class="btn sm" data-a="pzProspectos">Ver prospectos</button></div></section>
   ${nAtendidos?`<div class="actions"><button class="btn sm" data-a="pzVerAtendidos">${PZ.verAtendidos?'Ocultar':'Ver'} atendidos (${nAtendidos})</button></div>${PZ.verAtendidos?`<div class="pz-det">${[["espera","Esperando respuesta"],["produccion","Consultas a producción"],["cobros","Facturar y cobrar"],["abiertas","Cotizaciones abiertas"]].filter(([k])=>atendidos[k]?.length).map(([k,t])=>grupo(k,t,atendidos[k],"",true)).join("")}</div>`:''}`:''}`;
 }
 function mTarea(){
@@ -2588,6 +2588,10 @@ function startData(){
 
 onAuthStateChanged(auth, u => entrar(u));
 async function entrar(u){
+  if (S.me.uid !== (u?.uid || null)) {
+    PZ.data = null; PZ.verHechas = false; PZ.verAtendidos = false;
+    Object.keys(S.f).filter(k => /^(pz_|tz_)/.test(k)).forEach(k => delete S.f[k]);
+  }
   if (meSub) { meSub(); meSub = null; }
   stopData(); S.m = null; S.filtro = null; S.tab = null;
   S.u = u || null;
@@ -3178,6 +3182,15 @@ const A = {
     const c = S.convs.find(x => x.id === v); if (c && c.noLeidos) updateDoc(doc(db, "conversaciones", v), {noLeidos: 0}).catch(() => {});
   },
   pzRecargar(){ pzCargar(); draw(); },
+  pzClientes(){ if (!S.admin) return; S.f.cfil="toca"; S.f.cq=""; S.tab="clientes"; draw(); },
+  pzProspectos(){ if (!S.admin) return; S.tab="prospectos"; draw(); },
+  pzIdea(texto){ if (!S.admin) return; Object.keys(S.f).filter(k=>k.startsWith("tz_")).forEach(k=>delete S.f[k]); S.m={type:"tarea",pre:{texto,tipo:"seguimiento",fecha:today()}}; draw(); },
+  pzRecompra(id){
+    if (!S.admin) return;
+    const c=S.cli.find(c=>c.id===id),st=c&&statsCliente(c); if (!st?.ultCot) return;
+    Object.keys(S.f).filter(k=>k.startsWith("tz_")).forEach(k=>delete S.f[k]);
+    S.m={type:"tarea",pre:{texto:"Consultar reposición: "+st.ultItems,cliente:c.nombre,tipo:"seguimiento",fecha:today(),refCot:st.ultCot.numero||st.ultCot.id}};draw();
+  },
   pzVerHechas(){ PZ.verHechas = !PZ.verHechas; draw(); },
   pzVerAtendidos(){PZ.verAtendidos=!PZ.verAtendidos;draw();},
   pzAtenderDetectado(v){return pzMarcarDetectado(v,true);},
@@ -4035,7 +4048,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-17a";
+const APP_VER = "2026-11-20a";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
