@@ -7,7 +7,8 @@ export function organizarPizarra({data, clientes, statsCliente, hoy}) {
   const ocupadas = new Set(tareas.map(t => t.refCot).filter(Boolean));
   const hechas = new Set((data.hechasHoy || []).map(t => t.refCot).filter(Boolean));
   const recompras = clientes.map(c => ({c, st:statsCliente(c)}))
-    .filter(({st}) => st.ultCot && st.falta != null && st.falta <= 7 && !st.manual?.omitido
+    .filter(({c,st}) => (!data.cuentas || data.cuentas.includes(c.asignado || st.ultCot?.vendedor))
+      && st.ultCot && st.falta != null && st.falta <= 7 && !st.manual?.omitido
       && !ocupadas.has(st.ultCot.numero || st.ultCot.id) && !hechas.has(st.ultCot.numero || st.ultCot.id))
     .sort((a,b) => a.st.falta-b.st.falta || String(a.c.nombre).localeCompare(String(b.c.nombre)));
   return {hoyTareas, futuras, recompras};
