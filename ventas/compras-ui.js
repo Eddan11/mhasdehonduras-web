@@ -21,6 +21,15 @@ export function crearCompras(ctx) {
   const factor=(i,modo=modoBase(i))=>modo==='unidad'?Number(i.unidades)||1:1;
   const unidad=(i,modo=modoBase(i))=>modo==='unidad'?(i.unidad||'unidad'):(i.presentacion||'presentación');
   const cantidadVista=(i,n=i.cantidad)=>r6(n*factor(i));
+  let ultimaUnidad=null;
+  const ultimaCompra=id=>(S.compras||[]).filter(c=>c.estado!=='anulada'&&/^\d{4}-\d{2}-\d{2}$/.test(c.fecha||''))
+    .flatMap(c=>(c.items||[]).filter(i=>i.prod===id&&Number(i.costo)>0&&Number(i.unidades)>0).map(i=>({c,i})))
+    .sort((a,b)=>b.c.fecha.localeCompare(a.c.fecha)||(b.c.actualizado||b.c.creado||0)-(a.c.actualizado||a.c.creado||0)||String(b.c.id||'').localeCompare(String(a.c.id||'')))[0];
+  const costoReferencia=(p,modo)=>{
+    const anterior=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
+    const id=p.id||p.prod,ultima=ultimaCompra(id),base=anterior?.prod===id?anterior.costo:ultima?Number(ultima.i.costo)/Number(ultima.i.unidades)*(Number(p.unidades)||1):S.costos?.[id]?.compra;
+    return Number(base)>0?r6(Number(base)/factor(p,modo)):null;
+  };
   const v=k=>esc(S.f[k]??'');
   const cart=()=>S.compraCart||(S.compraCart=[]);
   const compras=()=>S.compras||[];
@@ -28,14 +37,14 @@ export function crearCompras(ctx) {
   const cuenta=c=>(S.cxp||[]).find(x=>x.id===c.cxpId);
   const total=()=>r2(cart().reduce((s,i)=>s+r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100),0)+Number(S.f.cp_cargos||0));
   const retirados=()=>S.compraEdit?(S.compraEdit.items||[]).filter(i=>Number(i.recibida)>0&&!cart().some(x=>x.prod===i.prod&&Number(x.recibida)>0)&&!S.compraEdit.costosAnteriores?.[i.prod]):[];
-  function limpiarLinea(){delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec','cp_modo'].forEach(k=>delete S.f[k]);}
+  function limpiarLinea(){ultimaUnidad=null;delete S.compraLineaEdit;['cp_prod','cp_cant','cp_costo','cp_tasa','cp_line_rec','cp_modo'].forEach(k=>delete S.f[k]);}
   function limpiarCompra(){rtnAutomatico=null;S.compraForm=false;S.compraCart=[];S.compraIntento=null;S.compraEdit=null;S.compraError=null;limpiarLinea();Object.keys(S.f).filter(k=>k.startsWith('cp_')).forEach(k=>delete S.f[k]);}
   const avisoError=()=>S.compraError?`<p role="alert" style="color:#ff9898">${esc(S.compraError)}</p>`:'';
   const input=(k,label,type='text',valor=null,extra='')=>`<div class="field"><label for="${k}">${label}</label><input id="${k}" data-k="${k}" type="${type}" value="${valor==null?v(k):esc(valor)}" ${extra}></div>`;
   const chk=(k,label)=>`<label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input style="width:20px;min-height:20px" data-k="${k}" type="checkbox" ${S.f[k]?'checked':''}>${label}</label>`;
   function vista() {
     const q=String(S.f.cpq||'').trim().toLowerCase();
-    const list=compras().filter(c=>!q||[c.proveedor,c.factura,c.numero].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.creado||0)-(a.creado||0));
+    const list=compras().filter(c=>!q||[c.proveedor,c.factura,c.numero].join(' ').toLowerCase().includes(q)).sort((a,b)=>String(a.fecha||'9999-12-31').localeCompare(String(b.fecha||'9999-12-31'))||(a.creado||0)-(b.creado||0));
     return `<h1>Compras</h1><p class="sub">Registre la compra una vez: mercadería recibida en Inventario y saldo del proveedor en Por pagar.</p>
       <div class="actions"><button class="btn pri" data-a="cpNueva">Nueva compra</button><button class="btn" data-a="cpPagarTab">Por pagar</button><button class="btn" data-a="cpInvTab">Inventario</button></div>
       ${S.compraForm?formulario():''}
@@ -46,6 +55,7 @@ export function crearCompras(ctx) {
     const ps=S.prod.filter(p=>p.activo!==false);
     const elegida=S.prod.find(p=>p.id===S.f.cp_prod)||{},vieja=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
     const p=vieja?.prod===elegida.id?{...elegida,...vieja}:elegida,modo=S.f.cp_modo||modoBase(p),f=factor(p,modo),un=unidad(p,modo);
+    ultimaUnidad={prod:p.id,modo,factor:f,costo:S.f.cp_costo??costoReferencia(p,modo)};
     return `<section class="panel"><h2>${S.compraEdit?'Modificar compra':'Nueva compra'}</h2>
       <div class="row">${input('cp_prov','Proveedor','text',null,'list="cp_proveedores" autocomplete="off"')}${input('cp_rtn','RTN del proveedor (opcional)')}</div>
       <datalist id="cp_proveedores">${[...new Set([...(S.proveedores||[]).map(p=>p.nombre),...(S.cxp||[]).map(p=>p.proveedor)])].filter(Boolean).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
@@ -54,7 +64,8 @@ export function crearCompras(ctx) {
       <h3>Productos</h3><p class="note">Ingrese lo comprado al proveedor, aunque venga a granel. El sistema convierte la cantidad a sus cajas de venta. El costo no cambia el precio de venta.</p>
       <div class="field"><label for="cp_prod">Producto</label><select id="cp_prod" data-k="cp_prod"><option value="">Seleccione</option>${ps.map(p=>`<option value="${esc(p.id)}" ${S.f.cp_prod===p.id?'selected':''}>${esc(p.codigo||p.id)} · ${esc(p.nombre)} · ${esc(p.presentacion||p.unidad||'Unidad')}</option>`).join('')}</select></div>
       ${Number(p.unidades)>1?`<div class="field"><label for="cp_modo">Comprar por</label><select id="cp_modo" data-k="cp_modo"><option value="unidad" ${modo==='unidad'?'selected':''}>${esc(p.unidad||'Unidad')} · a granel</option><option value="presentacion" ${modo==='presentacion'?'selected':''}>${esc(p.presentacion||'Presentación completa')}</option></select></div>`:''}
-      <div class="row">${input('cp_cant','Cantidad · '+esc(un),'number',null,'min="0.001" step="0.001"')}${input('cp_costo','Costo por '+esc(un)+' sin ISV (L)','number',null,'min="0.0001" step="0.0001"')}${input('cp_tasa','ISV (%)','number',S.f.cp_tasa??15,'min="0" max="100" step="0.01"')}</div>
+      <div class="row">${input('cp_cant','Cantidad · '+esc(un),'number',null,'min="0.001" step="0.001"')}${input('cp_costo','Costo por '+esc(un)+' sin ISV (L)','number',ultimaUnidad.costo,'min="0.000001" step="0.000001"')}${input('cp_tasa','ISV (%)','number',S.f.cp_tasa??15,'min="0" max="100" step="0.01"')}</div>
+      ${p.id&&S.compraLineaEdit==null?`<p class="note">Referencia: ${ultimaCompra(p.id)?'última compra del '+fdate(ultimaCompra(p.id).c.fecha):'costo guardado en Productos'}. Puede editar el costo para esta compra.</p>`:''}
       ${S.compraEdit?input('cp_line_rec','Cantidad recibida · '+esc(un),'number',S.f.cp_line_rec??0,'min="0" step="0.001"'):''}
       <button class="btn" data-a="cpAgregar">${S.compraLineaEdit!=null?'Guardar producto':'Agregar producto'}</button>
       ${cart().length?`<div class="scroll"><table><thead><tr><th>Producto / presentación</th><th class="num">Cantidad</th>${S.compraEdit?'<th class="num">Recibido</th>':''}<th class="num">Costo sin ISV</th><th class="num">Con ISV</th><th></th></tr></thead><tbody>${cart().map((i,n)=>`<tr><td>${esc(i.nombre)}<br><small>Venta: ${esc(i.presentacion)} · ${i.unidades} ${esc(i.unidad)}</small></td><td class="num">${cantidadVista(i)} ${esc(unidad(i))}</td>${S.compraEdit?`<td class="num">${cantidadVista(i,i.recibida||0)}</td>`:''}<td class="num">${L(i.costo/factor(i))}</td><td class="num">${L(r2(i.cantidad*i.costo)+r2(r2(i.cantidad*i.costo)*i.tasa/100))}</td><td><button class="btn sm" data-a="cpEditarLinea" data-v="${n}">Editar</button> <button class="btn sm" data-a="cpQuitar" data-v="${n}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:''}
@@ -93,7 +104,7 @@ export function crearCompras(ctx) {
     cpAgregar(){
       const p=S.prod.find(x=>x.id===S.f.cp_prod),viejo=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
       const f=factor(viejo?.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{}));
-      const cantidad=r6(Number(S.f.cp_cant)/f),costo=Number(S.f.cp_costo)*f,tasa=Number(S.f.cp_tasa??15);
+      const cantidad=r6(Number(S.f.cp_cant)/f),costo=r6(Number(S.f.cp_costo??costoReferencia(viejo?.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{})))*f),tasa=Number(S.f.cp_tasa??15);
       if(Math.abs(cantidad*f-Number(S.f.cp_cant))>0.00001)return toast('Revise la cantidad; no se puede convertir exactamente a la unidad de inventario.');
       if(!p||!(cantidad>0)||!(costo>0)||!Number.isFinite(cantidad)||!Number.isFinite(costo)||!Number.isFinite(tasa)||tasa<0||tasa>100)return toast('Seleccione producto y revise cantidad, costo e ISV.');
       if(cart().some((i,n)=>i.prod===p.id&&n!==S.compraLineaEdit))return toast('Ese producto ya está agregado. Quite la línea para corregirla.');
@@ -104,8 +115,11 @@ export function crearCompras(ctx) {
       if(S.compraLineaEdit!=null)cart()[S.compraLineaEdit]=linea;else cart().push(linea);limpiarLinea();draw();
     },
     cpEditarLinea(n){const i=cart()[Number(n)];if(!i)return;S.compraLineaEdit=Number(n);Object.assign(S.f,{cp_prod:i.prod,cp_modo:modoBase(i),cp_cant:cantidadVista(i),cp_costo:i.costo/factor(i),cp_tasa:i.tasa,cp_line_rec:cantidadVista(i,i.recibida||0)});draw();},
-    cpCambioUnidad(){['cp_cant','cp_costo'].forEach(k=>delete S.f[k]);const i=cart()[S.compraLineaEdit];S.f.cp_line_rec=i?r6((i.recibida||0)*factor(i,S.f.cp_modo)):0;draw();},
-    cpCambioProducto(){delete S.f.cp_modo;['cp_cant','cp_costo'].forEach(k=>delete S.f[k]);S.f.cp_line_rec=0;draw();},
+    cpCambioUnidad(){const p=S.prod.find(p=>p.id===S.f.cp_prod)||{},i=cart()[S.compraLineaEdit],base=i?.prod===p.id?i:p;
+      const anterior=ultimaUnidad?.prod===p.id?ultimaUnidad:{factor:factor(base),costo:costoReferencia(base,modoBase(base))},costo=S.f.cp_costo??anterior.costo;
+      delete S.f.cp_cant;if(costo!=null)S.f.cp_costo=costo===''?'':r6(Number(costo)*anterior.factor/factor(base,S.f.cp_modo));else delete S.f.cp_costo;
+      S.f.cp_line_rec=i?r6((i.recibida||0)*factor(i,S.f.cp_modo)):0;draw();},
+    cpCambioProducto(){ultimaUnidad=null;delete S.f.cp_modo;['cp_cant','cp_costo'].forEach(k=>delete S.f[k]);S.f.cp_line_rec=0;draw();},
     cpQuitar(n){cart().splice(Number(n),1);limpiarLinea();draw();},
     cpContado(){S.f.cp_abono=total();draw();},
     cpGuardar(){
