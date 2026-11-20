@@ -1,4 +1,11 @@
 // Compras reutiliza Productos, Inventario y Por pagar. No contiene credenciales ni costos iniciales.
+export function calcularVencimientoCompra(fecha,dias){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha||'')||dias===''||dias==null)return '';
+  const base=Date.parse(fecha+'T00:00:00Z'),n=Number(dias);
+  if(!Number.isFinite(base)||new Date(base).toISOString().slice(0,10)!==fecha||!Number.isInteger(n)||n<0||n>3650)return '';
+  const vence=new Date(base+n*864e5).toISOString().split('T')[0];
+  return /^\d{4}-\d{2}-\d{2}$/.test(vence)?vence:'';
+}
 export function crearCompras(ctx) {
   const {S,esc,empresa=v=>esc(String(v??"").toLocaleUpperCase("es-HN")),L,fdate,today,r2,draw,toast,call,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm}=ctx;
   const uid=()=>crypto.randomUUID();
@@ -43,6 +50,13 @@ export function crearCompras(ctx) {
   const avisoError=()=>S.compraError?`<p role="alert" style="color:#ff9898">${esc(S.compraError)}</p>`:'';
   const input=(k,label,type='text',valor=null,extra='')=>`<div class="field"><label for="${k}">${label}</label><input id="${k}" data-k="${k}" type="${type}" value="${valor==null?v(k):esc(valor)}" ${extra}></div>`;
   const chk=(k,label)=>`<label style="display:flex;gap:8px;align-items:center;margin:12px 0"><input style="width:20px;min-height:20px" data-k="${k}" type="checkbox" ${S.f[k]?'checked':''}>${label}</label>`;
+  const vencimiento=()=>S.f.cp_vencimiento==='dias'?calcularVencimientoCompra(S.f.cp_fecha||today(),S.f.cp_dias):calcularVencimientoCompra(S.f.cp_vence||S.f.cp_fecha||today(),0);
+  function actualizarPlazo(){
+    const fecha=vencimiento();
+    if(S.f.cp_vencimiento==='dias'&&fecha)S.f.cp_vence=fecha;
+    const el=typeof document!=='undefined'&&document.getElementById('cp_vence_calculado');
+    if(el)el.textContent=fecha?'Vence: '+fdate(fecha)+' · Días calendario desde la fecha de compra.':'Indique una fecha de compra y un plazo válido.';
+  }
   function vista() {
     const q=String(S.f.cpq||'').trim().toLowerCase();
     const list=compras().filter(c=>!q||[c.proveedor,c.factura,c.numero].join(' ').toLowerCase().includes(q)).sort((a,b)=>String(a.fecha||'9999-12-31').localeCompare(String(b.fecha||'9999-12-31'))||(a.creado||0)-(b.creado||0));
@@ -53,6 +67,7 @@ export function crearCompras(ctx) {
       <div class="panel"><div class="scroll">${list.length?`<table><thead><tr><th>Fecha</th><th>Proveedor / referencia</th><th>Recepción</th><th class="num">Total</th><th class="num">Saldo</th></tr></thead><tbody>${list.map(c=>`<tr class="click" tabindex="0" data-a="cpAbrir" data-v="${esc(c.id)}"><td>${fdate(c.fecha)}</td><td>${empresa(c.proveedor)}<br><small>${esc(c.factura)}</small></td><td>${esc(estado(c))}</td><td class="num">${L(c.total)}</td><td class="num">${c.estado==='anulada'?'—':cuenta(c)?L(saldo(cuenta(c))):'Cargando…'}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">No hay compras registradas.</p>'}</div></div>`;
   }
   function formulario() {
+    if(S.f.cp_vencimiento!=='dias'&&!S.f.cp_vence)S.f.cp_vence=S.f.cp_fecha||today();
     const ps=S.prod.filter(p=>p.activo!==false);
     const elegida=S.prod.find(p=>p.id===S.f.cp_prod)||{},vieja=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
     const p=vieja?.prod===elegida.id?{...elegida,...vieja}:elegida,modo=S.f.cp_modo||modoBase(p),f=factor(p,modo),un=unidad(p,modo);
@@ -60,7 +75,10 @@ export function crearCompras(ctx) {
     return `<section class="panel"><h2>${S.compraEdit?'Modificar compra':'Nueva compra'}</h2>
       <div class="row">${input('cp_prov','Proveedor','text',null,'list="cp_proveedores" autocomplete="off"')}${input('cp_rtn','RTN del proveedor (opcional)')}</div>
       <datalist id="cp_proveedores">${[...new Set([...(S.proveedores||[]).map(p=>p.nombre),...(S.cxp||[]).map(p=>p.proveedor)])].filter(Boolean).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
-      <div class="row">${input('cp_fact','Factura o referencia del proveedor')}${input('cp_fecha','Fecha','date',S.f.cp_fecha||today())}${input('cp_vence','Vence','date',S.f.cp_vence||today())}</div>
+      <div class="row">${input('cp_fact','Factura o referencia del proveedor')}${input('cp_fecha','Fecha de compra','date',S.f.cp_fecha||today())}</div>
+      <div class="row"><div class="field"><label for="cp_vencimiento">Vencimiento</label><select id="cp_vencimiento" data-k="cp_vencimiento"><option value="fecha" ${S.f.cp_vencimiento!=='dias'?'selected':''}>Fecha exacta</option><option value="dias" ${S.f.cp_vencimiento==='dias'?'selected':''}>Plazo en días</option></select></div>
+      ${S.f.cp_vencimiento==='dias'?input('cp_dias','Plazo en días','number',S.f.cp_dias??'','min="0" max="3650" step="1"'):input('cp_vence','Vence','date',vencimiento())}</div>
+      ${S.f.cp_vencimiento==='dias'?`<p class="note" id="cp_vence_calculado">${vencimiento()?'Vence: '+fdate(vencimiento())+' · Días calendario desde la fecha de compra.':'Indique una fecha de compra y un plazo válido.'}</p>`:''}
       <div class="field"><label for="cp_venta">Venta relacionada (opcional)</label><select id="cp_venta" data-k="cp_venta"><option value="">Para inventario, sin venta asociada</option>${(S.cot||[]).filter(c=>!c.eliminada&&!['anulada','perdida'].includes(c.estado)).slice(0,150).map(c=>`<option value="${esc(c.id)}" ${S.f.cp_venta===c.id?'selected':''}>${esc(c.numero)} · ${empresa(c.cliente?.nombre||'')}</option>`).join('')}</select></div>
       <h3>Productos</h3><p class="note">Ingrese lo comprado al proveedor, aunque venga a granel. El sistema convierte la cantidad a sus cajas de venta. El costo no cambia el precio de venta.</p>
       <div class="field"><label for="cp_prod">Producto</label><select id="cp_prod" data-k="cp_prod"><option value="">Seleccione</option>${ps.map(p=>`<option value="${esc(p.id)}" ${S.f.cp_prod===p.id?'selected':''}>${esc(p.codigo||p.id)} · ${esc(p.nombre)} · ${esc(p.presentacion||p.unidad||'Unidad')}</option>`).join('')}</select></div>
@@ -99,6 +117,16 @@ export function crearCompras(ctx) {
     }finally{S.busy=false;draw();}
   }
   const acciones={
+    cpVencimiento(modo){
+      if(!['fecha','dias'].includes(modo))return;
+      const fecha=calcularVencimientoCompra(S.f.cp_vence||S.f.cp_fecha||today(),0),base=S.f.cp_fecha||today();
+      if(modo==='dias'){
+        const dias=fecha&&calcularVencimientoCompra(base,0)?Math.round((Date.parse(fecha)-Date.parse(base))/864e5):0;
+        S.f.cp_dias=dias>=0?dias:0;
+      }else if(fecha)S.f.cp_vence=fecha;
+      S.f.cp_vencimiento=modo;actualizarPlazo();draw();
+    },
+    cpActualizarPlazo:actualizarPlazo,
     cpCompletarProveedor:completarProveedor,
     cpNueva(){if(S.compraEdit){if(!confirm('¿Descartar los cambios de esta compra?'))return;limpiarCompra();}const prod=S.m&&S.m.type==='inv'?S.m.id:null;S.tab='compras';S.m=null;if(!S.compraForm){S.compraForm=true;S.compraId=uid();S.compraCart=[];}if(prod)S.f.cp_prod=prod;draw();},
     cpCancelar(){if(cart().length&&!confirm('¿Descartar esta compra sin guardar?'))return;const id=S.compraEdit?.id;limpiarCompra();if(id)S.m={type:'compra',id};draw();},
@@ -126,8 +154,9 @@ export function crearCompras(ctx) {
     cpGuardar(){
       if(S.compraLineaEdit!=null)return toast('Guarde primero el producto que está editando.');
       if(!String(S.f.cp_prov||'').trim()||!String(S.f.cp_fact||'').trim()||!cart().length)return toast('Complete proveedor, referencia y productos.');
+      const vence=vencimiento();if(!vence||vence<(S.f.cp_fecha||today()))return toast('Revise el vencimiento. Indique una fecha desde la compra o un plazo entero de 0 a 3650 días.');
       // Un reintento conserva la misma operación: no duplica compra, pago ni inventario si se perdió la respuesta.
-      const payload=S.compraIntento||(S.compraIntento={accion:S.compraEdit?'modificar':'registrar',id:S.compraId,...(S.compraEdit?{version:S.compraEdit.version,operacion:uid(),costosRestaurar:Object.fromEntries(retirados().map(i=>[i.prod,Number(S.f['cp_rest_'+i.prod])||0]))}:{}),proveedor:S.f.cp_prov,rtn:S.f.cp_rtn||'',factura:S.f.cp_fact,fecha:S.f.cp_fecha||today(),vence:S.f.cp_vence||today(),cotizacionId:S.f.cp_venta||'',items:cart().map(({prod,cantidad,costo,tasa,origen,recibida})=>({prod,cantidad,costo,tasa,...(S.compraEdit?{origen:origen??null,recibida:recibida||0}:{})})),cargos:Number(S.f.cp_cargos||0),abono:Number(S.f.cp_abono||0),metodo:S.f.cp_metodo||'Transferencia',ref:S.f.cp_ref||'',nota:S.f.cp_nota||'',recibido:!!S.f.cp_recibida,actualizarCosto:true});
+      const payload=S.compraIntento||(S.compraIntento={accion:S.compraEdit?'modificar':'registrar',id:S.compraId,...(S.compraEdit?{version:S.compraEdit.version,operacion:uid(),costosRestaurar:Object.fromEntries(retirados().map(i=>[i.prod,Number(S.f['cp_rest_'+i.prod])||0]))}:{}),proveedor:S.f.cp_prov,rtn:S.f.cp_rtn||'',factura:S.f.cp_fact,fecha:S.f.cp_fecha||today(),vence,cotizacionId:S.f.cp_venta||'',items:cart().map(({prod,cantidad,costo,tasa,origen,recibida})=>({prod,cantidad,costo,tasa,...(S.compraEdit?{origen:origen??null,recibida:recibida||0}:{})})),cargos:Number(S.f.cp_cargos||0),abono:Number(S.f.cp_abono||0),metodo:S.f.cp_metodo||'Transferencia',ref:S.f.cp_ref||'',nota:S.f.cp_nota||'',recibido:!!S.f.cp_recibida,actualizarCosto:true});
       return enviar(payload,()=>{limpiarCompra();S.m={type:'compra',id:payload.id};toast(payload.accion==='modificar'?'Compra modificada; inventario y saldo actualizados.':'Compra guardada y vinculada con Por pagar.');});
     },
     cpModificar(){const c=compras().find(x=>x.id===S.m?.id);if(!c||c.estado==='anulada'||S.busy)return;if(S.compraForm&&cart().length&&!confirm('¿Descartar el formulario actual?'))return;limpiarCompra();const x=cuenta(c);S.compraEdit={id:c.id,version:c.actualizado||c.creado,items:c.items.map(i=>({...i})),costosAnteriores:c.costosAnteriores||{},pagado:(x?.pagos||[]).reduce((n,p)=>n+Number(p.monto||0),0)};S.compraId=c.id;S.compraForm=true;S.compraCart=c.items.map((i,origen)=>({...i,origen}));Object.assign(S.f,{cp_prov:c.proveedor,cp_rtn:c.rtn||'',cp_fact:c.factura,cp_fecha:c.fecha,cp_vence:c.vence,cp_venta:c.cotizacionId||'',cp_cargos:c.cargos||0,cp_nota:c.nota||''});S.tab='compras';S.m=null;draw();},
@@ -146,6 +175,14 @@ export function crearCompras(ctx) {
     const p=leerPago(x);if(!p)return;
     const payload=S.m.intentoPago||(S.m.intentoPago={accion:'pagar',id:x.compraId,operacion:uid(),...p});
     return enviar(payload,()=>{S.m={type:'cxp',id:x.id,mode:'ver'};clearForm();toast('Pago registrado en la compra y Por pagar.');});
+  }
+  if(typeof document!=='undefined'){
+    document.addEventListener('change',e=>{
+      const k=e.target.dataset?.k;
+      if(k==='cp_vencimiento')acciones.cpVencimiento(e.target.value);
+      if(k==='cp_fecha'){S.f.cp_fecha=e.target.value;actualizarPlazo();}
+    });
+    document.addEventListener('input',e=>{if(e.target.dataset?.k==='cp_dias'){S.f.cp_dias=e.target.value;actualizarPlazo();}});
   }
   return {vista,modal,acciones,pagarVinculada};
 }
