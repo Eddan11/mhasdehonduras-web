@@ -26,8 +26,9 @@ export function crearCompras(ctx) {
     .flatMap(c=>(c.items||[]).filter(i=>i.prod===id&&Number(i.costo)>0&&Number(i.unidades)>0).map(i=>({c,i})))
     .sort((a,b)=>b.c.fecha.localeCompare(a.c.fecha)||(b.c.actualizado||b.c.creado||0)-(a.c.actualizado||a.c.creado||0)||String(b.c.id||'').localeCompare(String(a.c.id||'')))[0];
   const costoReferencia=(p,modo)=>{
+    p=p||{};
     const anterior=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
-    const id=p.id||p.prod,ultima=ultimaCompra(id),base=anterior?.prod===id?anterior.costo:ultima?Number(ultima.i.costo)/Number(ultima.i.unidades)*(Number(p.unidades)||1):S.costos?.[id]?.compra;
+    const id=p.id||p.prod,ultima=ultimaCompra(id),base=anterior&&anterior.prod===id?anterior.costo:ultima?Number(ultima.i.costo)/Number(ultima.i.unidades)*(Number(p.unidades)||1):S.costos?.[id]?.compra;
     return Number(base)>0?r6(Number(base)/factor(p,modo)):null;
   };
   const v=k=>esc(S.f[k]??'');
@@ -103,8 +104,8 @@ export function crearCompras(ctx) {
     cpCancelar(){if(cart().length&&!confirm('¿Descartar esta compra sin guardar?'))return;const id=S.compraEdit?.id;limpiarCompra();if(id)S.m={type:'compra',id};draw();},
     cpAgregar(){
       const p=S.prod.find(x=>x.id===S.f.cp_prod),viejo=S.compraLineaEdit!=null?cart()[S.compraLineaEdit]:null;
-      const f=factor(viejo?.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{}));
-      const cantidad=r6(Number(S.f.cp_cant)/f),costo=r6(Number(S.f.cp_costo??costoReferencia(viejo?.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{})))*f),tasa=Number(S.f.cp_tasa??15);
+      const f=factor(viejo&&viejo.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{}));
+      const cantidad=r6(Number(S.f.cp_cant)/f),costo=r6(Number(S.f.cp_costo??costoReferencia(viejo&&viejo.prod===p?.id?viejo:(p||{}),S.f.cp_modo||modoBase(p||{})))*f),tasa=Number(S.f.cp_tasa??15);
       if(Math.abs(cantidad*f-Number(S.f.cp_cant))>0.00001)return toast('Revise la cantidad; no se puede convertir exactamente a la unidad de inventario.');
       if(!p||!(cantidad>0)||!(costo>0)||!Number.isFinite(cantidad)||!Number.isFinite(costo)||!Number.isFinite(tasa)||tasa<0||tasa>100)return toast('Seleccione producto y revise cantidad, costo e ISV.');
       if(cart().some((i,n)=>i.prod===p.id&&n!==S.compraLineaEdit))return toast('Ese producto ya está agregado. Quite la línea para corregirla.');
