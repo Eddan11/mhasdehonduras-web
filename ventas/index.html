@@ -280,6 +280,7 @@ body:has(.prospectos-vista){overflow-anchor:none}
 
 .prod-precios{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}.prod-totales{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0 18px}.prod-totales #pe_margen{margin-left:auto;text-align:right}.prod-opciones{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:10px 0}.prod-opciones label{display:flex;align-items:center;gap:8px}.prod-opciones input{width:18px;min-height:18px;flex:0 0 18px}.prod-caracteristicas input{margin-top:4px}
 </style>
+<link rel="stylesheet" href="agenda.css?v=2026-11-20h">
 </head>
 <body>
 <header>
@@ -303,6 +304,7 @@ import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, addDoc, d
   limit, startAfter, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { infoProducto, nombreConTamano } from "./producto-info.js?v=2026-11-06f";
 import { unidadTexto,abreviarTexto,textoNormal,expandirTexto } from "./unidades-texto.js?v=2026-11-06f";
+import { crearAgenda, horaAgenda, coincidencias } from "./agenda-ui.js?v=2026-11-20h";
 import { organizarPizarra } from "./pizarra-plan.js?v=2026-11-20b";
 import { crearGastos } from "./gastos-ui.js?v=2026-11-02e";
 import { crearImagenesCatalogo,miniaturaProducto } from "./imagenes-ui.js?v=2026-11-06f";
@@ -374,7 +376,7 @@ const TABS = {
 };
 // Todas las pestañas en la barra (se desliza). Para agrupar algunas en un botón "Más", ponerlas aquí. Compras y Por pagar están vinculados al inventario.
 const TABS_MAS = {};
-const TAB_NAME = {pizarra: "Pizarra", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
+const TAB_NAME = {pizarra: "Agenda", chats: "Chats WhatsApp", agente: "Agente", prospectos: "Prospectos", cotizar: "Nueva cotización", espera: "En espera", cotizaciones: "Cotizaciones", facturas: "Facturas", clientes: "Clientes", productos: "Productos", cobros: "Por cobrar", pagar: "Por pagar", compras: "Compras", gastos: "Gastos", inventario: "Inventario", utilidad: "Utilidad", miutil: "Mi utilidad", perfil: "Mi perfil", ajustes: "Ajustes"};
 const ROL_NAME = {admin: "Administrador", facturador: "Facturador", vendedor: "Vendedor"};
 const ESTADO = {vendida: ["SF", "b-sf"],cotizada: ["Abierta", "b-info"], aprobada: ["Por facturar", "b-warn"], facturada: ["Facturada", "b-ok"], anulada: ["Anulada", ""], perdida: ["No concretada", "b-bad"]};
 
@@ -954,7 +956,7 @@ function abPosicionar(){
     ini = {x: e.clientX, y: e.clientY}; mov = false;
     try { b.setPointerCapture(e.pointerId); } catch (_) {}
     clearTimeout(largo);
-    largo = setTimeout(() => { if (!mov && ini) { ini = null; AB.noClick = true; AB.oculto = true; try { localStorage.setItem("mhas_ab_oculto", "1"); } catch (_) {} b.hidden = true; toast("Ocultaste el botón del asistente. Lo vuelves a mostrar en Mi perfil o en la Pizarra."); } }, 900);
+    largo = setTimeout(() => { if (!mov && ini) { ini = null; AB.noClick = true; AB.oculto = true; try { localStorage.setItem("mhas_ab_oculto", "1"); } catch (_) {} b.hidden = true; toast("Ocultaste el botón del asistente. Lo vuelves a mostrar en Mi perfil o en la Agenda."); } }, 900);
   });
   b.addEventListener("pointermove", e => {
     if (!ini) return;
@@ -1061,29 +1063,10 @@ function pzCard(t, hecha){
     ${t.refChat || t.refCot ? `<div class="pz-refs">${t.refChat ? `<button type="button" class="pz-ref" data-a="asVerChat" data-v="${esc(t.refChat)}" title="Abrir chat">Chat</button>` : ""}${t.refCot ? `<button type="button" class="pz-ref" data-a="asVerCot" data-v="${esc(t.refCot)}" title="Abrir cotización">${esc(t.refCot.replace(/^COT-/, ""))}</button>` : ""}</div>` : ""}
   </div>`;
 }
-function vPizarra(){
-  if (!S.admin) return `<p class="empty">La pizarra es privada del administrador.</p>`;
-  if (!PZ.data && !PZ.cargando) pzCargar();
-  const d = PZ.data;
-  const hoyTxt = (t => t.charAt(0).toUpperCase() + t.slice(1))(new Date().toLocaleDateString("es-HN", {weekday: "long", day: "numeric", month: "long"}));
-  const tipoSel = S.f.pz_tipo || "seguimiento";
-  const head = `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between">
-    <div><h1 style="margin-bottom:2px">Mi asistente · Pizarra</h1><p class="sub" style="margin:0 0 12px">${esc(hoyTxt)} · Solo para ti · Cartera de Eduardo Maradiaga</p></div>
-    <div class="actions" style="margin:0"><button class="btn sm" data-a="pzRecargar" ${PZ.cargando ? "disabled" : ""}>${PZ.cargando ? "Actualizando…" : "Actualizar"}</button>${AB.oculto ? `<button class="btn sm" data-a="abToggle">Mostrar botón del asistente</button>` : ""}<button class="btn sm" data-a="asAbrir">Hablar con el asistente</button></div></div>
-  <div class="panel" style="padding:12px 14px;margin-bottom:0"><div class="pz-add">
-    <div class="field pz-txtf" style="margin:0"><label for="pz_txt">¿Qué necesitas recordar?</label><input id="pz_txt" data-k="pz_txt" value="${fv("pz_txt")}" placeholder="Ej. Llamar a Betsy el lunes para confirmar su pedido" autocomplete="off"></div>
-    <div class="field" style="margin:0"><label for="pz_tipo">Tipo</label><select id="pz_tipo" data-k="pz_tipo">${PZ_TIPOS.map(([v, t]) => `<option value="${v}" ${tipoSel === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-    <div class="field" style="margin:0"><label for="pz_fecha">Fecha</label><input id="pz_fecha" type="date" data-k="pz_fecha" value="${esc(S.f.pz_fecha || (tipoSel === "entregas" ? proxRuta() : today()))}"></div>
-    <button class="btn pz-mic${PZ.rec ? " on" : ""}" type="button" data-a="pzDictar" title="Dictar" aria-label="Dictar">${PZ.rec ? "■" : "🎤"}</button>
-    <button class="btn pri" type="button" data-a="pzAgregar">Guardar recordatorio</button>
-  </div></div>`;
-  if (!d) return head + `<p class="empty" style="margin-top:16px">Cargando la pizarra…</p>`;
-  if (d.error) return head + `<p class="empty" style="margin-top:16px">No se pudo cargar la pizarra (${esc(d.error)}). Toca Actualizar.</p>`;
-  const plan = organizarPizarra({data:d, clientes:S.cli, statsCliente, hoy:today()});
-  const tareas = (lista, vacio) => lista.length ? lista.map(t => pzCard(t)).join("") : '<p class="pz-vacio">' + vacio + '</p>';
-  const resumen = '<div class="pz-cols"><section class="pz-col"><h3>Hoy<small>' + plan.hoyTareas.length + '</small></h3>' + tareas(plan.hoyTareas, 'Sin compromisos pendientes para hoy.') + '</section>' +
-    '<section class="pz-col"><h3>Clientes por contactar<small>' + ((d.detectado?.espera?.length || 0) + (d.detectado?.abiertas?.length || 0) + plan.recompras.length) + '</small></h3><p class="sub">Empieza por quienes esperan respuesta; después retoma cotizaciones y recompras.</p><a class="btn sm" href="#pz-clientes">Ver oportunidades</a></section>' +
-    '<section class="pz-col"><h3>Próximos recordatorios<small>' + plan.futuras.length + '</small></h3>' + tareas(plan.futuras, 'Agenda aquí lo que te pidan para otro día.') + '</section></div>';
+function vPizarra(){ return agendaUI.vista(); }
+function vOportunidades(){
+  if(!S.admin)return "";const d=PZ.data;if(!d||d.error)return "";
+  const plan=organizarPizarra({data:d,clientes:S.cli,statsCliente,hoy:today()});
   const recompras = plan.recompras.slice(0,8).map(({c,st}) => '<div class="pz-card"><div class="pz-body"><b>' + esc(c.nombre) + '</b><div class="pz-m">' + esc(st.falta <= 0 ? 'Toca reponer' : 'Próxima recompra') + ' · ' + esc(fdate(st.prox)) + '</div><div class="pz-m">' + esc(st.ultItems) + '</div><div class="actions"><button class="btn sm" data-a="cliEdit" data-v="' + esc(c.id) + '">Ver cliente</button><button class="btn sm" data-a="pzRecompra" data-v="' + esc(c.id) + '">Agendar</button></div></div></div>').join('');
   const hechas = d.hechasHoy || [];
   const det = d.detectado || {};
@@ -1092,10 +1075,7 @@ function vPizarra(){
       <br><span>${esc(x.detalle || "")}</span>${x.cuando ? `<br><small>${esc(x.cuando)}</small>` : ""}</div>
       ${atendida?'':`<button type="button" class="btn sm" data-a="pzPasar" data-v="${k}:${i}">Agendar</button>`}</div>`).join("") : `<div class="pz-vacio">${pista}</div>`}</section>`;
   const atendidos=d.atendidos||{},nAtendidos=Object.values(atendidos).reduce((n,a)=>n+a.length,0);
-  return head + resumen + `<p class="note">Tus recordatorios se guardan en tu cuenta. Las oportunidades se calculan con los datos del sistema; revisa el último contacto antes de escribir.</p>
-  ${hechas.length ? `<div class="actions" style="margin-top:10px"><button class="btn sm" data-a="pzVerHechas">${PZ.verHechas ? "Ocultar" : "Ver"} hechas hoy (${hechas.length})</button></div>
-    ${PZ.verHechas ? `<div class="pz-col pz-hechas" style="margin-top:8px">${hechas.map(t => pzCard(t, true)).join("")}</div>` : ""}` : ""}
-  <h2 id="pz-clientes" style="margin:22px 0 2px">Clientes y oportunidades</h2>
+  return `<h2 id="pz-clientes" style="margin:22px 0 2px">Clientes y oportunidades</h2>
   <p class="sub" style="margin:0">Abre el chat o la cotización, agenda el siguiente paso o marca lo atendido. Un mensaje o cambio nuevo vuelve a aparecer.</p>
   <div class="pz-det">
     ${grupo("espera", "💬 Esperando respuesta", det.espera || [], "Nadie esperando")}
@@ -1108,20 +1088,22 @@ function vPizarra(){
   ${nAtendidos?`<div class="actions"><button class="btn sm" data-a="pzVerAtendidos">${PZ.verAtendidos?'Ocultar':'Ver'} atendidos (${nAtendidos})</button></div>${PZ.verAtendidos?`<div class="pz-det">${[["espera","Esperando respuesta"],["produccion","Consultas a producción"],["cobros","Facturar y cobrar"],["abiertas","Cotizaciones abiertas"]].filter(([k])=>atendidos[k]?.length).map(([k,t])=>grupo(k,t,atendidos[k],"",true)).join("")}</div>`:''}`:''}`;
 }
 function mTarea(){
-  const t = S.m.id ? ((PZ.data && PZ.data.pendientes) || []).find(x => x.id === S.m.id) || ((PZ.data && PZ.data.hechasHoy) || []).find(x => x.id === S.m.id) : (S.m.pre || {});
-  if (!t) return "";
-  const g = (k, d) => S.f["tz_" + k] ?? d;
-  const tipo = g("tipo", t.tipo || "otros");
-  return `<h1 style="padding-right:40px">${S.m.id ? "Editar tarea" : "Nueva tarea"}</h1>
-  <div class="field"><label for="tz_texto">Qué hay que hacer</label><input id="tz_texto" data-k="tz_texto" value="${esc(g("texto", t.texto || ""))}"></div>
-  <div class="field"><label for="tz_cliente">Cliente (opcional)</label><input id="tz_cliente" data-k="tz_cliente" value="${esc(g("cliente", t.cliente || ""))}"></div>
-  <div class="row">
-    <div class="field"><label for="tz_tipo">Columna</label><select id="tz_tipo" data-k="tz_tipo">${PZ_TIPOS.map(([v, x]) => `<option value="${v}" ${tipo === v ? "selected" : ""}>${x}</option>`).join("")}</select></div>
-    <div class="field"><label for="tz_fecha">Fecha</label><input id="tz_fecha" type="date" data-k="tz_fecha" value="${esc(g("fecha", t.fecha || (tipo === "entregas" ? proxRuta() : today())))}"></div>
-    <div class="field"><label for="tz_hora">Hora (opcional)</label><input id="tz_hora" data-k="tz_hora" value="${esc(g("hora", t.hora || ""))}" placeholder="10:00 a. m."></div>
-  </div>
-  ${tipo === "entregas" ? `<p class="note">Rutas: martes y jueves. La próxima es el ${esc(fechaPz(proxRuta()))}.</p>` : ""}
-  <div class="actions"><button class="btn pri big" data-a="pzGuardar" ${S.busy ? "disabled" : ""}>Guardar</button>${S.m.id ? `<button class="btn danger" data-a="pzBorrar">${S.f.tz_borrar ? "Toca otra vez para borrar" : "Borrar"}</button>` : ""}</div>`;
+  const todos=[...(PZ.data?.pendientes||[]),...(PZ.data?.hechas||PZ.data?.hechasHoy||[])];
+  const t=S.m.id?todos.find(t=>t.id===S.m.id):(S.m.pre||{});if(!t)return '';
+  const g=(k,d)=>S.f['tz_'+k]??d;
+  const candidato={...t,fecha:g('fecha',t.fecha||PZ.fecha||today()),hora:g('hora',horaAgenda(t.hora)),duracion:Number(g('duracion',t.duracion||30))};
+  const fijos=coincidencias(candidato,PZ.data?.pendientes||[]).filter(t=>!t.sugerencia||t.fija);
+  return `<h1>${S.m.id?'Editar compromiso':'Agendar cita, visita o tarea'}</h1>
+   <div class="field"><label for="tz_texto">Qué necesitas hacer</label><input id="tz_texto" data-k="tz_texto" value="${esc(g('texto',t.texto||''))}" placeholder="Llamar a un cliente, visitar una empresa, cita personal…"></div>
+   <div class="row"><div class="field"><label for="tz_clase">Compromiso</label><select id="tz_clase" data-k="tz_clase">${[['tarea','Tarea / seguimiento'],['cita','Cita'],['visita','Visita comercial'],['entrega','Entrega'],['personal','Personal / viaje']].map(([v,n])=>`<option value="${v}" ${g('clase',t.clase||'tarea')===v?'selected':''}>${n}</option>`).join('')}</select></div>
+   <div class="field"><label for="tz_tipo">Actividad</label><select id="tz_tipo" data-k="tz_tipo">${PZ_TIPOS.map(([v,n])=>`<option value="${v}" ${g('tipo',t.tipo||'seguimiento')===v?'selected':''}>${n}</option>`).join('')}</select></div></div>
+   <div class="row"><div class="field"><label for="tz_fecha">Fecha</label><input id="tz_fecha" data-k="tz_fecha" data-redraw="1" type="date" value="${esc(candidato.fecha)}"></div><div class="field"><label for="tz_hora">Hora (opcional)</label><input id="tz_hora" data-k="tz_hora" data-redraw="1" type="time" value="${esc(candidato.hora)}"></div><div class="field"><label for="tz_duracion">Duración en minutos</label><input id="tz_duracion" data-k="tz_duracion" data-redraw="1" type="number" min="5" max="720" step="5" value="${esc(candidato.duracion)}"></div></div>
+   <div class="row"><div class="field"><label for="tz_cliente">Cliente o persona (opcional)</label><input id="tz_cliente" data-k="tz_cliente" value="${esc(g('cliente',t.cliente||''))}"></div><div class="field"><label for="tz_ubicacion">Lugar (opcional)</label><input id="tz_ubicacion" data-k="tz_ubicacion" value="${esc(g('ubicacion',t.ubicacion||''))}"></div></div>
+   <div class="field"><label for="tz_nota">Notas</label><textarea id="tz_nota" data-k="tz_nota" rows="3">${esc(g('nota',t.nota||''))}</textarea></div>
+   ${t.sugerencia?`<label class="note"><input type="checkbox" data-k="tz_fija" ${g('fija',t.fija)?'checked':''}> Fijar este horario para que no se mueva automáticamente</label>`:''}
+   <p class="note">Tus citas y visitas conservan el horario que elijas. Al guardar, las sugerencias flexibles se acomodan en las mañanas o de 4 a 5; si no caben, pasan a otro día de lunes a sábado. Sin hora, el compromiso queda pendiente de ubicar.</p>
+   ${fijos.length?`<p class="note" style="color:var(--warn)">Este horario coincide con: ${fijos.map(t=>esc(t.texto)).join(', ')}. Revisa antes de guardar; las citas fijas no se moverán.</p>`:''}
+   <div class="actions"><button class="btn pri" data-a="pzGuardar" ${S.busy?'disabled':''}>Guardar y acomodar sugerencias</button>${S.m.id?`<button class="btn danger" data-a="pzBorrar">${S.f.tz_borrar?'Toca otra vez para borrar':'Borrar'}</button>`:''}</div>`;
 }
 
 function periodoMensajes(dias, ahora = Date.now()){
@@ -2591,7 +2573,7 @@ function startData(){
 onAuthStateChanged(auth, u => entrar(u));
 async function entrar(u){
   if (S.me.uid !== (u?.uid || null)) {
-    PZ.data = null; PZ.verHechas = false; PZ.verAtendidos = false;
+    PZ.data = null; PZ.fecha=null;PZ.vistaAgenda=null; PZ.verHechas = false; PZ.verAtendidos = false;
     Object.keys(S.f).filter(k => /^(pz_|tz_)/.test(k)).forEach(k => delete S.f[k]);
   }
   if (meSub) { meSub(); meSub = null; }
@@ -3191,7 +3173,7 @@ const A = {
     if (!S.admin) return;
     const c=S.cli.find(c=>c.id===id),st=c&&statsCliente(c); if (!st?.ultCot) return;
     Object.keys(S.f).filter(k=>k.startsWith("tz_")).forEach(k=>delete S.f[k]);
-    S.m={type:"tarea",pre:{texto:"Consultar reposición: "+st.ultItems,cliente:c.nombre,tipo:"seguimiento",fecha:today(),refCot:st.ultCot.numero||st.ultCot.id}};draw();
+    S.m={type:"tarea",pre:{texto:"Consultar reposición: "+st.ultItems,cliente:c.nombre,tipo:"seguimiento",fecha:PZ.fecha||today(),refCot:st.ultCot.numero||st.ultCot.id}};draw();
   },
   pzVerHechas(){ PZ.verHechas = !PZ.verHechas; draw(); },
   pzVerAtendidos(){PZ.verAtendidos=!PZ.verAtendidos;draw();},
@@ -3220,7 +3202,7 @@ const A = {
   },
   async pzHecha(v){
     if (!PZ.data) return; const t = PZ.data.pendientes.find(x => x.id === v); if (!t) return;
-    PZ.data.pendientes = PZ.data.pendientes.filter(x => x.id !== v); PZ.data.hechasHoy = [t].concat(PZ.data.hechasHoy || []); draw();
+    PZ.data.pendientes = PZ.data.pendientes.filter(x => x.id !== v); PZ.data.hechasHoy = [t].concat(PZ.data.hechasHoy || []); PZ.data.hechas=[{...t,hechaEn:Date.now()}].concat(PZ.data.hechas||[]); draw();
     try { await fnAsistente({accion: "tareaEstado", id: v, hecha: true}); } catch (e) { console.error(e); toast("No se pudo marcar."); pzCargar(); }
   },
   async pzDeshacer(v){
@@ -3232,23 +3214,23 @@ const A = {
     const [g, i] = String(v).split(":"), x = (((PZ.data || {}).detectado || {})[g] || [])[Number(i)]; if (!x) return;
     const sug = {espera: ["seguimiento", "Responder a " + x.nombre], produccion: ["cotizar", "Consultar " + x.detalle], cobros: ["cobros", (x.tipo === "facturar" ? "Facturar " : "Cobrar ") + x.cot], abiertas: ["seguimiento", "Dar seguimiento a " + x.cot]}[g] || ["otros", x.nombre];
     Object.keys(S.f).filter(k => k.startsWith("tz_")).forEach(k => delete S.f[k]);
-    S.m = {type: "tarea", id: null, pre: {texto: sug[1], cliente: x.nombre, tipo: sug[0], fecha: today(), refChat: x.tel || "", refCot: x.cot || ""}}; draw();
+    S.m = {type: "tarea", id: null, pre: {texto: sug[1], cliente: x.nombre, tipo: sug[0], fecha: PZ.fecha || today(), refChat: x.tel || "", refCot: x.cot || ""}}; draw();
   },
   async pzGuardar(){
-    const pre = S.m.pre || {}, t = S.m.id ? (PZ.data.pendientes.find(x => x.id === S.m.id) || PZ.data.hechasHoy.find(x => x.id === S.m.id) || {}) : pre;
+    const pre = S.m.pre || {}, t = S.m.id ? (PZ.data.pendientes.find(x => x.id === S.m.id) || (PZ.data.hechas||PZ.data.hechasHoy||[]).find(x => x.id === S.m.id) || {}) : pre;
     const g = (k, d) => S.f["tz_" + k] ?? d;
     const datos = {id: S.m.id || undefined, texto: clean(g("texto", t.texto)), cliente: clean(g("cliente", t.cliente)), tipo: g("tipo", t.tipo || "otros"),
-      fecha: g("fecha", t.fecha || today()), hora: clean(g("hora", t.hora)), refChat: t.refChat || "", refCot: t.refCot || "", origen: "pizarra"};
+      fecha: g("fecha", t.fecha || PZ.fecha || today()), hora: clean(g("hora", horaAgenda(t.hora))), duracion:Number(g("duracion",t.duracion||30)),clase:g("clase",t.clase||"tarea"),ubicacion:clean(g("ubicacion",t.ubicacion)),nota:clean(g("nota",t.nota)),fija:!!g("fija",t.fija),version:S.m.id?t.actualizado||0:undefined,refChat: t.refChat || "", refCot: t.refCot || "", origen: "agenda"};
     if (!datos.texto) return toast("Escribe qué hay que hacer.");
     S.busy = true; draw();
-    try { await fnAsistente(Object.assign({accion: "tareaGuardar"}, datos)); toast(datos.id ? "Tarea actualizada" : "Tarea guardada"); S.m = null; }
+    try { const r=await fnAsistente(Object.assign({accion: S.admin ? "agendaGuardar" : "tareaGuardar"}, datos)); toast((datos.id ? "Compromiso actualizado" : "Compromiso guardado")+(r.data?.movidas?" · sugerencias reacomodadas":"")); S.m = null; }
     catch (e) { console.error(e); toast("No se pudo guardar la tarea."); }
-    S.busy = false; Object.keys(S.f).filter(k => k.startsWith("tz_")).forEach(k => delete S.f[k]); draw(); pzCargar();
+    S.busy = false; if(!S.m)Object.keys(S.f).filter(k => k.startsWith("tz_")).forEach(k => delete S.f[k]); draw(); pzCargar();
   },
   async pzBorrar(){
     if (!S.f.tz_borrar) { S.f.tz_borrar = true; draw(); setTimeout(() => { S.f.tz_borrar = false; }, 4000); return; }
     const id = S.m.id; S.m = null; delete S.f.tz_borrar; draw();
-    try { await fnAsistente({accion: "tareaBorrar", id}); toast("Tarea borrada"); } catch (e) { console.error(e); toast("No se pudo borrar."); }
+    try { await fnAsistente({accion: S.admin ? "agendaBorrar" : "tareaBorrar", id}); toast("Compromiso borrado"); } catch (e) { console.error(e); toast("No se pudo borrar."); }
     pzCargar();
   },
   abToggle(){ AB.oculto = !AB.oculto; try { localStorage.setItem("mhas_ab_oculto", AB.oculto ? "1" : ""); } catch (_) {} toast(AB.oculto ? "Botón del asistente oculto" : "Botón del asistente visible"); draw(); },
@@ -3974,6 +3956,8 @@ const catalogoWebUI=crearCatalogoWeb({S,esc,L,miniatura: p=>miniaturaProducto(p,
 Object.assign(A,catalogoWebUI.acciones);
 const comprasUI = crearCompras({S,esc,empresa,L,fdate,today,r2,draw,toast,fallo,pagoForm,pagosHtml,saldo,leerPago,clearForm,call: d => fnCompras(d)});
 Object.assign(A, comprasUI.acciones);
+const agendaUI=crearAgenda({S,PZ,esc,fdate,today,draw,toast,call:d=>fnAsistente(d),cargar:pzCargar,oportunidades:vOportunidades});
+Object.assign(A,agendaUI.acciones);
 const prospectosUI = crearProspectos({S,esc,empresa,draw,toast,fallo,crearContacto:ctx=>crearContactoProspecto({...ctx,guardarCorreo:d=>fnCorreoProspecto(d)}),crearPlantillas:ctx=>crearPlantillasProspectos({...ctx,cargar:async()=>{if(!S.admin)throw Error("Solo administración.");const s=await getDoc(doc(db,"config","prospectos_mensajes"));return s.exists()?s.data():{revision:0};},guardar:async datos=>{if(!S.admin)throw Error("Solo administración.");if(!datos.asunto||datos.asunto.length>200||!datos.correo||datos.correo.length>5000||!datos.whatsapp||datos.whatsapp.length>5000)throw Error("Revise el asunto y los mensajes.");return runTransaction(db,async tx=>{const r=doc(db,"config","prospectos_mensajes"),s=await tx.get(r),revision=s.exists()?Number(s.data().revision)||0:0;if(revision!==Number(datos.revision))throw Error("Los mensajes cambiaron en otra ventana. Pulse Volver a cargar antes de guardar.");const nuevo={asunto:datos.asunto,correo:datos.correo,whatsapp:datos.whatsapp,revision:revision+1,actualizado:Date.now(),por:S.me.uid};tx.set(r,nuevo);return nuevo;});}}),call: d => fnProspectos(d)});
 Object.assign(A, prospectosUI.acciones);
 document.addEventListener("change", e => { if (e.target.dataset.ppestado) prospectosUI.acciones.ppEstado(e.target.dataset.ppestado, e.target.value); });
@@ -4051,7 +4035,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-20g";
+const APP_VER = "2026-11-20h";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
