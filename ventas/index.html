@@ -2332,7 +2332,7 @@ function vFacturas(){
   const vendFac = f => nomUid(duenoFac(f)) || f.vendedorNombre || ((f.cotId && S.cot.find(x => x.id === f.cotId)) || {}).vendedorNombre || f.porNombre || "—";
   if (por) list = list.filter(f => duenoFac(f) === por);
   if (q) list = list.filter(f => [f.numero, f.cliente && f.cliente.nombre, f.cliente && f.cliente.rtn, f.cotNumero, f.porNombre].join(" ").toLowerCase().includes(q));
-  list = list.slice().sort((a, b) => fl === "blanco" ? a.n - b.n : b.n - a.n);
+  list = list.slice().sort((a, b) => fl === "blanco" ? a.n - b.n : String(a.fecha || "9999-12-31").localeCompare(String(b.fecha || "9999-12-31")) || a.n - b.n);
   const quienes = [...new Map(all.filter(f => f.estado !== "blanco").map(f => [duenoFac(f), vendFac(f)]).filter(([k]) => k)).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const cnt = k => all.filter(f => k === "usadas" ? f.estado !== "blanco" : f.estado === k).length;
   const fact = puede("admin", "facturador");
@@ -3031,7 +3031,7 @@ const A = {
       const cols = [["Factura", 22], ["Fecha", 12], ["Cliente", 38], ["RTN", 17], ["Cotización", 13], ["Vendedor", 20], ["Facturó", 20], ["Forma de pago", 15], ["Subtotal", 13], ["Descuento", 12], ["Gravado", 13], ["ISV 15%", 12], ["Total", 13], ["Estado", 11], ["Motivo anulación", 30], ["CAI", 40]];
       ws.columns = cols.map(([h, w]) => ({header: h, width: w}));
       ws.getRow(1).font = {bold: true}; ws.getRow(1).fill = {type: "pattern", pattern: "solid", fgColor: {argb: "FFE0A526"}};
-      (S.facturas || []).filter(f => f.estado !== "blanco").sort((a, b) => a.n - b.n).forEach(f => {
+      (S.facturas || []).filter(f => f.estado !== "blanco").sort((a, b) => String(a.fecha || "9999-12-31").localeCompare(String(b.fecha || "9999-12-31")) || a.n - b.n).forEach(f => {
         const an = f.estado === "anulada";
         const row = ws.addRow([f.numero, f.fecha ? fdate(f.fecha) : "", (f.cliente && f.cliente.nombre) || "", (f.cliente && f.cliente.rtn) || "", f.cotNumero || "", (() => { const c = f.cotId ? S.cot.find(x => x.id === f.cotId) : null, k = unif(f.vendedor || (c && c.vendedor) || f.por || ""), u = (S.usuarios || []).find(x => x.id === k); return (u && (u.nombre || u.email)) || f.vendedorNombre || (c && c.vendedorNombre) || ""; })(), f.porNombre || "", f.formaPago || "",
           an ? 0 : f.sub || 0, an ? 0 : f.desc || 0, an ? 0 : f.gravado || 0, an ? 0 : f.isv || 0, an ? 0 : f.total || 0, (ESTADO_FAC[f.estado] || [f.estado])[0], (f.anulada && f.anulada.motivo) || "", f.cai || ""]);
@@ -4051,7 +4051,7 @@ draw();
    Cada vez que se sube un cambio, se sube el número aquí y en ventas/version.json (los dos iguales).
    Cada 5 minutos y al volver a abrir la app se revisa version.json: si hay una versión nueva, se recarga sola
    cuando no hay nada a medio llenar; si hay algo a medio llenar, sale una barra con el botón "Actualizar". */
-const APP_VER = "2026-11-20d";
+const APP_VER = "2026-11-20e";
 function algoSinGuardar(){
   if (S.prospectoForm || S.prospectoBuscando) return true;
   if (S.cart && S.cart.length) return true;
